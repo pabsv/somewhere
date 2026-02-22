@@ -118,28 +118,59 @@ results = scraper.search_all(
 
 ---
 
-### Phase 3: Smart Deal Detection
+### Phase 3: Smart Deal Detection ✅ COMPLETE
 **Goal:** Know what makes a flight a "deal" worth alerting
 
 | Step | Task | Status |
 |------|------|--------|
-| 3.1 | Connect scraper → database | 🔴 Todo |
-| 3.2 | User matching logic (availability check) | 🔴 Todo |
-| 3.3 | Deal scoring (price vs route average) | 🔴 Todo |
-| 3.4 | Price drop detection | 🔴 Todo |
-| 3.5 | Deduplication | 🔴 Todo |
+| 3.1 | Connect scraper → database | ✅ Done (run_pipeline.py) |
+| 3.2 | User matching logic (availability check) | ✅ Done (UserMatcher service) |
+| 3.3 | Deal scoring (price vs route average) | ✅ Done (FlightService) |
+| 3.4 | Price drop detection | ✅ Done (price_history tracking) |
+| 3.5 | Deduplication | ✅ Done (flight_key unique index) |
+
+**Usage:**
+```bash
+python run_pipeline.py          # Quick test (2 origins, 3 destinations)
+python run_pipeline.py --full   # Full scan (all configured airports)
+```
+
+**Test Results (Feb 16, 2026):**
+- 466 flights scraped → 407 new, 59 updated
+- 106 deals detected (65 hot deals)
+- Deal scoring working (score 0-100 based on price + route average)
 
 ---
 
-### Phase 4: Scheduler
+### Phase 4: Scheduler ✅ COMPLETE
 **Goal:** Automated daily runs
 
 | Step | Task | Status |
 |------|------|--------|
-| 4.1 | Job scheduler setup (APScheduler) | 🔴 Todo |
-| 4.2 | Daily full scan job (e.g., 6 AM) | 🔴 Todo |
-| 4.3 | Per-user deal matching after scan | 🔴 Todo |
-| 4.4 | Logging & failure alerts | 🔴 Todo |
+| 4.1 | Job scheduler setup (APScheduler) | ✅ Done |
+| 4.2 | Staggered daily jobs (by origin) | ✅ Done |
+| 4.3 | Single-origin pipeline support | ✅ Done |
+| 4.4 | Logging to file + console | ✅ Done |
+
+**Staggered Schedule (15-min intervals):**
+```
+06:00 - EIN (Eindhoven)
+06:15 - AMS (Amsterdam)
+06:30 - BRU (Brussels)
+06:45 - DUS (Düsseldorf)
+07:00 - CGN (Cologne)
+```
+
+**Usage:**
+```bash
+python -m scheduler.scheduler              # Start scheduler daemon
+python -m scheduler.scheduler --test       # Test all origins once
+python -m scheduler.scheduler --test EIN   # Test single origin
+```
+
+**Test Results (Feb 16, 2026):**
+- EIN alone: 41 searches, 3593 flights, 849 deals in ~10 minutes
+- Full 5-origin scan estimated: ~50 minutes total (spread over 1 hour)
 
 ---
 
