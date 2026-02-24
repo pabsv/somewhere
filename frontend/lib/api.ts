@@ -9,28 +9,28 @@ import { mockDeals } from "@/data/mock-deals";
 import { loadPreferences, savePreferences as storageSave } from "@/lib/storage";
 import { getDestination } from "@/data/destinations";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ─── Backend response shape ────────────────────────────────────────────────────
-// Matches the JSON that FastAPI will return from GET /api/deals.
-// This is the contract between the two blocks — keep it in sync with the backend models.
+// Matches FlightModel.to_api_dict() from database/models/flight.py exactly.
+// Keep this in sync with the backend model if fields are added/renamed.
 export interface BackendFlight {
-  flight_key: string;    // "{origin}-{dest}-{outbound}-{return}-{price}"
+  flight_key: string;       // "{origin}-{dest}-{outbound}-{return}-{price}"
   origin: string;
-  destination: string;   // IATA code, e.g. "BCN"
-  outbound_date: string; // YYYY-MM-DD
-  return_date: string;   // YYYY-MM-DD
-  price: number;         // EUR
-  airlines: string[];    // backend stores a list; we join for display
-  stops: number;         // 0 = direct
-  deal_score: number;    // 0–100
+  destination: string;      // IATA code, e.g. "BCN"
+  outbound_date: string;    // YYYY-MM-DD
+  return_date: string;      // YYYY-MM-DD
+  price: number;            // EUR
+  airlines: string[];       // backend stores a list; we join for display
+  is_direct: boolean;       // outbound_stops == 0 && return_stops == 0
+  deal_score: number;       // 0–100
   is_deal: boolean;
   azair_link: string;
 }
 
 // ─── Transform: backend shape → frontend Deal ─────────────────────────────────
-// All field mismatches are resolved here, in one place.
+// All field mismatches resolved here, in one place.
 function transformFlight(f: BackendFlight): Deal {
   return {
     id: f.flight_key,
@@ -41,9 +41,9 @@ function transformFlight(f: BackendFlight): Deal {
     return_date: f.return_date,
     price: f.price,
     airline: f.airlines.join(", "),
-    is_direct: f.stops === 0,
+    is_direct: f.is_direct,
     deal_score: f.deal_score,
-    // Mirrors backend thresholds: hot deal = price < €75 OR score ≥ 90
+    // Mirrors backend thresholds in database/config.py
     is_hot_deal: f.price < 75 || f.deal_score >= 90,
     azair_link: f.azair_link,
   };

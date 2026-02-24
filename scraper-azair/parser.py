@@ -8,6 +8,22 @@ import re
 import json
 
 
+def normalize_date(date_text: str) -> str:
+    """
+    Normalise Azair's raw date string to YYYY-MM-DD.
+
+    Azair returns dates in the format "Tue 17/03/26".
+    All other code (DB queries, UserMatcher, frontend) expects YYYY-MM-DD.
+    """
+    if not date_text:
+        return date_text
+    try:
+        dt = datetime.strptime(date_text.strip(), "%a %d/%m/%y")
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        return date_text  # Already normalised or unknown format — pass through
+
+
 @dataclass
 class Flight:
     """Represents a flight deal."""
@@ -221,13 +237,13 @@ def parse_single_result(result_div, origin_override: str = None) -> Optional[Fli
             if not origin:
                 origin = from_code
             destination = to_code
-            outbound_date = date_text
+            outbound_date = normalize_date(date_text)
             outbound_departure = from_time
             outbound_arrival = to_time
             outbound_duration = duration_str
             outbound_stops = stops
         elif is_return:
-            return_date = date_text
+            return_date = normalize_date(date_text)
             return_departure = from_time
             return_arrival = to_time
             return_duration = duration_str
