@@ -1,11 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import DealsCalendar from "@/components/calendar/DealsCalendar";
-import { mockDeals } from "@/data/mock-deals";
+import { getDeals, getPreferences } from "@/lib/api";
+import { Deal, DateWindow } from "@/types";
 
 export default function Home() {
-  const hotDeals = mockDeals.filter((d) => d.is_hot_deal).length;
-  const cheapest = Math.min(...mockDeals.map((d) => d.price));
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [availability, setAvailability] = useState<DateWindow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getDeals(), getPreferences()])
+      .then(([d, prefs]) => {
+        setDeals(d);
+        setAvailability(prefs.availability);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const hotDeals = deals.filter((d) => d.is_hot_deal).length;
+  const cheapest = deals.length > 0 ? Math.min(...deals.map((d) => d.price)) : null;
 
   return (
     <div>
@@ -13,17 +28,26 @@ export default function Home() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-neutral-900">Flight Deals</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          {mockDeals.length} deals found · {hotDeals} hot · from €{cheapest}
+          {loading
+            ? "Loading…"
+            : `${deals.length} deals · ${hotDeals} hot · from €${cheapest}`}
         </p>
       </div>
 
       {/* Calendar */}
-      <DealsCalendar deals={mockDeals} />
+      {loading ? (
+        <div className="py-16 text-sm text-neutral-400">Loading deals…</div>
+      ) : deals.length === 0 ? (
+        <div className="py-16 text-sm text-neutral-500">No deals available.</div>
+      ) : (
+        <DealsCalendar deals={deals} availabilityWindows={availability} />
+      )}
 
-      {/* Help text */}
-      <p className="text-sm text-neutral-500 mt-6">
-        Click a deal to see details and book.
-      </p>
+      {!loading && deals.length > 0 && (
+        <p className="text-sm text-neutral-500 mt-6">
+          Click a deal to see details and book.
+        </p>
+      )}
     </div>
   );
 }

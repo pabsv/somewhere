@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Deal } from "@/types";
+import { useState, useMemo, useRef } from "react";
+import { Deal, DateWindow } from "@/types";
 import { getColor } from "@/data/colors";
+
+const NUM_MONTHS = 6;
 
 interface DealsCalendarProps {
   deals: Deal[];
+  availabilityWindows?: DateWindow[];
 }
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -42,12 +45,11 @@ function formatDisplayDateLong(dateStr: string): string {
   return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export default function DealsCalendar({ deals }: DealsCalendarProps) {
+export default function DealsCalendar({ deals, availabilityWindows = [] }: DealsCalendarProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [baseMonth, setBaseMonth] = useState(today.getMonth());
-  const [baseYear, setBaseYear] = useState(today.getFullYear());
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredDealId, setHoveredDealId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -102,23 +104,34 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
 
   const hoveredDeal = deals.find(d => d.id === hoveredDealId) || null;
 
-  const prev = () => {
-    if (baseMonth === 0) {
-      setBaseMonth(11);
-      setBaseYear(baseYear - 1);
-    } else {
-      setBaseMonth(baseMonth - 1);
+  // Generate NUM_MONTHS months starting from current month
+  const months = useMemo(() => {
+    const result: { year: number; month: number }[] = [];
+    for (let i = 0; i < NUM_MONTHS; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      result.push({ year: d.getFullYear(), month: d.getMonth() });
     }
+    return result;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scrollPrev = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const monthEl = el.children[0] as HTMLElement | null;
+    const w = (monthEl?.offsetWidth ?? 320) + 24; // 24 = gap-6
+    el.scrollBy({ left: -w, behavior: "smooth" });
   };
 
-  const next = () => {
-    if (baseMonth === 11) {
-      setBaseMonth(0);
-      setBaseYear(baseYear + 1);
-    } else {
-      setBaseMonth(baseMonth + 1);
-    }
+  const scrollNext = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const monthEl = el.children[0] as HTMLElement | null;
+    const w = (monthEl?.offsetWidth ?? 320) + 24;
+    el.scrollBy({ left: w, behavior: "smooth" });
   };
+
+  const isAvailable = (dateKey: string): boolean =>
+    availabilityWindows.some((w) => dateKey >= w.start && dateKey <= w.end);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
@@ -153,6 +166,7 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
       const key = formatKey(date);
       const isToday = date.getTime() === today.getTime();
       const isPast = date < today;
+      const available = !isPast && isAvailable(key);
       const dayDeals = getDealsForDate(key);
 
       // Create slots for each row
@@ -167,7 +181,7 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
       days.push(
         <div
           key={day}
-          className={`h-14 flex flex-col pt-1 ${isPast ? "bg-neutral-50" : "bg-white"}`}
+          className={`h-14 flex flex-col pt-1 ${isPast ? "bg-neutral-50" : available ? "bg-blue-50" : "bg-white"}`}
         >
           <span
             className={`text-xs text-center mb-1 ${
@@ -204,7 +218,7 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
                 >
                   {isStart && (
                     <span className="text-[8px] font-bold text-white pl-1 truncate">
-                      {deal.destination}
+                      €{deal.price}
                     </span>
                   )}
                 </button>
@@ -228,7 +242,7 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
     }
 
     return (
-      <div className="flex-1 min-w-[280px]">
+      <div key={`${year}-${month}`} className="flex-none min-w-[280px] w-[calc(50%-12px)]">
         <h3 className="text-sm font-semibold text-neutral-900 mb-3">{monthName}</h3>
         <div className="grid grid-cols-7 gap-px bg-neutral-200">
           {WEEKDAYS.map((d) => (
@@ -241,9 +255,6 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
       </div>
     );
   };
-
-  const month2 = baseMonth === 11 ? 0 : baseMonth + 1;
-  const year2 = baseMonth === 11 ? baseYear + 1 : baseYear;
 
   return (
     <div>
@@ -258,19 +269,22 @@ export default function DealsCalendar({ deals }: DealsCalendarProps) {
       </div>
 
       {/* Calendar */}
-      <div className="flex items-center gap-3">
-        <button onClick={prev} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700">
+      <div className="flex items-center gap-2">
+        <button onClick={scrollPrev} className="flex-none p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <div className="flex gap-6 flex-1 overflow-x-auto">
-          {renderMonth(baseYear, baseMonth)}
-          {renderMonth(year2, month2)}
+        <div
+          ref={scrollRef}
+          className="flex gap-6 flex-1 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {months.map(({ year, month }) => renderMonth(year, month))}
         </div>
 
-        <button onClick={next} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700">
+        <button onClick={scrollNext} className="flex-none p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
           </svg>

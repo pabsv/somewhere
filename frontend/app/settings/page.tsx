@@ -6,16 +6,23 @@ import AirportSelector from "@/components/settings/AirportSelector";
 import DestinationPicker from "@/components/settings/DestinationPicker";
 import TripPreferences from "@/components/settings/TripPreferences";
 import Button from "@/components/ui/Button";
-import { loadPreferences, savePreferences } from "@/lib/storage";
+import { getPreferences, savePreferences } from "@/lib/api";
 import { UserPreferences, DateWindow } from "@/types";
+
+function formatShortDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
 
 export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Load preferences on mount
   useEffect(() => {
-    setPrefs(loadPreferences());
+    getPreferences().then(setPrefs);
   }, []);
 
   if (!prefs) return null;
@@ -31,9 +38,11 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const clearAvailability = () => {
-    updatePrefs({ availability: [] });
+  const removeWindow = (index: number) => {
+    updatePrefs({ availability: prefs.availability.filter((_, i) => i !== index) });
   };
+
+  const clearAvailability = () => updatePrefs({ availability: [] });
 
   return (
     <div className="max-w-3xl">
@@ -62,16 +71,34 @@ export default function SettingsPage() {
         </div>
         <p className="text-sm text-neutral-500 mb-4">
           Drag on the calendar to select when you can travel.
-          {prefs.availability.length > 0 &&
-            ` ${prefs.availability.length} window${prefs.availability.length > 1 ? "s" : ""} selected.`}
         </p>
         <div className="border border-neutral-200 p-6">
           <TwoMonthCalendar
             selectedRanges={prefs.availability}
-            onRangesChange={(ranges) => updatePrefs({ availability: ranges })}
+            onRangesChange={(ranges: DateWindow[]) => updatePrefs({ availability: ranges })}
             mode="select"
           />
         </div>
+
+        {/* Individual range removal */}
+        {prefs.availability.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {prefs.availability.map((window, i) => (
+              <button
+                key={i}
+                onClick={() => removeWindow(i)}
+                className="flex items-center gap-1.5 px-2 py-0.5 text-xs border border-neutral-300 text-neutral-600 hover:border-neutral-500 hover:text-neutral-900"
+              >
+                <span>
+                  {window.label
+                    ? window.label
+                    : `${formatShortDate(window.start)} – ${formatShortDate(window.end)}`}
+                </span>
+                <span className="text-neutral-400">×</span>
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Airports */}
@@ -125,7 +152,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Save button (bottom) */}
+      {/* Save (bottom) */}
       <div className="border-t border-neutral-200 pt-6">
         <Button onClick={handleSave} variant={saved ? "secondary" : "primary"}>
           {saved ? "Saved" : "Save changes"}

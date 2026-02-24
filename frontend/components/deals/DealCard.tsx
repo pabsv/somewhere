@@ -4,14 +4,19 @@ interface DealCardProps {
   deal: Deal;
 }
 
+// Parse YYYY-MM-DD as local date (not UTC midnight, which shifts the date for UTC+X users)
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export default function DealCard({ deal }: DealCardProps) {
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return parseLocalDate(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
   const days = Math.ceil(
-    (new Date(deal.return_date).getTime() - new Date(deal.outbound_date).getTime()) /
+    (parseLocalDate(deal.return_date).getTime() - parseLocalDate(deal.outbound_date).getTime()) /
       (1000 * 60 * 60 * 24)
   );
 
