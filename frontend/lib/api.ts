@@ -10,7 +10,7 @@ import { loadPreferences, savePreferences as storageSave } from "@/lib/storage";
 import { getDestination } from "@/data/destinations";
 
 const USE_MOCK = false;
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
 
 // ─── Backend response shape ────────────────────────────────────────────────────
 // Matches FlightModel.to_api_dict() from database/models/flight.py exactly.
@@ -55,7 +55,7 @@ function transformFlight(f: BackendFlight): Deal {
 export async function getDeals(): Promise<Deal[]> {
   if (USE_MOCK) return mockDeals;
 
-  const res = await fetch(`${API_BASE}/api/deals`, { credentials: "include" });
+  const res = await fetch(`${API_BASE}/api/deals`);
   if (!res.ok) throw new Error(`Failed to fetch deals: ${res.status}`);
   const data: { deals: BackendFlight[] } = await res.json();
   return data.deals.map(transformFlight);
@@ -65,7 +65,7 @@ export async function getDeals(): Promise<Deal[]> {
 export async function getPreferences(): Promise<UserPreferences> {
   if (USE_MOCK) return loadPreferences();
 
-  const res = await fetch(`${API_BASE}/api/user/preferences`, { credentials: "include" });
+  const res = await fetch(`${API_BASE}/api/preferences`);
   if (!res.ok) throw new Error(`Failed to fetch preferences: ${res.status}`);
   return res.json();
 }
@@ -73,9 +73,8 @@ export async function getPreferences(): Promise<UserPreferences> {
 export async function savePreferences(prefs: UserPreferences): Promise<void> {
   if (USE_MOCK) { storageSave(prefs); return; }
 
-  const res = await fetch(`${API_BASE}/api/user/preferences`, {
+  const res = await fetch(`${API_BASE}/api/preferences`, {
     method: "PUT",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(prefs),
   });
