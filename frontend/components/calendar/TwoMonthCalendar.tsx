@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import MonthGrid from "./MonthGrid";
 import { DateWindow } from "@/types";
+
+const NUM_MONTHS = 6;
 
 interface TwoMonthCalendarProps {
   selectedRanges: DateWindow[];
@@ -12,8 +14,12 @@ interface TwoMonthCalendarProps {
   onDayClick?: (date: string) => void;
 }
 
+// Local-date safe key (avoids UTC shift for UTC+ timezones)
 function formatDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function isInRange(date: Date, range: DateWindow): boolean {
@@ -29,33 +35,37 @@ export default function TwoMonthCalendar({
   onDayClick,
 }: TwoMonthCalendarProps) {
   const today = new Date();
-  const [baseMonth, setBaseMonth] = useState(today.getMonth());
-  const [baseYear, setBaseYear] = useState(today.getFullYear());
+  today.setHours(0, 0, 0, 0);
 
-  // Drag selection state
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Date | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
 
-  const secondMonth = baseMonth === 11 ? 0 : baseMonth + 1;
-  const secondYear = baseMonth === 11 ? baseYear + 1 : baseYear;
-
-  const prevMonths = () => {
-    if (baseMonth === 0) {
-      setBaseMonth(11);
-      setBaseYear(baseYear - 1);
-    } else {
-      setBaseMonth(baseMonth - 1);
+  const months = useMemo(() => {
+    const result: { year: number; month: number }[] = [];
+    for (let i = 0; i < NUM_MONTHS; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      result.push({ year: d.getFullYear(), month: d.getMonth() });
     }
+    return result;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scrollPrev = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const monthEl = el.children[0] as HTMLElement | null;
+    const w = (monthEl?.offsetWidth ?? 320) + 24;
+    el.scrollBy({ left: -w, behavior: "smooth" });
   };
 
-  const nextMonths = () => {
-    if (baseMonth === 11) {
-      setBaseMonth(0);
-      setBaseYear(baseYear + 1);
-    } else {
-      setBaseMonth(baseMonth + 1);
-    }
+  const scrollNext = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const monthEl = el.children[0] as HTMLElement | null;
+    const w = (monthEl?.offsetWidth ?? 320) + 24;
+    el.scrollBy({ left: w, behavior: "smooth" });
   };
 
   const handleMouseDown = useCallback((date: Date) => {
@@ -82,7 +92,7 @@ export default function TwoMonthCalendar({
     const start = dragStart < dragEnd ? dragStart : dragEnd;
     const end = dragStart < dragEnd ? dragEnd : dragStart;
 
-    // Check if clicking on existing range to remove it
+    // Single-click on an existing range removes it
     const startKey = formatDateKey(dragStart);
     const endKey = formatDateKey(dragEnd);
     if (startKey === endKey) {
@@ -96,7 +106,6 @@ export default function TwoMonthCalendar({
       }
     }
 
-    // Add new range
     const newRange: DateWindow = {
       start: formatDateKey(start),
       end: formatDateKey(end),
@@ -113,14 +122,6 @@ export default function TwoMonthCalendar({
     const start = dragStart < dragEnd ? dragStart : dragEnd;
     const end = dragStart < dragEnd ? dragEnd : dragStart;
     return date >= start && date <= end;
-  };
-
-  const isSelected = (date: Date): boolean => {
-    return selectedRanges.some(r => isInRange(date, r));
-  };
-
-  const hasDeal = (date: Date): boolean => {
-    return dealDates.includes(formatDateKey(date));
   };
 
   const renderDay = ({ date, isCurrentMonth, isToday, isPast }: {
@@ -143,7 +144,7 @@ export default function TwoMonthCalendar({
         onClick={() => mode === "view" && deal && onDayClick?.(formatDateKey(date))}
         className={`
           h-14 flex flex-col pt-1 text-sm select-none relative
-          ${!isCurrentMonth ? "text-neutral-300" : ""}
+          ${!isCurrentMonth ? "text-neutral-300 bg-white" : ""}
           ${isPast && isCurrentMonth ? "text-neutral-300 bg-neutral-50" : ""}
           ${isCurrentMonth && !isPast ? "cursor-pointer" : ""}
           ${selected && !inDrag ? "bg-blue-100" : ""}
@@ -180,44 +181,45 @@ export default function TwoMonthCalendar({
     );
   };
 
+  const isSelected = (date: Date) => selectedRanges.some(r => isInRange(date, r));
+  const hasDeal = (date: Date) => dealDates.includes(formatDateKey(date));
+
   return (
     <div
       onMouseUp={handleMouseUp}
       onMouseLeave={() => isDragging && handleMouseUp()}
       className="select-none"
     >
-      {/* Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
         <button
-          onClick={prevMonths}
-          className="p-1 text-neutral-500 hover:text-neutral-900"
+          onClick={scrollPrev}
+          className="flex-none p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+
+        <div
+          ref={scrollRef}
+          className="flex gap-6 flex-1 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {months.map(({ year, month }) => (
+            <div key={`${year}-${month}`} className="flex-none min-w-[280px] w-[calc(50%-12px)]">
+              <MonthGrid year={year} month={month} renderDay={renderDay} />
+            </div>
+          ))}
+        </div>
+
         <button
-          onClick={nextMonths}
-          className="p-1 text-neutral-500 hover:text-neutral-900"
+          onClick={scrollNext}
+          className="flex-none p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
           </svg>
         </button>
-      </div>
-
-      {/* Two month grids */}
-      <div className="grid grid-cols-2 gap-8">
-        <MonthGrid
-          year={baseYear}
-          month={baseMonth}
-          renderDay={renderDay}
-        />
-        <MonthGrid
-          year={secondYear}
-          month={secondMonth}
-          renderDay={renderDay}
-        />
       </div>
     </div>
   );

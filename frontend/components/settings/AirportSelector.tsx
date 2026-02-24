@@ -1,7 +1,12 @@
 "use client";
 
-import { airports, getNearbyAirports } from "@/data/airports";
-import Chip from "@/components/ui/Chip";
+import { useState, useRef, useEffect } from "react";
+import { airports } from "@/data/airports";
+import { Airport } from "@/types";
+
+const COUNTRY_NAMES: Record<string, string> = {
+  NL: "netherlands", BE: "belgium", DE: "germany",
+};
 
 interface AirportSelectorProps {
   homeAirport: string;
@@ -16,66 +21,128 @@ export default function AirportSelector({
   onHomeChange,
   onNearbyChange,
 }: AirportSelectorProps) {
-  const suggestions = getNearbyAirports(homeAirport);
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const toggleNearby = (code: string) => {
-    if (nearbyAirports.includes(code)) {
+  const allSelected = [homeAirport, ...nearbyAirports].filter(Boolean);
+
+  const filtered = airports.filter((a) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      a.code.toLowerCase().includes(q) ||
+      a.name.toLowerCase().includes(q) ||
+      a.city.toLowerCase().includes(q) ||
+      a.country.toLowerCase().includes(q) ||
+      (COUNTRY_NAMES[a.country] ?? "").includes(q)
+    );
+  });
+
+  const toggle = (airport: Airport) => {
+    const { code } = airport;
+    if (code === homeAirport) {
+      // Remove home → promote first nearby, or clear
+      if (nearbyAirports.length > 0) {
+        const [newHome, ...rest] = nearbyAirports;
+        onHomeChange(newHome);
+        onNearbyChange(rest);
+      } else {
+        onHomeChange("");
+      }
+    } else if (nearbyAirports.includes(code)) {
       onNearbyChange(nearbyAirports.filter((c) => c !== code));
     } else {
-      onNearbyChange([...nearbyAirports, code]);
+      // Add — first airport becomes home, rest are nearby
+      if (!homeAirport) {
+        onHomeChange(code);
+      } else {
+        onNearbyChange([...nearbyAirports, code]);
+      }
     }
+    setQuery("");
   };
 
-  const handleHomeChange = (code: string) => {
-    onHomeChange(code);
-    // Auto-clear nearby airports that are now the home
-    if (nearbyAirports.includes(code)) {
-      onNearbyChange(nearbyAirports.filter((c) => c !== code));
-    }
-  };
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Home airport */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-2">
-          Home airport
-        </label>
-        <select
-          value={homeAirport}
-          onChange={(e) => handleHomeChange(e.target.value)}
-          className="w-full px-3 py-2 border border-neutral-300 bg-white text-sm"
-        >
-          {airports.map((a) => (
-            <option key={a.code} value={a.code}>
-              {a.code} – {a.name}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div ref={containerRef} className="space-y-3">
+      {/* Search input */}
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Search by airport, city or country…"
+          className="w-full px-3 py-2 border border-neutral-300 text-sm focus:outline-none focus:border-neutral-500"
+        />
 
-      {/* Nearby airports */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-2">
-          Also search from
-        </label>
-        {suggestions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((airport) => (
-              <Chip
-                key={airport.code}
-                selected={nearbyAirports.includes(airport.code)}
-                onClick={() => toggleNearby(airport.code)}
-                size="sm"
-              >
-                {airport.code}
-              </Chip>
-            ))}
+        {isOpen && filtered.length > 0 && (
+          <div className="absolute z-20 top-full left-0 right-0 border border-neutral-200 bg-white shadow-md max-h-52 overflow-y-auto">
+            {filtered.map((a) => {
+              const isHome = a.code === homeAirport;
+              const isNearby = nearbyAirports.includes(a.code);
+              const isSelected = isHome || isNearby;
+              return (
+                <button
+                  key={a.code}
+                  onMouseDown={(e) => { e.preventDefault(); toggle(a); }}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-neutral-50 ${isSelected ? "bg-blue-50" : ""}`}
+                >
+                  <span>
+                    <span className="font-medium">{a.code}</span>
+                    <span className="text-neutral-500"> – {a.city}, {a.name}</span>
+                  </span>
+                  {isSelected && (
+                    <span className="text-xs text-blue-500 ml-3 shrink-0">
+                      {isHome ? "home ×" : "nearby ×"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <p className="text-sm text-neutral-500">No nearby airports found</p>
         )}
       </div>
+
+      {/* Selected chips */}
+      {allSelected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {allSelected.map((code) => {
+            const airport = airports.find((a) => a.code === code);
+            const isHome = code === homeAirport;
+            return (
+              <span
+                key={code}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full ${
+                  isHome
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-neutral-100 text-neutral-700"
+                }`}
+              >
+                <span className="font-medium">{code}</span>
+                {isHome && <span className="text-blue-400">home</span>}
+                <button
+                  onClick={() => airport && toggle(airport)}
+                  className="text-neutral-400 hover:text-neutral-700 leading-none ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

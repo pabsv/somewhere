@@ -67,7 +67,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-xl font-semibold text-neutral-900">Settings</h1>

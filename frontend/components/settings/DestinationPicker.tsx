@@ -1,131 +1,125 @@
 "use client";
 
-import { useState } from "react";
-import { destinations, regions, getDestinationsByRegion } from "@/data/destinations";
-import Chip from "@/components/ui/Chip";
+import { useState, useRef, useEffect } from "react";
+import { destinations } from "@/data/destinations";
+import { Destination } from "@/types";
+
+const COUNTRY_NAMES: Record<string, string> = {
+  ES: "spain", PT: "portugal", IT: "italy", GR: "greece", HU: "hungary",
+  CZ: "czechia czech", PL: "poland", AT: "austria", HR: "croatia",
+  RS: "serbia", BG: "bulgaria", RO: "romania", DK: "denmark", SE: "sweden",
+  NO: "norway", FI: "finland", IS: "iceland", IE: "ireland", GB: "uk united kingdom england",
+  MA: "morocco", MT: "malta", FR: "france", DE: "germany", NL: "netherlands", BE: "belgium",
+};
 
 interface DestinationPickerProps {
   selected: string[];
   onChange: (codes: string[]) => void;
 }
 
-export default function DestinationPicker({
-  selected,
-  onChange,
-}: DestinationPickerProps) {
-  const [search, setSearch] = useState("");
+export default function DestinationPicker({ selected, onChange }: DestinationPickerProps) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const toggle = (code: string) => {
-    if (selected.includes(code)) {
-      onChange(selected.filter((c) => c !== code));
+  const filtered = destinations.filter((d) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      d.code.toLowerCase().includes(q) ||
+      d.name.toLowerCase().includes(q) ||
+      d.country.toLowerCase().includes(q) ||
+      (COUNTRY_NAMES[d.country] ?? "").includes(q)
+    );
+  });
+
+  const toggle = (dest: Destination) => {
+    if (selected.includes(dest.code)) {
+      onChange(selected.filter((c) => c !== dest.code));
     } else {
-      onChange([...selected, code]);
+      onChange([...selected, dest.code]);
     }
+    setQuery("");
   };
 
-  const selectRegion = (region: string) => {
-    const regionCodes = getDestinationsByRegion(region).map((d) => d.code);
-    const allSelected = regionCodes.every((c) => selected.includes(c));
-    if (allSelected) {
-      onChange(selected.filter((c) => !regionCodes.includes(c)));
-    } else {
-      onChange([...new Set([...selected, ...regionCodes])]);
-    }
-  };
-
-  const clearAll = () => onChange([]);
-
-  const filteredDestinations = search
-    ? destinations.filter(
-        (d) =>
-          d.name.toLowerCase().includes(search.toLowerCase()) ||
-          d.code.toLowerCase().includes(search.toLowerCase())
-      )
-    : null;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-neutral-500">
-          {selected.length} selected
-        </span>
-        {selected.length > 0 && (
-          <button
-            onClick={clearAll}
-            className="text-sm text-neutral-500 hover:text-neutral-900"
-          >
-            Clear all
-          </button>
+    <div ref={containerRef} className="space-y-3">
+      {/* Search input */}
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Search by city, country or code…"
+          className="w-full px-3 py-2 border border-neutral-300 text-sm focus:outline-none focus:border-neutral-500"
+        />
+
+        {isOpen && filtered.length > 0 && (
+          <div className="absolute z-20 top-full left-0 right-0 border border-neutral-200 bg-white shadow-md max-h-56 overflow-y-auto">
+            {filtered.slice(0, 25).map((d) => {
+              const isSelected = selected.includes(d.code);
+              return (
+                <button
+                  key={d.code}
+                  onMouseDown={(e) => { e.preventDefault(); toggle(d); }}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-neutral-50 ${isSelected ? "bg-blue-50" : ""}`}
+                >
+                  <span>
+                    <span className="font-medium">{d.name}</span>
+                    <span className="text-neutral-500"> – {d.country}</span>
+                  </span>
+                  <span className={`text-xs font-mono ml-3 shrink-0 ${isSelected ? "text-blue-500" : "text-neutral-400"}`}>
+                    {isSelected ? `${d.code} ×` : d.code}
+                  </span>
+                </button>
+              );
+            })}
+            {filtered.length > 25 && (
+              <div className="px-3 py-2 text-xs text-neutral-400 border-t border-neutral-100">
+                {filtered.length - 25} more — keep typing to narrow down
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Search */}
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search destinations..."
-        className="w-full px-3 py-2 border border-neutral-300 text-sm"
-      />
-
-      {/* Search results */}
-      {filteredDestinations && (
-        <div className="flex flex-wrap gap-2 pb-4 border-b border-neutral-200">
-          {filteredDestinations.length === 0 ? (
-            <span className="text-sm text-neutral-500">No results</span>
-          ) : (
-            filteredDestinations.map((d) => (
-              <Chip
-                key={d.code}
-                selected={selected.includes(d.code)}
-                onClick={() => toggle(d.code)}
-                size="sm"
-              >
-                {d.name}
-              </Chip>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Regions */}
-      {!search && (
-        <div className="space-y-4">
-          {regions.map((region) => {
-            const regionDests = getDestinationsByRegion(region);
-            const allSelected = regionDests.every((d) =>
-              selected.includes(d.code)
-            );
-
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((code) => {
+            const dest = destinations.find((d) => d.code === code);
             return (
-              <div key={region}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                    {region}
-                  </span>
-                  <button
-                    onClick={() => selectRegion(region)}
-                    className="text-xs text-neutral-400 hover:text-neutral-700"
-                  >
-                    {allSelected ? "clear" : "all"}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {regionDests.map((d) => (
-                    <Chip
-                      key={d.code}
-                      selected={selected.includes(d.code)}
-                      onClick={() => toggle(d.code)}
-                      size="sm"
-                    >
-                      {d.name}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
+              <span
+                key={code}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-neutral-100 text-neutral-700 rounded-full"
+              >
+                <span>{dest?.name ?? code}</span>
+                <button
+                  onClick={() => onChange(selected.filter((c) => c !== code))}
+                  className="text-neutral-400 hover:text-neutral-700 leading-none"
+                >
+                  ×
+                </button>
+              </span>
             );
           })}
+          <button
+            onClick={() => onChange([])}
+            className="text-xs text-neutral-400 hover:text-neutral-700 px-1 py-1"
+          >
+            Clear all
+          </button>
         </div>
       )}
     </div>
