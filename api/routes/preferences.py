@@ -35,8 +35,6 @@ class UserPreferences(BaseModel):
     nearby_airports: list[str]
     destinations: list[str]
     availability: list[DateWindow]
-    min_days: int
-    max_days: int
     max_price: float    # stored as notifications.max_price_alert on the backend
     direct_only: bool
 
@@ -65,8 +63,6 @@ def get_preferences(user_id: str = Depends(get_default_user_id)):
             }
             for w in availability
         ],
-        "min_days": user.search_preferences.min_days,
-        "max_days": user.search_preferences.max_days,
         "max_price": user.notifications.max_price_alert,
         "direct_only": user.search_preferences.direct_only,
     }
@@ -83,12 +79,7 @@ def save_preferences(
 
     # Update user document
     user_repo.update_airports(user_id, prefs.home_airport, prefs.nearby_airports)
-    user_repo.update_search_preferences(
-        user_id,
-        min_days=prefs.min_days,
-        max_days=prefs.max_days,
-        direct_only=prefs.direct_only,
-    )
+    user_repo.update_search_preferences(user_id, direct_only=prefs.direct_only)
     user_repo.update_notifications(user_id, max_price_alert=prefs.max_price)
 
     # Replace availability windows (delete all, insert new)

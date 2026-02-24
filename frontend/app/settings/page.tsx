@@ -1,29 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import TwoMonthCalendar from "@/components/calendar/TwoMonthCalendar";
 import AirportSelector from "@/components/settings/AirportSelector";
 import DestinationPicker from "@/components/settings/DestinationPicker";
 import TripPreferences from "@/components/settings/TripPreferences";
 import Button from "@/components/ui/Button";
-import { getPreferences, savePreferences } from "@/lib/api";
+import { getPreferences, savePreferences, triggerScrape, getScrapeStatus, ScrapeState } from "@/lib/api";
 import { UserPreferences, DateWindow } from "@/types";
-
-function formatShortDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [saved, setSaved] = useState(false);
+  const [scrape, setScrape] = useState<ScrapeState>({
+    status: "idle",
+    started_at: null,
+    finished_at: null,
+    result: null,
+    error: null,
+  });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     getPreferences().then(setPrefs);
+    // Sync scrape state on mount in case a scrape is already running
+    getScrapeStatus().then(setScrape).catch(() => {});
   }, []);
+
+  // Poll status while running
+  useEffect(() => {
+    if (scrape.status === "running") {
+      pollRef.current = setInterval(() => {
+        getScrapeStatus().then(setScrape).catch(() => {});
+      }, 2000);
+    } else {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [scrape.status]);
 
   if (!prefs) return null;
 
@@ -38,11 +57,14 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const removeWindow = (index: number) => {
-    updatePrefs({ availability: prefs.availability.filter((_, i) => i !== index) });
+  const handleScrape = async () => {
+    setScrape(s => ({ ...s, status: "running", result: null, error: null }));
+    try {
+      await triggerScrape();
+    } catch (e) {
+      setScrape(s => ({ ...s, status: "error", error: String(e) }));
+    }
   };
-
-  const clearAvailability = () => updatePrefs({ availability: [] });
 
   return (
     <div className="max-w-3xl">
@@ -56,19 +78,9 @@ export default function SettingsPage() {
 
       {/* Availability */}
       <section className="mb-10">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
-            Availability
-          </h2>
-          {prefs.availability.length > 0 && (
-            <button
-              onClick={clearAvailability}
-              className="text-sm text-neutral-500 hover:text-neutral-900"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
+        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-4">
+          Availability
+        </h2>
         <p className="text-sm text-neutral-500 mb-4">
           Drag on the calendar to select when you can travel.
         </p>
@@ -79,26 +91,6 @@ export default function SettingsPage() {
             mode="select"
           />
         </div>
-
-        {/* Individual range removal */}
-        {prefs.availability.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {prefs.availability.map((window, i) => (
-              <button
-                key={i}
-                onClick={() => removeWindow(i)}
-                className="flex items-center gap-1.5 px-2 py-0.5 text-xs border border-neutral-300 text-neutral-600 hover:border-neutral-500 hover:text-neutral-900"
-              >
-                <span>
-                  {window.label
-                    ? window.label
-                    : `${formatShortDate(window.start)} – ${formatShortDate(window.end)}`}
-                </span>
-                <span className="text-neutral-400">×</span>
-              </button>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Airports */}
@@ -129,34 +121,57 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Trip preferences */}
+      {/* Search preferences */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-4">
-          Trip Preferences
+        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-1">
+          Search Preferences
         </h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          Trip length is calculated automatically from your availability windows.
+        </p>
         <div className="border border-neutral-200 p-6">
           <TripPreferences
-            minDays={prefs.min_days}
-            maxDays={prefs.max_days}
             maxPrice={prefs.max_price}
             directOnly={prefs.direct_only}
-            onChange={({ minDays, maxDays, maxPrice, directOnly }) =>
-              updatePrefs({
-                min_days: minDays,
-                max_days: maxDays,
-                max_price: maxPrice,
-                direct_only: directOnly,
-              })
+            onChange={({ maxPrice, directOnly }) =>
+              updatePrefs({ max_price: maxPrice, direct_only: directOnly })
             }
           />
         </div>
       </section>
 
-      {/* Save (bottom) */}
-      <div className="border-t border-neutral-200 pt-6">
+      {/* Save + Scrape */}
+      <div className="border-t border-neutral-200 pt-6 flex items-start justify-between gap-8">
         <Button onClick={handleSave} variant={saved ? "secondary" : "primary"}>
           {saved ? "Saved" : "Save changes"}
         </Button>
+
+        <div className="flex flex-col items-end gap-2">
+          <Button
+            onClick={handleScrape}
+            variant="secondary"
+            disabled={scrape.status === "running"}
+          >
+            {scrape.status === "running" ? "Scraping…" : "Run scraper"}
+          </Button>
+
+          {scrape.status === "running" && (
+            <p className="text-xs text-neutral-500">
+              Searching Azair for your destinations and dates — this takes a few minutes.
+            </p>
+          )}
+
+          {scrape.status === "done" && scrape.result && (
+            <p className="text-xs text-neutral-600">
+              Done — {scrape.result.new} new flights, {scrape.result.updated} updated,{" "}
+              <span className="font-medium">{scrape.result.deals} deals</span>
+            </p>
+          )}
+
+          {scrape.status === "error" && (
+            <p className="text-xs text-red-600">{scrape.error}</p>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -26,8 +26,6 @@ export interface UserPreferences {
   nearby_airports: string[];
   destinations: string[];
   availability: DateWindow[];
-  min_days: number;
-  max_days: number;
   max_price: number;
   direct_only: boolean;
 }

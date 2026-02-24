@@ -1,5 +1,11 @@
 """
 User matcher service - match flights to user availability and preferences.
+
+Trip duration is derived automatically from each availability window using the
+70% rule:  min_days = max(2, round(window_length * 0.7)),  max_days = window_length
+
+This means a 7-day window yields 5–7 day trips, a 4-day window yields 3–4 day
+trips, etc.  Users no longer need to set min/max days manually.
 """
 
 import logging
@@ -15,6 +21,25 @@ from ..repositories.destination_repo import DestinationRepository
 from ..repositories.flight_repo import FlightRepository
 
 logger = logging.getLogger(__name__)
+
+
+def _window_trip_range(window_length_days: int) -> tuple[int, int]:
+    """
+    Derive the appropriate min/max trip duration for an availability window.
+
+    Rule: min = max(2, round(N × 0.7)),  max = N
+
+    Examples:
+        3 days  →  min 2,  max 3
+        4 days  →  min 3,  max 4
+        5 days  →  min 4,  max 5
+        7 days  →  min 5,  max 7
+       10 days  →  min 7,  max 10
+       14 days  →  min 10, max 14
+    """
+    min_days = max(2, round(window_length_days * 0.7))
+    max_days = window_length_days
+    return min_days, max_days
 
 
 class UserMatcher:
@@ -75,7 +100,6 @@ class UserMatcher:
         # Get user's airports (home + nearby)
         origins = user.all_airports
 
-        # Get user's search preferences
         prefs = user.search_preferences
         max_price = user.notifications.max_price_alert
 
@@ -88,6 +112,13 @@ class UserMatcher:
         for avail in availabilities:
             start_str = avail.start_date.strftime("%Y-%m-%d")
             end_str = avail.end_date.strftime("%Y-%m-%d")
+
+            # Derive trip duration range from window length (70% rule)
+            window_length = (avail.end_date - avail.start_date).days + 1
+            min_days, max_days = _window_trip_range(window_length)
+
+            logger.debug(f"Window {start_str}–{end_str} ({window_length}d): "
+                        f"trips {min_days}–{max_days} days")
 
             # Get flights in this date range
             for origin in origins:
@@ -106,9 +137,9 @@ class UserMatcher:
                             continue
                         if prefs.direct_only and not flight.is_direct:
                             continue
-                        if flight.duration_days < prefs.min_days:
+                        if flight.duration_days < min_days:
                             continue
-                        if flight.duration_days > prefs.max_days:
+                        if flight.duration_days > max_days:
                             continue
                         if deals_only and not flight.is_deal:
                             continue
@@ -186,20 +217,26 @@ class UserMatcher:
             if flight.price > user.notifications.max_price_alert:
                 continue
 
-            # Check search preferences
-            prefs = user.search_preferences
-            if prefs.direct_only and not flight.is_direct:
-                continue
-            if flight.duration_days < prefs.min_days:
-                continue
-            if flight.duration_days > prefs.max_days:
+            # Check direct-only preference
+            if user.search_preferences.direct_only and not flight.is_direct:
                 continue
 
-            # Check availability
+            # Check availability windows — and validate trip duration against
+            # each window's derived range (70% rule)
             availabilities = self.availability_repo.find_active_in_range(
                 str(user_id), out_date, ret_date
             )
             if not availabilities:
+                continue
+
+            duration_ok = False
+            for avail in availabilities:
+                window_length = (avail.end_date - avail.start_date).days + 1
+                min_days, max_days = _window_trip_range(window_length)
+                if min_days <= flight.duration_days <= max_days:
+                    duration_ok = True
+                    break
+            if not duration_ok:
                 continue
 
             # User matches!

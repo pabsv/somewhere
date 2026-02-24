@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .dependencies import ensure_default_user
-from .routes import deals, preferences
+from .routes import deals, preferences, scrape
 
 
 @asynccontextmanager
@@ -35,12 +35,13 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:4173", "http://localhost:5173"],
-    allow_methods=["GET", "PUT"],
+    allow_methods=["GET", "PUT", "POST"],
     allow_headers=["*"],
 )
 
 app.include_router(deals.router)
 app.include_router(preferences.router)
+app.include_router(scrape.router)
 
 
 @app.get("/health")

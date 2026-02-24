@@ -133,6 +133,8 @@ export default function TwoMonthCalendar({
     const inDrag = isInDragRange(date);
     const deal = hasDeal(date);
     const canInteract = !isPast && isCurrentMonth;
+    const dateKey = formatDateKey(date);
+    const endingRange = mode === "select" ? selectedRanges.find(r => dateKey === r.end) : undefined;
 
     return (
       <div
@@ -140,20 +142,39 @@ export default function TwoMonthCalendar({
         onMouseEnter={() => handleMouseEnter(date)}
         onClick={() => mode === "view" && deal && onDayClick?.(formatDateKey(date))}
         className={`
-          h-10 flex items-center justify-center text-sm select-none relative
+          h-14 flex flex-col pt-1 text-sm select-none relative
           ${!isCurrentMonth ? "text-neutral-300" : ""}
-          ${isPast && isCurrentMonth ? "text-neutral-300" : ""}
+          ${isPast && isCurrentMonth ? "text-neutral-300 bg-neutral-50" : ""}
           ${isCurrentMonth && !isPast ? "cursor-pointer" : ""}
-          ${isToday ? "font-semibold" : ""}
-          ${selected && !inDrag ? "bg-neutral-100" : ""}
-          ${inDrag ? "bg-neutral-200" : ""}
+          ${selected && !inDrag ? "bg-blue-100" : ""}
+          ${inDrag ? "bg-blue-200" : ""}
           ${canInteract && !selected && !inDrag ? "hover:bg-neutral-50" : ""}
           ${mode === "view" && deal ? "cursor-pointer" : ""}
         `}
       >
-        {date.getDate()}
+        <span
+          className={`text-xs text-center ${
+            isToday
+              ? "w-5 h-5 mx-auto bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-medium"
+              : ""
+          }`}
+        >
+          {date.getDate()}
+        </span>
         {deal && (
           <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-500 rounded-full" />
+        )}
+        {endingRange && (
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRangesChange(selectedRanges.filter(r => r !== endingRange));
+            }}
+            className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center text-[11px] text-blue-400 hover:text-blue-700 leading-none"
+          >
+            ×
+          </button>
         )}
       </div>
     );

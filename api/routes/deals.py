@@ -6,7 +6,7 @@ Uses UserMatcher which filters against:
   - user's destination preferences
   - user's airports (home + nearby)
   - user's max_price (stored as notifications.max_price_alert)
-  - user's trip length (min_days / max_days)
+  - user's trip length (auto-derived from each availability window, 70% rule)
   - user's direct_only flag
 """
 

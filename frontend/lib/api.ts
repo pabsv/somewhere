@@ -80,3 +80,32 @@ export async function savePreferences(prefs: UserPreferences): Promise<void> {
   });
   if (!res.ok) throw new Error(`Failed to save preferences: ${res.status}`);
 }
+
+// ─── Scraper ──────────────────────────────────────────────────────────────────
+
+export interface ScrapeResult {
+  new: number;
+  updated: number;
+  deals: number;
+  hot_deals: number;
+}
+
+export interface ScrapeState {
+  status: "idle" | "running" | "done" | "error";
+  started_at: string | null;
+  finished_at: string | null;
+  result: ScrapeResult | null;
+  error: string | null;
+}
+
+export async function triggerScrape(): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/api/scrape`, { method: "POST" });
+  if (!res.ok) throw new Error(`Failed to start scrape: ${res.status}`);
+  return res.json();
+}
+
+export async function getScrapeStatus(): Promise<ScrapeState> {
+  const res = await fetch(`${API_BASE}/api/scrape/status`);
+  if (!res.ok) throw new Error(`Failed to get scrape status: ${res.status}`);
+  return res.json();
+}

@@ -51,22 +51,16 @@ class UserNotifications:
 @dataclass
 class UserSearchPreferences:
     """User's search preferences."""
-    min_days: int = 2  # Minimum trip duration
-    max_days: int = 7  # Maximum trip duration
     direct_only: bool = False  # Only show direct flights
 
     def to_dict(self) -> dict:
         return {
-            "min_days": self.min_days,
-            "max_days": self.max_days,
             "direct_only": self.direct_only
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "UserSearchPreferences":
         return cls(
-            min_days=data.get("min_days", 2),
-            max_days=data.get("max_days", 7),
             direct_only=data.get("direct_only", False)
         )
 
@@ -83,7 +77,7 @@ class User:
         "password_hash": "bcrypt_hash",
         "airports": { "home": "EIN", "nearby": ["AMS", "BRU"] },
         "notifications": { "daily_digest": true, "instant_alerts": true, "max_price_alert": 75 },
-        "search_preferences": { "min_days": 2, "max_days": 7, "direct_only": false },
+        "search_preferences": { "direct_only": false },
         "is_active": true,
         "created_at": datetime,
         "updated_at": datetime

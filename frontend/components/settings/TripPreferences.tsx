@@ -1,66 +1,22 @@
 "use client";
 
 interface TripPreferencesProps {
-  minDays: number;
-  maxDays: number;
   maxPrice: number;
   directOnly: boolean;
-  onChange: (prefs: {
-    minDays: number;
-    maxDays: number;
-    maxPrice: number;
-    directOnly: boolean;
-  }) => void;
+  onChange: (prefs: { maxPrice: number; directOnly: boolean }) => void;
 }
 
 export default function TripPreferences({
-  minDays,
-  maxDays,
   maxPrice,
   directOnly,
   onChange,
 }: TripPreferencesProps) {
-  const update = (partial: Partial<{
-    minDays: number;
-    maxDays: number;
-    maxPrice: number;
-    directOnly: boolean;
-  }>) => {
-    onChange({ minDays, maxDays, maxPrice, directOnly, ...partial });
+  const update = (partial: Partial<{ maxPrice: number; directOnly: boolean }>) => {
+    onChange({ maxPrice, directOnly, ...partial });
   };
 
   return (
     <div className="space-y-4">
-      {/* Trip length */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
-            Min days
-          </label>
-          <input
-            type="number"
-            min={1}
-            max={maxDays}
-            value={minDays}
-            onChange={(e) => update({ minDays: parseInt(e.target.value) || 1 })}
-            className="w-full px-3 py-2 border border-neutral-300 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
-            Max days
-          </label>
-          <input
-            type="number"
-            min={minDays}
-            max={30}
-            value={maxDays}
-            onChange={(e) => update({ maxDays: parseInt(e.target.value) || 7 })}
-            className="w-full px-3 py-2 border border-neutral-300 text-sm"
-          />
-        </div>
-      </div>
-
       {/* Max price */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-1">
