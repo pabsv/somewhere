@@ -13,6 +13,16 @@ export interface Deal {
   deal_score: number;    // 0-100
   is_hot_deal: boolean;
   azair_link: string;
+  // Extended flight details (from backend)
+  duration_days?: number;
+  outbound_departure?: string;
+  outbound_arrival?: string;
+  return_departure?: string;
+  return_arrival?: string;
+  outbound_duration?: string;
+  return_duration?: string;
+  outbound_stops?: number;
+  return_stops?: number;
 }
 
 export interface DateWindow {

@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { Deal, DateWindow } from "@/types";
 import { getColor } from "@/data/colors";
+import { buildAzairSearchUrl } from "@/lib/api";
 
 const NUM_MONTHS = 6;
 
@@ -54,10 +55,27 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
+  // Calendar view: one bar per destination+dates combo — keep best deal_score (then lowest price)
+  const calendarDeals = useMemo(() => {
+    const best = new Map<string, Deal>();
+    for (const deal of deals) {
+      const key = `${deal.destination}-${deal.outbound_date}-${deal.return_date}`;
+      const existing = best.get(key);
+      if (
+        !existing ||
+        deal.deal_score > existing.deal_score ||
+        (deal.deal_score === existing.deal_score && deal.price < existing.price)
+      ) {
+        best.set(key, deal);
+      }
+    }
+    return Array.from(best.values());
+  }, [deals]);
+
   // Assign each deal a consistent row index for stacking
   const dealRows = useMemo(() => {
     const rows: Deal[][] = [];
-    const sorted = [...deals].sort((a, b) => a.outbound_date.localeCompare(b.outbound_date));
+    const sorted = [...calendarDeals].sort((a, b) => a.outbound_date.localeCompare(b.outbound_date));
 
     for (const deal of sorted) {
       let placed = false;
@@ -81,12 +99,12 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
       });
     });
     return map;
-  }, [deals]);
+  }, [calendarDeals]);
 
   const maxRows = Math.max(...Object.values(dealRows), 0) + 1;
 
   const getDealsForDate = (dateKey: string): Deal[] => {
-    return deals
+    return calendarDeals
       .filter(d => dateKey >= d.outbound_date && dateKey <= d.return_date)
       .sort((a, b) => (dealRows[a.id] || 0) - (dealRows[b.id] || 0));
   };
@@ -102,7 +120,7 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
       .map(d => ({ code: d.destination, city: d.destination_city }));
   }, [deals]);
 
-  const hoveredDeal = deals.find(d => d.id === hoveredDealId) || null;
+  const hoveredDeal = calendarDeals.find(d => d.id === hoveredDealId) || null;
 
   // Generate NUM_MONTHS months starting from current month
   const months = useMemo(() => {
@@ -301,7 +319,10 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
             €{hoveredDeal.price} · {hoveredDeal.origin} → {hoveredDeal.destination_city}
           </div>
           <div className="text-neutral-400 mt-0.5">
-            {formatDisplayDate(hoveredDeal.outbound_date)} – {formatDisplayDate(hoveredDeal.return_date)} · {hoveredDeal.airline}
+            {formatDisplayDate(hoveredDeal.outbound_date)} – {formatDisplayDate(hoveredDeal.return_date)}
+            {hoveredDeal.duration_days ? ` · ${hoveredDeal.duration_days}d` : ""}
+            {" · "}{hoveredDeal.is_direct ? "Direct" : `${(hoveredDeal.outbound_stops ?? 0) + (hoveredDeal.return_stops ?? 0)} stop`}
+            {" · "}{hoveredDeal.airline}
           </div>
         </div>
       )}
@@ -320,20 +341,45 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
             <div className="text-sm text-neutral-600 space-y-1 mb-4">
               <div>
                 {formatDisplayDateLong(selectedDeal.outbound_date)} – {formatDisplayDateLong(selectedDeal.return_date)}
+                {selectedDeal.duration_days ? ` · ${selectedDeal.duration_days} days` : ""}
               </div>
-              <div>{selectedDeal.airline} · {selectedDeal.is_direct ? "Direct" : "1 stop"}</div>
+              {selectedDeal.outbound_departure && (
+                <div className="text-neutral-500">
+                  ↗ {selectedDeal.outbound_departure}–{selectedDeal.outbound_arrival}
+                  {selectedDeal.outbound_duration ? ` · ${selectedDeal.outbound_duration}` : ""}
+                  {selectedDeal.outbound_stops ? ` · ${selectedDeal.outbound_stops} stop` : " · Direct"}
+                </div>
+              )}
+              {selectedDeal.return_departure && (
+                <div className="text-neutral-500">
+                  ↙ {selectedDeal.return_departure}–{selectedDeal.return_arrival}
+                  {selectedDeal.return_duration ? ` · ${selectedDeal.return_duration}` : ""}
+                  {selectedDeal.return_stops ? ` · ${selectedDeal.return_stops} stop` : " · Direct"}
+                </div>
+              )}
+              <div>{selectedDeal.airline}</div>
               {selectedDeal.is_hot_deal && (
                 <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded">HOT DEAL</span>
               )}
             </div>
-            <a
-              href={selectedDeal.azair_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full bg-blue-600 text-white text-center py-2 text-sm font-medium rounded hover:bg-blue-700"
-            >
-              Book on Azair →
-            </a>
+            <div className="flex flex-col gap-2">
+              <a
+                href={selectedDeal.azair_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-blue-600 text-white text-center py-2 text-sm font-medium rounded hover:bg-blue-700"
+              >
+                Book this flight →
+              </a>
+              <a
+                href={buildAzairSearchUrl(selectedDeal)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full border border-neutral-300 text-neutral-700 text-center py-2 text-sm font-medium rounded hover:bg-neutral-50"
+              >
+                View alternatives
+              </a>
+            </div>
           </div>
         </div>
       )}
