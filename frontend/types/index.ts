@@ -11,7 +11,6 @@ export interface Deal {
   airline: string;
   is_direct: boolean;
   deal_score: number;    // 0-100
-  is_hot_deal: boolean;
   azair_link: string;
   // Extended flight details (from backend)
   duration_days?: number;

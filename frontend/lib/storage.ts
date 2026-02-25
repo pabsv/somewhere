@@ -1,5 +1,13 @@
 import { UserPreferences } from "@/types";
-import { defaultUserPreferences } from "@/data/mock-user";
+
+const defaultUserPreferences: UserPreferences = {
+  home_airport: "",
+  nearby_airports: [],
+  destinations: [],
+  availability: [],
+  max_price: 150,
+  direct_only: false,
+};
 
 const STORAGE_KEY = "flight-scraper-preferences";
 

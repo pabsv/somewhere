@@ -33,6 +33,7 @@ COLLECTION_DESTINATIONS = "destination_preferences"
 COLLECTION_FLIGHTS = "flights"
 COLLECTION_PRICE_HISTORY = "price_history"
 COLLECTION_ROUTE_STATS = "route_stats"
+COLLECTION_SCHEDULE_STATE = "schedule_state"
 
 # TTL settings
 PRICE_HISTORY_TTL_DAYS = 180  # Auto-delete price history after 180 days

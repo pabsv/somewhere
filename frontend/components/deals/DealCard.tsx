@@ -41,9 +41,6 @@ export default function DealCard({ deal }: DealCardProps) {
           <div className="text-lg font-semibold text-neutral-900">
             €{deal.price}
           </div>
-          {deal.is_hot_deal && (
-            <div className="text-xs text-emerald-600 font-medium">HOT</div>
-          )}
         </div>
       </div>
 

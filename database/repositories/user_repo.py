@@ -85,6 +85,11 @@ class UserRepository:
         docs = self.collection.find({"is_active": True})
         return [User.from_dict(doc) for doc in docs]
 
+    def find_all(self) -> list[User]:
+        """Find all users regardless of active status."""
+        docs = self.collection.find({})
+        return [User.from_dict(doc) for doc in docs]
+
     def find_users_wanting_destination(self, destination_code: str) -> list[User]:
         """
         Find all users who have a specific destination in their preferences.
@@ -182,6 +187,30 @@ class UserRepository:
             }
         )
         return result.modified_count > 0
+
+    def find_or_create(self, email: str, name: str) -> User:
+        """
+        Find an existing user by email or create a new one (no password required).
+        Updates the stored name if it has changed.
+        """
+        user = self.find_by_email(email)
+        if user:
+            if user.name != name:
+                self.collection.update_one(
+                    {"_id": user._id},
+                    {"$set": {"name": name, "updated_at": datetime.utcnow()}}
+                )
+                user.name = name
+            return user
+
+        user = User(
+            email=email.lower().strip(),
+            name=name.strip(),
+            password_hash="",
+        )
+        result = self.collection.insert_one(user.to_dict())
+        user._id = result.inserted_id
+        return user
 
     # Authentication
     def authenticate(self, email: str, password: str) -> Optional[User]:

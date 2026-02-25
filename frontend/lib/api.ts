@@ -5,13 +5,18 @@
 // Nothing else needs to change.
 
 import { Deal, UserPreferences, DealFilters } from "@/types";
-import { mockDeals } from "@/data/mock-deals";
 import { loadPreferences, savePreferences as storageSave } from "@/lib/storage";
 import { getDestination } from "@/data/destinations";
 import { getAirport } from "@/data/airports";
+import { getStoredUser } from "@/lib/auth";
 
 const USE_MOCK = false;
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
+
+function authHeaders(): HeadersInit {
+  const user = getStoredUser();
+  return user ? { "X-User-ID": user.user_id } : {};
+}
 
 // ─── Backend response shape ────────────────────────────────────────────────────
 // Matches FlightModel.to_api_dict() from database/models/flight.py exactly.
@@ -53,8 +58,6 @@ function transformFlight(f: BackendFlight): Deal {
     airline: f.airlines.join(", "),
     is_direct: f.is_direct,
     deal_score: f.deal_score,
-    // Mirrors backend thresholds in database/config.py
-    is_hot_deal: f.price < 75 || f.deal_score >= 90,
     azair_link: f.azair_link,
     duration_days: f.duration_days,
     outbound_departure: f.outbound_departure,
@@ -68,13 +71,39 @@ function transformFlight(f: BackendFlight): Deal {
   };
 }
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  user_id: string;
+  name: string;
+  email: string;
+}
+
+export async function login(name: string, email: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email }),
+  });
+  if (!res.ok) throw new Error(`Login failed: ${res.status}`);
+  return res.json();
+}
+
+export async function verifySession(userId: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { "X-User-ID": userId },
+  });
+  if (!res.ok) throw new Error("Session invalid");
+  return res.json();
+}
+
 // ─── Deals ────────────────────────────────────────────────────────────────────
 // Real API returns deals pre-filtered by user preferences (server-side matching).
 // Pages apply additional UI-level filtering on top (client-side).
 export async function getDeals(): Promise<Deal[]> {
-  if (USE_MOCK) return mockDeals;
+  if (USE_MOCK) return [];
 
-  const res = await fetch(`${API_BASE}/api/deals`);
+  const res = await fetch(`${API_BASE}/api/deals`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch deals: ${res.status}`);
   const data: { deals: BackendFlight[] } = await res.json();
   return data.deals.map(transformFlight);
@@ -84,7 +113,7 @@ export async function getDeals(): Promise<Deal[]> {
 export async function getPreferences(): Promise<UserPreferences> {
   if (USE_MOCK) return loadPreferences();
 
-  const res = await fetch(`${API_BASE}/api/preferences`);
+  const res = await fetch(`${API_BASE}/api/preferences`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch preferences: ${res.status}`);
   return res.json();
 }
@@ -94,7 +123,7 @@ export async function savePreferences(prefs: UserPreferences): Promise<void> {
 
   const res = await fetch(`${API_BASE}/api/preferences`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(prefs),
   });
   if (!res.ok) throw new Error(`Failed to save preferences: ${res.status}`);
@@ -118,14 +147,54 @@ export interface ScrapeState {
 }
 
 export async function triggerScrape(): Promise<{ status: string }> {
-  const res = await fetch(`${API_BASE}/api/scrape`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/api/scrape`, { method: "POST", headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to start scrape: ${res.status}`);
   return res.json();
 }
 
 export async function getScrapeStatus(): Promise<ScrapeState> {
-  const res = await fetch(`${API_BASE}/api/scrape/status`);
+  const res = await fetch(`${API_BASE}/api/scrape/status`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to get scrape status: ${res.status}`);
+  return res.json();
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  is_active: boolean;
+  created_at: string | null;
+  airports: { home: string; nearby: string[] };
+}
+
+export async function getAdminUsers(): Promise<{ users: AdminUser[]; total: number }> {
+  const res = await fetch(`${API_BASE}/api/admin/users`);
+  if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
+  return res.json();
+}
+
+export async function clearAllData(): Promise<{ deleted: Record<string, number> }> {
+  const res = await fetch(`${API_BASE}/api/admin/clear`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to clear data: ${res.status}`);
+  return res.json();
+}
+
+export interface OriginScheduleState {
+  origin: string;
+  status: "idle" | "running" | "done" | "error";
+  last_run_at: string | null;
+  finished_at: string | null;
+  next_run_at: string | null;
+  period_minutes: number | null;
+  last_result: { new: number; updated: number; deals: number; hot_deals: number } | null;
+  last_error: string | null;
+}
+
+export async function getScheduleStatus(): Promise<{ states: OriginScheduleState[] }> {
+  const res = await fetch(`${API_BASE}/api/admin/schedule`);
+  if (!res.ok) throw new Error(`Failed to fetch schedule: ${res.status}`);
   return res.json();
 }
 

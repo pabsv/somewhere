@@ -358,9 +358,6 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
                 </div>
               )}
               <div>{selectedDeal.airline}</div>
-              {selectedDeal.is_hot_deal && (
-                <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded">HOT DEAL</span>
-              )}
             </div>
             <div className="flex flex-col gap-2">
               <a

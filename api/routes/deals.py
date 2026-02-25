@@ -12,13 +12,13 @@ Uses UserMatcher which filters against:
 
 from fastapi import APIRouter, Depends
 from database.services.user_matcher import UserMatcher
-from ..dependencies import get_default_user_id
+from ..dependencies import get_current_user_id
 
 router = APIRouter(prefix="/api")
 
 
 @router.get("/deals")
-def get_deals(user_id: str = Depends(get_default_user_id)):
+def get_deals(user_id: str = Depends(get_current_user_id)):
     matcher = UserMatcher()
     flights = matcher.find_flights_for_user(user_id, max_results=200)
     return {"deals": [f.to_api_dict() for f in flights]}

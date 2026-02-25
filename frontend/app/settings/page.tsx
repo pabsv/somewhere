@@ -5,65 +5,45 @@ import TwoMonthCalendar from "@/components/calendar/TwoMonthCalendar";
 import AirportSelector from "@/components/settings/AirportSelector";
 import DestinationPicker from "@/components/settings/DestinationPicker";
 import TripPreferences from "@/components/settings/TripPreferences";
-import Button from "@/components/ui/Button";
-import { getPreferences, savePreferences, triggerScrape, getScrapeStatus, ScrapeState } from "@/lib/api";
+import { getPreferences, savePreferences } from "@/lib/api";
 import { UserPreferences, DateWindow } from "@/types";
 
 export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [scrape, setScrape] = useState<ScrapeState>({
-    status: "idle",
-    started_at: null,
-    finished_at: null,
-    result: null,
-    error: null,
-  });
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    getPreferences().then(setPrefs);
-    // Sync scrape state on mount in case a scrape is already running
-    getScrapeStatus().then(setScrape).catch(() => {});
+    getPreferences().then((p) => {
+      setPrefs(p);
+      hasLoaded.current = true;
+    });
   }, []);
 
-  // Poll status while running
+  // Auto-save with 600ms debounce after any preference change
   useEffect(() => {
-    if (scrape.status === "running") {
-      pollRef.current = setInterval(() => {
-        getScrapeStatus().then(setScrape).catch(() => {});
-      }, 2000);
-    } else {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    }
+    if (!hasLoaded.current || !prefs) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSaveStatus("saving");
+
+    debounceRef.current = setTimeout(async () => {
+      await savePreferences(prefs);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 1500);
+    }, 600);
+
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [scrape.status]);
+  }, [prefs]);
 
   if (!prefs) return null;
 
   const updatePrefs = (partial: Partial<UserPreferences>) => {
     setPrefs({ ...prefs, ...partial });
-    setSaved(false);
-  };
-
-  const handleSave = () => {
-    savePreferences(prefs);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const handleScrape = async () => {
-    setScrape(s => ({ ...s, status: "running", result: null, error: null }));
-    try {
-      await triggerScrape();
-    } catch (e) {
-      setScrape(s => ({ ...s, status: "error", error: String(e) }));
-    }
   };
 
   return (
@@ -71,9 +51,12 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-xl font-semibold text-neutral-900">Settings</h1>
-        <Button onClick={handleSave} variant={saved ? "secondary" : "primary"}>
-          {saved ? "Saved" : "Save changes"}
-        </Button>
+        {saveStatus === "saving" && (
+          <span className="text-xs text-neutral-400">Saving…</span>
+        )}
+        {saveStatus === "saved" && (
+          <span className="text-xs text-neutral-400">Saved</span>
+        )}
       </div>
 
       {/* Availability */}
@@ -90,6 +73,16 @@ export default function SettingsPage() {
             onRangesChange={(ranges: DateWindow[]) => updatePrefs({ availability: ranges })}
             mode="select"
           />
+          {prefs.availability.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-neutral-100">
+              <button
+                onClick={() => updatePrefs({ availability: [] })}
+                className="text-xs text-neutral-400 hover:text-red-500"
+              >
+                Clear all dates
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -139,40 +132,6 @@ export default function SettingsPage() {
           />
         </div>
       </section>
-
-      {/* Save + Scrape */}
-      <div className="border-t border-neutral-200 pt-6 flex items-start justify-between gap-8">
-        <Button onClick={handleSave} variant={saved ? "secondary" : "primary"}>
-          {saved ? "Saved" : "Save changes"}
-        </Button>
-
-        <div className="flex flex-col items-end gap-2">
-          <Button
-            onClick={handleScrape}
-            variant="secondary"
-            disabled={scrape.status === "running"}
-          >
-            {scrape.status === "running" ? "Scraping…" : "Run scraper"}
-          </Button>
-
-          {scrape.status === "running" && (
-            <p className="text-xs text-neutral-500">
-              Searching Azair for your destinations and dates — this takes a few minutes.
-            </p>
-          )}
-
-          {scrape.status === "done" && scrape.result && (
-            <p className="text-xs text-neutral-600">
-              Done — {scrape.result.new} new flights, {scrape.result.updated} updated,{" "}
-              <span className="font-medium">{scrape.result.deals} deals</span>
-            </p>
-          )}
-
-          {scrape.status === "error" && (
-            <p className="text-xs text-red-600">{scrape.error}</p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

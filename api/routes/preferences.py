@@ -17,7 +17,7 @@ from typing import Optional
 from database.repositories.user_repo import UserRepository
 from database.repositories.availability_repo import AvailabilityRepository
 from database.repositories.destination_repo import DestinationRepository
-from ..dependencies import get_default_user_id
+from ..dependencies import get_current_user_id
 
 router = APIRouter(prefix="/api")
 
@@ -42,7 +42,7 @@ class UserPreferences(BaseModel):
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/preferences")
-def get_preferences(user_id: str = Depends(get_default_user_id)):
+def get_preferences(user_id: str = Depends(get_current_user_id)):
     user_repo = UserRepository()
     avail_repo = AvailabilityRepository()
     dest_repo = DestinationRepository()
@@ -71,7 +71,7 @@ def get_preferences(user_id: str = Depends(get_default_user_id)):
 @router.put("/preferences")
 def save_preferences(
     prefs: UserPreferences,
-    user_id: str = Depends(get_default_user_id),
+    user_id: str = Depends(get_current_user_id),
 ):
     user_repo = UserRepository()
     avail_repo = AvailabilityRepository()

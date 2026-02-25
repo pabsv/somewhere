@@ -1,16 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { getStoredUser, clearStoredUser } from "@/lib/auth";
 
 const links = [
   { href: "/", label: "Deals" },
   { href: "/deals", label: "List" },
   { href: "/settings", label: "Settings" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = getStoredUser();
+
+  function handleLogout() {
+    clearStoredUser();
+    router.push("/login");
+  }
+
+  if (pathname === "/login") return null;
 
   return (
     <nav className="border-b border-neutral-200">
@@ -37,6 +48,19 @@ export default function Navigation() {
               </Link>
             ))}
           </div>
+
+          {/* User */}
+          {user && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">{user.name}</span>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-neutral-400 hover:text-neutral-900"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>

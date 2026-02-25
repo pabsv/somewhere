@@ -18,7 +18,7 @@ from database.repositories.user_repo import UserRepository
 from database.repositories.availability_repo import AvailabilityRepository
 from database.repositories.destination_repo import DestinationRepository
 from database.services.flight_service import FlightService
-from ..dependencies import get_default_user_id
+from ..dependencies import get_current_user_id
 
 # Scraper lives in scraper-azair/ which isn't a Python package (hyphen in name),
 # so we add it to sys.path and import scraper.py directly.
@@ -121,7 +121,7 @@ def _run_scrape(user_id: str) -> None:
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/scrape")
-def start_scrape(user_id: str = Depends(get_default_user_id)):
+def start_scrape(user_id: str = Depends(get_current_user_id)):
     """Start a background scrape. Returns immediately."""
     if _state["status"] == "running":
         return {"status": "already_running"}

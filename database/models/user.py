@@ -11,8 +11,8 @@ from bson import ObjectId
 @dataclass
 class UserAirports:
     """User's airport preferences."""
-    home: str = "EIN"  # Primary home airport
-    nearby: list[str] = field(default_factory=lambda: ["AMS", "BRU"])
+    home: str = ""
+    nearby: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {"home": self.home, "nearby": self.nearby}
@@ -20,8 +20,8 @@ class UserAirports:
     @classmethod
     def from_dict(cls, data: dict) -> "UserAirports":
         return cls(
-            home=data.get("home", "EIN"),
-            nearby=data.get("nearby", ["AMS", "BRU"])
+            home=data.get("home", ""),
+            nearby=data.get("nearby", [])
         )
 
 
@@ -73,9 +73,10 @@ class User:
     MongoDB document structure:
     {
         "_id": ObjectId,
-        "email": "user@example.com",
-        "password_hash": "bcrypt_hash",
-        "airports": { "home": "EIN", "nearby": ["AMS", "BRU"] },
+        "name": "Alice",
+        "email": "alice@example.com",
+        "password_hash": "",
+        "airports": { "home": "", "nearby": [] },
         "notifications": { "daily_digest": true, "instant_alerts": true, "max_price_alert": 75 },
         "search_preferences": { "direct_only": false },
         "is_active": true,
@@ -84,6 +85,7 @@ class User:
     }
     """
     email: str
+    name: str = ""
     password_hash: str = ""
     airports: UserAirports = field(default_factory=UserAirports)
     notifications: UserNotifications = field(default_factory=UserNotifications)
@@ -114,6 +116,7 @@ class User:
     def to_dict(self) -> dict:
         """Convert to dictionary for MongoDB storage."""
         doc = {
+            "name": self.name,
             "email": self.email,
             "password_hash": self.password_hash,
             "airports": self.airports.to_dict(),
@@ -132,6 +135,7 @@ class User:
         """Create User from MongoDB document."""
         return cls(
             _id=data.get("_id"),
+            name=data.get("name", ""),
             email=data.get("email", ""),
             password_hash=data.get("password_hash", ""),
             airports=UserAirports.from_dict(data.get("airports", {})),
@@ -146,6 +150,7 @@ class User:
         """Convert to dictionary without sensitive fields (for API responses)."""
         return {
             "id": self.id,
+            "name": self.name,
             "email": self.email,
             "airports": self.airports.to_dict(),
             "notifications": self.notifications.to_dict(),

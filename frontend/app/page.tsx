@@ -9,6 +9,7 @@ export default function Home() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [availability, setAvailability] = useState<DateWindow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([getDeals(), getPreferences()])
@@ -16,10 +17,10 @@ export default function Home() {
         setDeals(d);
         setAvailability(prefs.availability);
       })
+      .catch(() => setError("Could not connect to the API. Is it running?"))
       .finally(() => setLoading(false));
   }, []);
 
-  const hotDeals = deals.filter((d) => d.is_hot_deal).length;
   const cheapest = deals.length > 0 ? Math.min(...deals.map((d) => d.price)) : null;
 
   return (
@@ -30,13 +31,15 @@ export default function Home() {
         <p className="text-sm text-neutral-500 mt-1">
           {loading
             ? "Loading…"
-            : `${deals.length} deals · ${hotDeals} hot · from €${cheapest}`}
+            : `${deals.length} deals · from €${cheapest}`}
         </p>
       </div>
 
       {/* Calendar */}
       {loading ? (
         <div className="py-16 text-sm text-neutral-400">Loading deals…</div>
+      ) : error ? (
+        <div className="py-16 text-sm text-red-500">{error}</div>
       ) : deals.length === 0 ? (
         <div className="py-16 text-sm text-neutral-500">No deals available.</div>
       ) : (

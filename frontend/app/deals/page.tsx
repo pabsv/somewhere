@@ -9,6 +9,7 @@ import { Deal, DealFilters as FilterState } from "@/types";
 export default function DealsPage() {
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     origin: null,
@@ -24,6 +25,7 @@ export default function DealsPage() {
   useEffect(() => {
     getDeals()
       .then(setAllDeals)
+      .catch(() => setError("Could not connect to the API. Is it running?"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -84,6 +86,8 @@ export default function DealsPage() {
       {/* Content */}
       {loading ? (
         <div className="py-8 text-sm text-neutral-400">Loading deals…</div>
+      ) : error ? (
+        <div className="py-8 text-sm text-red-500">{error}</div>
       ) : filteredDeals.length === 0 ? (
         <div className="py-8 text-sm text-neutral-500">
           {allDeals.length === 0 ? "No deals available." : "No deals match your filters."}
