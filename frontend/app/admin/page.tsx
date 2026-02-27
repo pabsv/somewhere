@@ -4,9 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   getAdminUsers,
   AdminUser,
-  triggerScrape,
-  getScrapeStatus,
-  ScrapeState,
   clearAllData,
   getScheduleStatus,
   OriginScheduleState,
@@ -298,12 +295,6 @@ export default function AdminPage() {
   const [usersTotal, setUsersTotal] = useState(0);
   const [usersError, setUsersError] = useState<string | null>(null);
 
-  // Manual scrape
-  const [scrape, setScrape] = useState<ScrapeState>({
-    status: "idle", started_at: null, finished_at: null, result: null, error: null,
-  });
-  const scrapePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Schedule state
   const [scheduleStates, setScheduleStates] = useState<OriginScheduleState[]>([]);
   const schedulePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -319,25 +310,10 @@ export default function AdminPage() {
       .then((d) => { setUsers(d.users); setUsersTotal(d.total); })
       .catch((e) => setUsersError(String(e)));
 
-    getScrapeStatus().then(setScrape).catch(() => {});
-
     getScheduleStatus()
       .then((d) => setScheduleStates(d.states))
       .catch(() => {});
   }, []);
-
-  // ─── Manual scrape polling ─────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (scrape.status === "running") {
-      scrapePollingRef.current = setInterval(() => {
-        getScrapeStatus().then(setScrape).catch(() => {});
-      }, 2000);
-    } else {
-      if (scrapePollingRef.current) { clearInterval(scrapePollingRef.current); scrapePollingRef.current = null; }
-    }
-    return () => { if (scrapePollingRef.current) clearInterval(scrapePollingRef.current); };
-  }, [scrape.status]);
 
   // ─── Schedule polling (faster while something is running) ─────────────────
 
@@ -352,12 +328,6 @@ export default function AdminPage() {
   }, [anyRunning]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleScrape = async () => {
-    setScrape((s) => ({ ...s, status: "running", result: null, error: null }));
-    try { await triggerScrape(); }
-    catch (e) { setScrape((s) => ({ ...s, status: "error", error: String(e) })); }
-  };
 
   const handleClear = async () => {
     setClearStatus("clearing");
@@ -387,34 +357,6 @@ export default function AdminPage() {
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-neutral-900">Admin</h1>
       </div>
-
-      {/* ── Manual scraper ── */}
-      <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-4">
-          Manual scraper
-        </h2>
-        <div className="border border-neutral-200 p-6 flex flex-col gap-2">
-          <div className="w-fit">
-            <Button onClick={handleScrape} variant="primary" disabled={scrape.status === "running"}>
-              {scrape.status === "running" ? "Scraping…" : "Run scraper now"}
-            </Button>
-          </div>
-          {scrape.status === "running" && (
-            <p className="text-xs text-neutral-500">
-              Searching Azair for your destinations and dates — this takes a few minutes.
-            </p>
-          )}
-          {scrape.status === "done" && scrape.result && (
-            <p className="text-xs text-neutral-600">
-              Done — {scrape.result.new} new, {scrape.result.updated} updated,{" "}
-              <span className="font-medium">{scrape.result.deals} deals</span>
-            </p>
-          )}
-          {scrape.status === "error" && (
-            <p className="text-xs text-red-600">{scrape.error}</p>
-          )}
-        </div>
-      </section>
 
       {/* ── Scheduler ── */}
       <section className="mb-10">

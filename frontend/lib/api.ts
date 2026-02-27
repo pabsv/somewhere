@@ -11,7 +11,6 @@ import { getAirport } from "@/data/airports";
 import { getStoredUser } from "@/lib/auth";
 
 const USE_MOCK = false;
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
 
 function authHeaders(): HeadersInit {
   const user = getStoredUser();
@@ -80,7 +79,7 @@ export interface AuthUser {
 }
 
 export async function login(name: string, email: string): Promise<AuthUser> {
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
+  const res = await fetch(`/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email }),
@@ -90,7 +89,7 @@ export async function login(name: string, email: string): Promise<AuthUser> {
 }
 
 export async function verifySession(userId: string): Promise<AuthUser> {
-  const res = await fetch(`${API_BASE}/api/auth/me`, {
+  const res = await fetch(`/api/auth/me`, {
     headers: { "X-User-ID": userId },
   });
   if (!res.ok) throw new Error("Session invalid");
@@ -103,7 +102,7 @@ export async function verifySession(userId: string): Promise<AuthUser> {
 export async function getDeals(): Promise<Deal[]> {
   if (USE_MOCK) return [];
 
-  const res = await fetch(`${API_BASE}/api/deals`, { headers: authHeaders() });
+  const res = await fetch(`/api/deals`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch deals: ${res.status}`);
   const data: { deals: BackendFlight[] } = await res.json();
   return data.deals.map(transformFlight);
@@ -113,7 +112,7 @@ export async function getDeals(): Promise<Deal[]> {
 export async function getPreferences(): Promise<UserPreferences> {
   if (USE_MOCK) return loadPreferences();
 
-  const res = await fetch(`${API_BASE}/api/preferences`, { headers: authHeaders() });
+  const res = await fetch(`/api/preferences`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch preferences: ${res.status}`);
   return res.json();
 }
@@ -121,41 +120,12 @@ export async function getPreferences(): Promise<UserPreferences> {
 export async function savePreferences(prefs: UserPreferences): Promise<void> {
   if (USE_MOCK) { storageSave(prefs); return; }
 
-  const res = await fetch(`${API_BASE}/api/preferences`, {
+  const res = await fetch(`/api/preferences`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(prefs),
   });
   if (!res.ok) throw new Error(`Failed to save preferences: ${res.status}`);
-}
-
-// ─── Scraper ──────────────────────────────────────────────────────────────────
-
-export interface ScrapeResult {
-  new: number;
-  updated: number;
-  deals: number;
-  hot_deals: number;
-}
-
-export interface ScrapeState {
-  status: "idle" | "running" | "done" | "error";
-  started_at: string | null;
-  finished_at: string | null;
-  result: ScrapeResult | null;
-  error: string | null;
-}
-
-export async function triggerScrape(): Promise<{ status: string }> {
-  const res = await fetch(`${API_BASE}/api/scrape`, { method: "POST", headers: authHeaders() });
-  if (!res.ok) throw new Error(`Failed to start scrape: ${res.status}`);
-  return res.json();
-}
-
-export async function getScrapeStatus(): Promise<ScrapeState> {
-  const res = await fetch(`${API_BASE}/api/scrape/status`, { headers: authHeaders() });
-  if (!res.ok) throw new Error(`Failed to get scrape status: ${res.status}`);
-  return res.json();
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -170,13 +140,13 @@ export interface AdminUser {
 }
 
 export async function getAdminUsers(): Promise<{ users: AdminUser[]; total: number }> {
-  const res = await fetch(`${API_BASE}/api/admin/users`);
+  const res = await fetch(`/api/admin/users`);
   if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
   return res.json();
 }
 
 export async function clearAllData(): Promise<{ deleted: Record<string, number> }> {
-  const res = await fetch(`${API_BASE}/api/admin/clear`, { method: "DELETE" });
+  const res = await fetch(`/api/admin/clear`, { method: "DELETE" });
   if (!res.ok) throw new Error(`Failed to clear data: ${res.status}`);
   return res.json();
 }
@@ -193,7 +163,7 @@ export interface OriginScheduleState {
 }
 
 export async function getScheduleStatus(): Promise<{ states: OriginScheduleState[] }> {
-  const res = await fetch(`${API_BASE}/api/admin/schedule`);
+  const res = await fetch(`/api/admin/schedule`);
   if (!res.ok) throw new Error(`Failed to fetch schedule: ${res.status}`);
   return res.json();
 }

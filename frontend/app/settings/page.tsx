@@ -11,6 +11,17 @@ import { UserPreferences, DateWindow } from "@/types";
 export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [availabilityOpen, setAvailabilityOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("settings_availability_open");
+    return stored === null ? true : stored === "true";
+  });
+
+  const toggleAvailability = () => {
+    const next = !availabilityOpen;
+    setAvailabilityOpen(next);
+    localStorage.setItem("settings_availability_open", String(next));
+  };
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoaded = useRef(false);
@@ -61,29 +72,47 @@ export default function SettingsPage() {
 
       {/* Availability */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-4">
-          Availability
-        </h2>
-        <p className="text-sm text-neutral-500 mb-4">
-          Drag on the calendar to select when you can travel.
-        </p>
-        <div className="border border-neutral-200 p-6">
-          <TwoMonthCalendar
-            selectedRanges={prefs.availability}
-            onRangesChange={(ranges: DateWindow[]) => updatePrefs({ availability: ranges })}
-            mode="select"
-          />
-          {prefs.availability.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-neutral-100">
-              <button
-                onClick={() => updatePrefs({ availability: [] })}
-                className="text-xs text-neutral-400 hover:text-red-500"
-              >
-                Clear all dates
-              </button>
+        <button
+          onClick={toggleAvailability}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
+            Availability
+          </h2>
+          <svg
+            className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${availabilityOpen ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {availabilityOpen && (
+          <>
+            <p className="text-sm text-neutral-500 mb-4">
+              Drag on the calendar to select when you can travel.
+            </p>
+            <div className="border border-neutral-200 p-6">
+              <TwoMonthCalendar
+                selectedRanges={prefs.availability}
+                onRangesChange={(ranges: DateWindow[]) => updatePrefs({ availability: ranges })}
+                mode="select"
+              />
+              {prefs.availability.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-neutral-100">
+                  <button
+                    onClick={() => updatePrefs({ availability: [] })}
+                    className="text-xs text-neutral-400 hover:text-red-500"
+                  >
+                    Clear all dates
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </section>
 
       {/* Airports */}

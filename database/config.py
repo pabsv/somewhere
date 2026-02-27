@@ -22,6 +22,11 @@ MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "")
 # Connection string builder
 def get_connection_string() -> str:
     """Build MongoDB connection string."""
+    # Atlas / full URI takes priority (set MONGODB_URI env var for production)
+    uri = os.getenv("MONGODB_URI")
+    if uri:
+        return uri
+    # Local fallback
     if MONGO_USERNAME and MONGO_PASSWORD:
         return f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
     return f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
