@@ -71,6 +71,38 @@ class FlightRepository:
 
         return {"new": new_count, "updated": updated_count}
 
+    def bulk_upsert(self, flights: list[FlightModel]) -> dict:
+        """
+        Upsert many flights in a single bulk_write call.
+        Uses $setOnInsert for first_seen_at so it is only written on insert.
+
+        Returns:
+            Dict with counts: {"new": X, "updated": Y}
+        """
+        from pymongo import UpdateOne
+        if not flights:
+            return {"new": 0, "updated": 0}
+
+        now = datetime.utcnow()
+        ops = []
+        for flight in flights:
+            flight.last_seen_at = now
+            flight.scraped_at = now
+            doc = flight.to_dict()
+            doc.pop("first_seen_at", None)  # handled by $setOnInsert below
+            ops.append(UpdateOne(
+                {"flight_key": flight.flight_key},
+                {
+                    "$set": doc,
+                    "$setOnInsert": {"first_seen_at": now},
+                },
+                upsert=True,
+            ))
+
+        result = self.collection.bulk_write(ops, ordered=False)
+        new_count = result.upserted_count
+        return {"new": new_count, "updated": len(ops) - new_count}
+
     # Read
     def find_by_id(self, flight_id: str) -> Optional[FlightModel]:
         """Find a flight by ID."""

@@ -123,6 +123,35 @@ class RouteStatsRepository:
             updated += 1
         return updated
 
+    def fetch_many(self, route_keys: list[str]) -> dict:
+        """
+        Fetch route stats for multiple route keys in one query.
+
+        Returns:
+            Dict of {route_key: RouteStats}
+        """
+        docs = self.collection.find({"route_key": {"$in": route_keys}})
+        return {doc["route_key"]: RouteStats.from_dict(doc) for doc in docs}
+
+    def bulk_upsert_many(self, stats_list: list[RouteStats]) -> None:
+        """
+        Save multiple RouteStats in a single bulk_write call.
+        """
+        from pymongo import UpdateOne
+        if not stats_list:
+            return
+
+        now = datetime.utcnow()
+        ops = []
+        for s in stats_list:
+            s.last_updated = now
+            ops.append(UpdateOne(
+                {"route_key": s.route_key},
+                {"$set": s.to_dict()},
+                upsert=True,
+            ))
+        self.collection.bulk_write(ops, ordered=False)
+
     # Read
     def find_by_id(self, stats_id: str) -> Optional[RouteStats]:
         """Find route stats by ID."""
