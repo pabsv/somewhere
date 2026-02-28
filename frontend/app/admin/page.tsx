@@ -5,6 +5,7 @@ import {
   getAdminUsers,
   AdminUser,
   clearAllData,
+  clearAllUsers,
   getScheduleStatus,
   OriginScheduleState,
 } from "@/lib/api";
@@ -299,9 +300,13 @@ export default function AdminPage() {
   const [scheduleStates, setScheduleStates] = useState<OriginScheduleState[]>([]);
   const schedulePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Clear data
+  // Clear flight data
   const [clearStatus, setClearStatus]   = useState<"idle" | "confirm" | "clearing" | "done">("idle");
   const [clearResult, setClearResult]   = useState<Record<string, number> | null>(null);
+
+  // Clear users
+  const [clearUsersStatus, setClearUsersStatus] = useState<"idle" | "confirm" | "clearing" | "done">("idle");
+  const [clearUsersResult, setClearUsersResult] = useState<Record<string, number> | null>(null);
 
   // ─── Load on mount ─────────────────────────────────────────────────────────
 
@@ -338,6 +343,21 @@ export default function AdminPage() {
       setClearStatus("done");
     } catch {
       setClearStatus("idle");
+    }
+  };
+
+  const handleClearUsers = async () => {
+    setClearUsersStatus("clearing");
+    setClearUsersResult(null);
+    try {
+      const res = await clearAllUsers();
+      setClearUsersResult(res.deleted);
+      setClearUsersStatus("done");
+      // Refresh users table
+      setUsers([]);
+      setUsersTotal(0);
+    } catch {
+      setClearUsersStatus("idle");
     }
   };
 
@@ -447,45 +467,94 @@ export default function AdminPage() {
         <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-4">
           Data
         </h2>
-        <div className="border border-neutral-200 p-6 flex flex-col gap-2">
-          {clearStatus === "idle" && (
-            <div className="w-fit">
-              <Button onClick={() => setClearStatus("confirm")} variant="secondary">
-                Clear all flight data
-              </Button>
-            </div>
-          )}
-          {clearStatus === "confirm" && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-600">
-                Delete all flights, price history, and route stats?
-              </span>
-              <button onClick={handleClear} className="text-sm text-red-600 font-medium hover:text-red-700">
-                Yes, clear
-              </button>
-              <button onClick={() => setClearStatus("idle")} className="text-sm text-neutral-400 hover:text-neutral-700">
-                Cancel
-              </button>
-            </div>
-          )}
-          {clearStatus === "clearing" && (
-            <p className="text-xs text-neutral-500">Clearing…</p>
-          )}
-          {clearStatus === "done" && clearResult && (
-            <div className="flex items-center gap-4">
-              <p className="text-xs text-neutral-600">
-                Cleared — {clearResult.flights ?? 0} flights,{" "}
-                {clearResult.price_history ?? 0} price history,{" "}
-                {clearResult.route_stats ?? 0} route stats
-              </p>
-              <button
-                onClick={() => { setClearStatus("idle"); setClearResult(null); }}
-                className="text-xs text-neutral-400 hover:text-neutral-700"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
+        <div className="border border-neutral-200 p-6 flex flex-col gap-6">
+
+          {/* Flight data */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-neutral-400 uppercase tracking-wide font-medium">Flight data</p>
+            {clearStatus === "idle" && (
+              <div className="w-fit">
+                <Button onClick={() => setClearStatus("confirm")} variant="secondary">
+                  Clear all flight data
+                </Button>
+              </div>
+            )}
+            {clearStatus === "confirm" && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-neutral-600">
+                  Delete all flights, price history, and route stats?
+                </span>
+                <button onClick={handleClear} className="text-sm text-red-600 font-medium hover:text-red-700">
+                  Yes, clear
+                </button>
+                <button onClick={() => setClearStatus("idle")} className="text-sm text-neutral-400 hover:text-neutral-700">
+                  Cancel
+                </button>
+              </div>
+            )}
+            {clearStatus === "clearing" && (
+              <p className="text-xs text-neutral-500">Clearing…</p>
+            )}
+            {clearStatus === "done" && clearResult && (
+              <div className="flex items-center gap-4">
+                <p className="text-xs text-neutral-600">
+                  Cleared — {clearResult.flights ?? 0} flights,{" "}
+                  {clearResult.price_history ?? 0} price history,{" "}
+                  {clearResult.route_stats ?? 0} route stats
+                </p>
+                <button
+                  onClick={() => { setClearStatus("idle"); setClearResult(null); }}
+                  className="text-xs text-neutral-400 hover:text-neutral-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Users */}
+          <div className="flex flex-col gap-2 pt-4 border-t border-neutral-100">
+            <p className="text-xs text-neutral-400 uppercase tracking-wide font-medium">Users</p>
+            {clearUsersStatus === "idle" && (
+              <div className="w-fit">
+                <Button onClick={() => setClearUsersStatus("confirm")} variant="secondary">
+                  Clear all users
+                </Button>
+              </div>
+            )}
+            {clearUsersStatus === "confirm" && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-neutral-600">
+                  Delete all users, availability, and destination preferences?
+                </span>
+                <button onClick={handleClearUsers} className="text-sm text-red-600 font-medium hover:text-red-700">
+                  Yes, clear
+                </button>
+                <button onClick={() => setClearUsersStatus("idle")} className="text-sm text-neutral-400 hover:text-neutral-700">
+                  Cancel
+                </button>
+              </div>
+            )}
+            {clearUsersStatus === "clearing" && (
+              <p className="text-xs text-neutral-500">Clearing…</p>
+            )}
+            {clearUsersStatus === "done" && clearUsersResult && (
+              <div className="flex items-center gap-4">
+                <p className="text-xs text-neutral-600">
+                  Cleared — {clearUsersResult.users ?? 0} users,{" "}
+                  {clearUsersResult.availability ?? 0} availability windows,{" "}
+                  {clearUsersResult.destination_preferences ?? 0} destination prefs
+                </p>
+                <button
+                  onClick={() => { setClearUsersStatus("idle"); setClearUsersResult(null); }}
+                  className="text-xs text-neutral-400 hover:text-neutral-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
       </section>
 

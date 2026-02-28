@@ -151,6 +151,12 @@ export async function clearAllData(): Promise<{ deleted: Record<string, number> 
   return res.json();
 }
 
+export async function clearAllUsers(): Promise<{ deleted: Record<string, number> }> {
+  const res = await fetch(`/api/admin/clear-users`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to clear users: ${res.status}`);
+  return res.json();
+}
+
 export interface OriginScheduleState {
   origin: string;
   status: "idle" | "running" | "done" | "error";

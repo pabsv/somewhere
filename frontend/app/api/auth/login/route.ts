@@ -10,36 +10,35 @@ export async function POST(req: NextRequest) {
   const db = await getDb();
   const cleanEmail = email.trim().toLowerCase();
   const cleanName = name.trim();
+  const now = new Date();
 
-  let user = await db.collection("users").findOne({ email: cleanEmail });
+  // Ensure unique index exists (idempotent — no-op if already present)
+  await db.collection("users").createIndex({ email: 1 }, { unique: true });
 
-  if (user) {
-    if (user.name !== cleanName) {
-      await db.collection("users").updateOne(
-        { _id: user._id },
-        { $set: { name: cleanName, updated_at: new Date() } }
-      );
-      user.name = cleanName;
-    }
-  } else {
-    const now = new Date();
-    const result = await db.collection("users").insertOne({
-      email: cleanEmail,
-      name: cleanName,
-      password_hash: "",
-      airports: { home: "", nearby: [] },
-      notifications: { daily_digest: true, instant_alerts: true, max_price_alert: 75 },
-      search_preferences: { direct_only: false },
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    });
-    user = await db.collection("users").findOne({ _id: result.insertedId });
-  }
+  // Atomic upsert: find by email, create only if missing
+  const result = await db.collection("users").findOneAndUpdate(
+    { email: cleanEmail },
+    {
+      $setOnInsert: {
+        email: cleanEmail,
+        name: cleanName,
+        password_hash: "",
+        airports: { home: "", nearby: [] },
+        notifications: { daily_digest: true, instant_alerts: true, max_price_alert: 75 },
+        search_preferences: { direct_only: false },
+        is_active: true,
+        created_at: now,
+      },
+      $set: { updated_at: now },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  const user = result!;
 
   return NextResponse.json({
-    user_id: user!._id.toString(),
-    name: user!.name,
-    email: user!.email,
+    user_id: user._id.toString(),
+    name: user.name,
+    email: user.email,
   });
 }
