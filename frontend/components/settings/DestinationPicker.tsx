@@ -39,7 +39,7 @@ export default function DestinationPicker({ selected, onChange }: DestinationPic
     } else {
       onChange([...selected, dest.code]);
     }
-    setQuery("");
+    // Keep dropdown open and query intact so the user can keep picking
   };
 
   useEffect(() => {
@@ -54,6 +54,39 @@ export default function DestinationPicker({ selected, onChange }: DestinationPic
 
   return (
     <div ref={containerRef} className="space-y-3">
+
+      {/* Selected destinations — above the search so they're always visible */}
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((code) => {
+            const dest = destinations.find((d) => d.code === code);
+            return (
+              <span
+                key={code}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-neutral-200 bg-neutral-50 text-neutral-800"
+              >
+                <span>{dest?.name ?? code}</span>
+                <button
+                  onClick={() => onChange(selected.filter((c) => c !== code))}
+                  className="text-neutral-300 hover:text-neutral-700 leading-none"
+                  aria-label={`Remove ${dest?.name ?? code}`}
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+          <button
+            onClick={() => onChange([])}
+            className="text-xs text-neutral-400 hover:text-neutral-700 px-1 py-1.5"
+          >
+            Clear all
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-neutral-400">No destinations added yet. Search below to add one.</p>
+      )}
+
       {/* Search input */}
       <div className="relative">
         <input
@@ -80,7 +113,7 @@ export default function DestinationPicker({ selected, onChange }: DestinationPic
                     <span className="text-neutral-500"> – {d.country}</span>
                   </span>
                   <span className={`text-xs font-mono ml-3 shrink-0 ${isSelected ? "text-blue-500" : "text-neutral-400"}`}>
-                    {isSelected ? `${d.code} ×` : d.code}
+                    {isSelected ? "✓" : d.code}
                   </span>
                 </button>
               );
@@ -93,35 +126,6 @@ export default function DestinationPicker({ selected, onChange }: DestinationPic
           </div>
         )}
       </div>
-
-      {/* Selected chips */}
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selected.map((code) => {
-            const dest = destinations.find((d) => d.code === code);
-            return (
-              <span
-                key={code}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-neutral-100 text-neutral-700 rounded-full"
-              >
-                <span>{dest?.name ?? code}</span>
-                <button
-                  onClick={() => onChange(selected.filter((c) => c !== code))}
-                  className="text-neutral-400 hover:text-neutral-700 leading-none"
-                >
-                  ×
-                </button>
-              </span>
-            );
-          })}
-          <button
-            onClick={() => onChange([])}
-            className="text-xs text-neutral-400 hover:text-neutral-700 px-1 py-1"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
     </div>
   );
 }
