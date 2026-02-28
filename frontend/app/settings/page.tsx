@@ -10,7 +10,7 @@ import { UserPreferences, DateWindow } from "@/types";
 
 export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "dirty" | "saving" | "saved">("idle");
   const [availabilityOpen, setAvailabilityOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     const stored = localStorage.getItem("settings_availability_open");
@@ -25,31 +25,39 @@ export default function SettingsPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoaded = useRef(false);
+  const prefsRef = useRef<UserPreferences | null>(null);
 
   useEffect(() => {
     getPreferences().then((p) => {
       setPrefs(p);
+      prefsRef.current = p;
       hasLoaded.current = true;
     });
   }, []);
 
-  // Auto-save with 600ms debounce after any preference change
+  const doSave = async (p: UserPreferences) => {
+    setSaveStatus("saving");
+    await savePreferences(p);
+    setSaveStatus("saved");
+    setTimeout(() => setSaveStatus("idle"), 1500);
+  };
+
+  // Auto-save with 800ms debounce after any preference change
   useEffect(() => {
     if (!hasLoaded.current || !prefs) return;
+    prefsRef.current = prefs;
+    setSaveStatus("dirty");
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    setSaveStatus("saving");
+    debounceRef.current = setTimeout(() => doSave(prefs), 800);
 
-    debounceRef.current = setTimeout(async () => {
-      await savePreferences(prefs);
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 1500);
-    }, 600);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [prefs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [prefs]);
+  const handleSave = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (prefsRef.current) doSave(prefsRef.current);
+  };
 
   if (!prefs) return null;
 
@@ -62,12 +70,21 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-xl font-semibold text-neutral-900">Settings</h1>
-        {saveStatus === "saving" && (
-          <span className="text-xs text-neutral-400">Saving…</span>
-        )}
-        {saveStatus === "saved" && (
-          <span className="text-xs text-neutral-400">Saved</span>
-        )}
+        <button
+          onClick={handleSave}
+          disabled={saveStatus === "saving" || saveStatus === "saved" || saveStatus === "idle"}
+          className={`text-sm px-4 py-1.5 font-medium border transition-colors ${
+            saveStatus === "saved"
+              ? "border-green-200 bg-green-50 text-green-700 cursor-default"
+              : saveStatus === "saving"
+              ? "border-neutral-200 text-neutral-400 cursor-default"
+              : saveStatus === "dirty"
+              ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+              : "border-neutral-200 text-neutral-300 cursor-default"
+          }`}
+        >
+          {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save changes"}
+        </button>
       </div>
 
       {/* Availability */}
