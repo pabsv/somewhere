@@ -29,7 +29,6 @@ Nothing left here.
 - [ ] **Email notifications**
   - Gmail SMTP via `email-service/` module (currently empty)
   - Daily digest: top deals, formatted HTML email
-  - Hot deal instant alert: when `deal_score ≥ 90` or price drop >30%
   - Scheduler hooks into email after each scrape run
   - Toggle in settings UI (on/off, min deal score threshold)
 
@@ -57,9 +56,6 @@ Nothing left here.
   - Weekend vs weekday premium
   - Airline reliability weighting
 
-- [ ] **Hot deals surfacing**
-  - Backend already scores and flags `is_hot_deal` in MongoDB
-  - When ready: add "HOT" badge back to `DealCard`, highlighted section at top of deals page, instant alert email for high-score deals
 
 ---
 
