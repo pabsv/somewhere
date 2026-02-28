@@ -236,7 +236,7 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
                 >
                   {isStart && (
                     <span className="text-[8px] font-bold text-white pl-1 truncate">
-                      €{deal.price}
+                      {deal.destination} €{deal.price}
                     </span>
                   )}
                 </button>
