@@ -40,7 +40,13 @@ Frontend and backend never talk directly — both connect to Atlas. Same pattern
 # Local dev:
 cd frontend && npm run dev        # http://localhost:4173
 
-# Scheduler (home PC — run from project root with MONGODB_URI set)
+# Scheduler — shortcuts (cd to project root, then just type the command)
+simulate          # 60 min/cycle dev mode  ← the main one
+scrape            # run all origins once and exit
+scrape EIN        # run single origin once
+api               # FastAPI on port 9000 (rarely needed)
+
+# Scheduler — full commands
 python -m scheduler.scheduler --simulate      # 60 min/cycle (dev)
 python -m scheduler.scheduler                 # 24h/cycle (production)
 python -m scheduler.scheduler --test          # run all origins once and exit
@@ -49,6 +55,8 @@ python -m scheduler.scheduler --test EIN      # run single origin once and exit
 # FastAPI (local only — not needed by deployed frontend)
 uvicorn api.main:app --reload --port 9000
 ```
+
+> Shortcuts are `.bat` files in the project root — work in cmd, PowerShell, and Git Bash.
 
 ---
 

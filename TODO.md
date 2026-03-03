@@ -1,62 +1,90 @@
 # TODO
 
-## Medium Term — Core Features
+## Short Term — Auth, UI & Test Deployment
 
-- [ ] **Email notifications**
-  - Gmail SMTP via `email-service/` module (currently empty)
-  - Daily digest: top deals, formatted HTML email
-  - Scheduler hooks into email after each scrape run
-  - Toggle in settings UI (on/off, min deal score threshold)
+- [ ] **Proper user creation with password**
+  - Add password field to signup and login forms
+  - Hash passwords with bcrypt on save (infrastructure already in `user_repo.py`)
+  - Validate password on login — replace header trust with session token or signed cookie
+  - Basic validation: min length, confirm password field on signup
+  - Keep existing MongoDB user model — just add `password_hash` field
 
-- [ ] **Price trend indicator** — `price_history` collection is already populated. Add a small up/down indicator or % delta on deal cards to show if the price has moved vs last week.
+- [ ] **UI improvements**
+  - Mobile responsive layout — calendar needs list/card fallback on small screens; settings and deals page need layout pass
+  - Loading skeletons on calendar and deals page (currently bare while fetching)
+  - Empty states — deals page when no results, calendar when no deals exist yet
+  - General visual polish pass before sharing with test users
+
+- [ ] **Scheduler cloud deployment**
+  - Move scheduler off home PC to Railway or Render background worker
+  - Currently: if PC is off, nothing scrapes — unacceptable for test users
+  - Only dependency is `MONGODB_URI` env var — should be straightforward
+
+- [ ] **Deployment readiness**
+  - Audit env vars — ensure nothing sensitive is hardcoded or leaked
+  - Verify Vercel deployment is stable and all API routes are working
+  - Smoke test full flow: login → set preferences → scraper runs → deals appear
 
 ---
 
-## Long Term — Scale & Polish
+## Medium Term — Smarter Scraping
 
-- [ ] **Multi-user auth: add passwords**
-  - Currently: login is name + email only, no password — `X-User-ID` header trusted as-is
-  - bcrypt infrastructure already in `user_repo.py` (hash_password, verify_password, authenticate)
-  - To upgrade: add password field to login form, validate in `/api/auth/login`, replace header trust with JWT
+- [ ] **"Discover" mode: scrape all European destinations**
+  - Currently scraper only checks user's specified destination watchlist
+  - New behaviour: scrape all European destinations from user's origins
+  - Surface the best deals from anywhere — not just watchlisted places
+  - Watchlisted destinations still get priority (scored/displayed first)
+  - UI needs a way to distinguish "your picks" vs "discovered deals"
 
-- [ ] **Mobile responsive layout** — currently desktop-first. Deals page grid already has `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. The calendar (`DealsCalendar`, `TwoMonthCalendar`) needs a list/card fallback on small screens. Settings page needs layout work too.
+- [ ] **Deal prioritisation logic**
+  - Watchlist deals: shown first, always visible
+  - Discover deals: shown below, filterable, ranked by deal score
+  - Add a "destination type" tag on deal cards (Watchlist / Discover)
+  - Settings: toggle discover mode on/off
 
-- [ ] **Price trend charts**
-  - Sparkline per route showing price history (7/30 day)
-  - Route stats page: cheapest month, best day of week to fly
+- [ ] **Deal freshness**
+  - Don't surface deals scraped >48h ago as if they're current
+  - Add `scraped_at` age indicator on deal cards
+  - Auto-hide or grey out stale deals
 
-- [ ] **Calendar export (iCal)**
-  - Export matching deals as `.ics` file / subscribe link
+- [ ] **Price trend indicator**
+  - `price_history` collection is already populated
+  - Small ↑/↓ % badge on deal cards showing movement vs last week
+  - Purely a UI addition — data is already there
 
-- [ ] **Browser notifications / PWA**
-  - Service worker for background push notifications
-  - "Install as app" on mobile
+---
 
-- [ ] **Smarter deal scoring**
-  - Seasonality adjustment
-  - Weekend vs weekday premium
-  - Airline reliability weighting
+## Long Term — Auth, Notifications & Reach
+
+- [ ] **Auth0 integration**
+  - Upgrade from custom password auth to Auth0
+  - Remove session token logic — validate via Auth0 JWT on all API routes
+  - Update login/signup UI to use Auth0 hosted or embedded flow
+  - Keep per-user MongoDB documents tied to Auth0 user ID
+
+- [ ] **Calendar subscriptions (iCal)**
+  - Expose a `/api/calendar/feed.ics` endpoint per user
+  - Deals appear as events in Google Calendar / Apple Calendar
+  - Auto-updates as new deals come in (subscribe once, always current)
+
+- [ ] **Email notifications**
+  - Daily digest: top deals matching user preferences
+  - Hot deal alert: instant email when a price drops significantly below route average
+  - Toggle in settings (on/off, min score threshold)
+  - `email-service/` module exists but is empty — implement via Gmail SMTP or Resend
 
 ---
 
 ## Done (for reference)
 
-- ✅ Calendar deal bars show destination code — `BCN €89` instead of just `€89`
-- ✅ DB write optimization — pre-fetch route stats + bulk_write cuts ~1800 Atlas round trips to ~4 per scrape run
-- ✅ Airport/destination picker UX — chips shown above search, dropdown stays open while picking, no "home" label
-- ✅ Admin: clear all users button — wipes users, availability, destination_preferences (with confirm step)
-- ✅ Login deduplication — atomic findOneAndUpdate upsert prevents duplicate user creation; unique index on email
-- ✅ Deploy to cloud — Frontend on Vercel, DB on MongoDB Atlas, scheduler runs on home PC writing to Atlas
-- ✅ Settings: collapsible availability section — starts open, state persisted in localStorage
-- ✅ Settings: "Clear all dates" button below availability calendar
-- ✅ Scheduler timezone fix — ISO strings from backend get "Z" suffix; all times display in user's local timezone
-- ✅ Scheduler timeline — visual bar on admin page showing cycle progress, origin slots, live "now" cursor
-- ✅ Scheduler auto-starts with API — BackgroundScheduler in api/main.py, simulate mode (60 min/cycle)
-- ✅ Scheduler reads DB preferences — origins from user.all_airports, destinations/availability at job runtime
-- ✅ schedule_state collection — per-origin state written immediately on configure (timeline visible before first run)
+- ✅ Run shortcuts — `simulate.bat`, `scrape.bat`, `api.bat` in project root
+- ✅ Deploy — Frontend on Vercel, DB on MongoDB Atlas, scheduler on home PC
+- ✅ Scheduler timeline — visual bar on admin page, live "now" cursor, per-origin status
+- ✅ Scheduler reads DB preferences — origins/destinations/availability at job runtime
 - ✅ Admin page — scheduler section, clear data, users table
-- ✅ Clear all flight data on admin page (flights + price_history + route_stats, with confirm step)
-- ✅ Sort by score/price/date on deals page — all three implemented
-- ✅ Destination filter shows city names — `DealFilters.tsx` uses `d.name`
-- ✅ Error state in UI — `.catch()` added to home and deals page
-- ✅ Mock data files deleted — `mock-deals.ts`, `mock-user.ts` removed
+- ✅ Deal scoring — absolute price threshold + % below route historical average
+- ✅ Calendar view — deal bars with destination + price, deduplication by best deal
+- ✅ Deals page — sort by score/price/date, filter by destination
+- ✅ Settings — availability calendar, airport picker, destination picker
+- ✅ DB write optimisation — bulk_write cuts ~1800 Atlas round trips to ~4 per run
+- ✅ Login deduplication — atomic upsert, unique index on email
