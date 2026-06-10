@@ -30,7 +30,8 @@ class ScrapeTargetModel:
     consecutive_failures: int = 0            # success or non-empty resets to 0
 
     # Lightweight running stats (computed in repo on each save)
-    avg_price: Optional[float] = None
+    avg_price: Optional[float] = None            # EWMA of cheapest-per-run
+    price_p50_ewma: Optional[float] = None       # EWMA of median-per-run (scoring baseline)
     min_price_seen: Optional[float] = None
 
     created_at: Optional[datetime] = None
@@ -58,6 +59,7 @@ class ScrapeTargetModel:
             "error_runs": self.error_runs,
             "consecutive_failures": self.consecutive_failures,
             "avg_price": self.avg_price,
+            "price_p50_ewma": self.price_p50_ewma,
             "min_price_seen": self.min_price_seen,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -81,6 +83,7 @@ class ScrapeTargetModel:
             error_runs=data.get("error_runs", 0),
             consecutive_failures=data.get("consecutive_failures", 0),
             avg_price=data.get("avg_price"),
+            price_p50_ewma=data.get("price_p50_ewma"),
             min_price_seen=data.get("min_price_seen"),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),

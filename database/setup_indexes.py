@@ -1,7 +1,12 @@
 """
-MongoDB index setup script.
+MongoDB index setup script (v2).
 
 Run this once to create all necessary indexes for optimal performance.
+
+flights gets EXACTLY four indexes (plus _id):
+  flight_key unique, (origin, outbound_date, price),
+  (destination, outbound_date, price), TTL last_seen_at 14d.
+Any other existing flights index is dropped by name.
 
 Usage:
     python -m database.setup_indexes
@@ -19,13 +24,9 @@ from .connection import get_database
 from .config import (
     COLLECTION_USERS,
     COLLECTION_AVAILABILITY,
-    COLLECTION_DESTINATIONS,
     COLLECTION_FLIGHTS,
-    COLLECTION_PRICE_HISTORY,
-    COLLECTION_ROUTE_STATS,
     COLLECTION_SCRAPE_TARGETS,
     COLLECTION_SCRAPE_RUNS,
-    PRICE_HISTORY_TTL_DAYS,
     FLIGHTS_TTL_DAYS,
     SCRAPE_RUNS_TTL_DAYS,
 )
@@ -41,8 +42,6 @@ def setup_user_indexes(db):
     indexes = [
         # Unique email index
         IndexModel([("email", ASCENDING)], unique=True, name="email_unique"),
-        # Active users index
-        IndexModel([("is_active", ASCENDING)], name="is_active"),
     ]
 
     collection.create_indexes(indexes)
@@ -54,22 +53,10 @@ def setup_availability_indexes(db):
     collection = db[COLLECTION_AVAILABILITY]
 
     indexes = [
-        # User lookup
-        IndexModel([("user_id", ASCENDING)], name="user_id"),
-        # Active availability for user
+        # User + window-end lookups (future windows per user)
         IndexModel(
-            [("user_id", ASCENDING), ("is_active", ASCENDING)],
-            name="user_active"
-        ),
-        # Date range queries
-        IndexModel(
-            [("user_id", ASCENDING), ("start_date", ASCENDING), ("end_date", ASCENDING)],
-            name="user_date_range"
-        ),
-        # Future availability
-        IndexModel(
-            [("is_active", ASCENDING), ("end_date", ASCENDING)],
-            name="active_future"
+            [("user_id", ASCENDING), ("end_date", ASCENDING)],
+            name="user_end_date"
         ),
     ]
 
@@ -77,62 +64,50 @@ def setup_availability_indexes(db):
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_AVAILABILITY}")
 
 
-def setup_destination_indexes(db):
-    """Create indexes for destination_preferences collection."""
-    collection = db[COLLECTION_DESTINATIONS]
-
-    indexes = [
-        # User lookup
-        IndexModel([("user_id", ASCENDING)], name="user_id"),
-        # Destination lookup (reverse lookup)
-        IndexModel([("destination_code", ASCENDING)], name="destination_code"),
-        # User + destination (for checking duplicates)
-        IndexModel(
-            [("user_id", ASCENDING), ("destination_code", ASCENDING)],
-            unique=True,
-            name="user_destination_unique"
-        ),
-        # Active destinations for user
-        IndexModel(
-            [("user_id", ASCENDING), ("is_active", ASCENDING), ("priority", ASCENDING)],
-            name="user_active_priority"
-        ),
-    ]
-
-    collection.create_indexes(indexes)
-    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_DESTINATIONS}")
+# The ONLY indexes allowed on flights (besides the implicit _id).
+FLIGHTS_INDEX_NAMES = {
+    "_id_",
+    "flight_key_unique",
+    "origin_outbound_price",
+    "destination_outbound_price",
+    "ttl_last_seen",
+}
 
 
 def setup_flight_indexes(db):
-    """Create indexes for flights collection."""
+    """
+    Create the v2 index set for the flights collection and drop everything
+    else by name (legacy deal/route/price indexes from v1).
+    """
     collection = db[COLLECTION_FLIGHTS]
 
+    # Drop any index that is not part of the v2 set.
+    try:
+        existing = list(collection.list_indexes())
+    except OperationFailure:
+        existing = []
+    for idx in existing:
+        name = idx["name"]
+        if name not in FLIGHTS_INDEX_NAMES:
+            try:
+                collection.drop_index(name)
+                logger.info(f"Dropped legacy index '{name}' on {COLLECTION_FLIGHTS}")
+            except OperationFailure as e:
+                logger.warning(f"Could not drop index '{name}' on {COLLECTION_FLIGHTS}: {e}")
+
     indexes = [
-        # Unique flight key
+        # Unique itinerary key (no price component in v2)
         IndexModel([("flight_key", ASCENDING)], unique=True, name="flight_key_unique"),
-        # Route lookup
+        # Origin-side queries sorted by price
         IndexModel(
-            [("origin", ASCENDING), ("destination", ASCENDING)],
-            name="route"
+            [("origin", ASCENDING), ("outbound_date", ASCENDING), ("price", ASCENDING)],
+            name="origin_outbound_price"
         ),
-        # Origin lookup
-        IndexModel([("origin", ASCENDING)], name="origin"),
-        # Destination lookup
-        IndexModel([("destination", ASCENDING)], name="destination"),
-        # Price sorting
-        IndexModel([("price", ASCENDING)], name="price"),
-        # Deals lookup
+        # Destination-side queries sorted by price
         IndexModel(
-            [("is_deal", ASCENDING), ("deal_score", DESCENDING)],
-            name="deals"
+            [("destination", ASCENDING), ("outbound_date", ASCENDING), ("price", ASCENDING)],
+            name="destination_outbound_price"
         ),
-        # Date range queries
-        IndexModel(
-            [("outbound_date", ASCENDING), ("return_date", ASCENDING)],
-            name="date_range"
-        ),
-        # Recently scraped
-        IndexModel([("scraped_at", DESCENDING)], name="scraped_at"),
         # Last seen TTL — auto-delete flights not re-seen in FLIGHTS_TTL_DAYS.
         # This is the pool-scraper's primary cleanup mechanism.
         IndexModel(
@@ -140,79 +115,11 @@ def setup_flight_indexes(db):
             expireAfterSeconds=FLIGHTS_TTL_DAYS * 24 * 60 * 60,
             name="ttl_last_seen"
         ),
-        # Combined route + price for sorted queries
-        IndexModel(
-            [("origin", ASCENDING), ("destination", ASCENDING), ("price", ASCENDING)],
-            name="route_price"
-        ),
-        # Deals by destination
-        IndexModel(
-            [("destination", ASCENDING), ("is_deal", ASCENDING), ("deal_score", DESCENDING)],
-            name="destination_deals"
-        ),
     ]
-
-    # Drop the old non-TTL last_seen index if it exists, so the new TTL one
-    # can take its place without conflict.
-    try:
-        collection.drop_index("last_seen")
-        logger.info(f"Dropped legacy non-TTL 'last_seen' index on {COLLECTION_FLIGHTS}")
-    except OperationFailure:
-        pass
 
     collection.create_indexes(indexes)
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_FLIGHTS}")
     logger.info(f"  TTL: flights expire {FLIGHTS_TTL_DAYS}d after last_seen_at")
-
-
-def setup_price_history_indexes(db):
-    """Create indexes for price_history collection."""
-    collection = db[COLLECTION_PRICE_HISTORY]
-
-    indexes = [
-        # Flight lookup
-        IndexModel([("flight_key", ASCENDING)], name="flight_key"),
-        # Route lookup
-        IndexModel([("route_key", ASCENDING)], name="route_key"),
-        # Time-based queries
-        IndexModel([("scraped_at", DESCENDING)], name="scraped_at"),
-        # Route + time for trend queries
-        IndexModel(
-            [("route_key", ASCENDING), ("scraped_at", DESCENDING)],
-            name="route_time"
-        ),
-        # TTL index - auto-delete after X days
-        IndexModel(
-            [("scraped_at", ASCENDING)],
-            expireAfterSeconds=PRICE_HISTORY_TTL_DAYS * 24 * 60 * 60,
-            name="ttl_cleanup"
-        ),
-    ]
-
-    collection.create_indexes(indexes)
-    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_PRICE_HISTORY}")
-    logger.info(f"TTL index set to delete records after {PRICE_HISTORY_TTL_DAYS} days")
-
-
-def setup_route_stats_indexes(db):
-    """Create indexes for route_stats collection."""
-    collection = db[COLLECTION_ROUTE_STATS]
-
-    indexes = [
-        # Unique route key
-        IndexModel([("route_key", ASCENDING)], unique=True, name="route_key_unique"),
-        # Origin lookup
-        IndexModel([("origin", ASCENDING)], name="origin"),
-        # Destination lookup
-        IndexModel([("destination", ASCENDING)], name="destination"),
-        # Average price sorting
-        IndexModel([("average_price", ASCENDING)], name="avg_price"),
-        # Sample count (for filtering routes with enough data)
-        IndexModel([("sample_count", DESCENDING)], name="sample_count"),
-    ]
-
-    collection.create_indexes(indexes)
-    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_ROUTE_STATS}")
 
 
 def setup_scrape_target_indexes(db):
@@ -257,7 +164,7 @@ def setup_scrape_run_indexes(db):
 def setup_all_indexes():
     """Create all indexes for all collections."""
     logger.info("=" * 60)
-    logger.info("Setting up MongoDB indexes...")
+    logger.info("Setting up MongoDB indexes (v2)...")
     logger.info("=" * 60)
 
     db = get_database()
@@ -266,10 +173,7 @@ def setup_all_indexes():
     steps = [
         ("users",          setup_user_indexes),
         ("availability",   setup_availability_indexes),
-        ("destinations",   setup_destination_indexes),
         ("flights",        setup_flight_indexes),
-        ("price_history",  setup_price_history_indexes),
-        ("route_stats",    setup_route_stats_indexes),
         ("scrape_targets", setup_scrape_target_indexes),
         ("scrape_runs",    setup_scrape_run_indexes),
     ]
@@ -304,10 +208,7 @@ def list_all_indexes():
     collections = [
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
-        COLLECTION_DESTINATIONS,
         COLLECTION_FLIGHTS,
-        COLLECTION_PRICE_HISTORY,
-        COLLECTION_ROUTE_STATS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
     ]
@@ -325,10 +226,7 @@ def drop_all_indexes():
     collections = [
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
-        COLLECTION_DESTINATIONS,
         COLLECTION_FLIGHTS,
-        COLLECTION_PRICE_HISTORY,
-        COLLECTION_ROUTE_STATS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
     ]

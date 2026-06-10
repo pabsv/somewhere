@@ -52,7 +52,7 @@ class Flight:
     return_stops: int
 
     # Booking
-    azair_link: str  # Direct link to Azair for this specific flight
+    azair_link: str = ""  # Direct link to Azair for this specific flight (azair source only)
 
     # Source tracking
     search_link: Optional[str] = None  # Google Flights URL (for Fli-sourced flights)

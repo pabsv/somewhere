@@ -1,14 +1,23 @@
 """
-Flight repository with upsert logic and deal queries.
+Flight repository — upsert and query logic for the flights collection.
+
+v2: flight_key excludes price (one doc per itinerary date-pair), and
+bulk_upsert maintains an embedded `price_points` array that appends only
+when the stored price actually changes (capped at the last 20 points).
 """
 
 from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 
+from pymongo import UpdateOne
+
 from ..connection import get_collection
 from ..config import COLLECTION_FLIGHTS
 from ..models.flight import FlightModel
+
+# Max number of price points retained per flight doc.
+PRICE_POINTS_CAP = 20
 
 
 class FlightRepository:
@@ -18,90 +27,109 @@ class FlightRepository:
         self.collection = get_collection(COLLECTION_FLIGHTS)
 
     # Create / Upsert
-    def upsert(self, flight: FlightModel) -> tuple[FlightModel, bool]:
-        """
-        Insert or update a flight based on flight_key.
-
-        Args:
-            flight: FlightModel to insert/update
-
-        Returns:
-            Tuple of (FlightModel, is_new) where is_new indicates if it was inserted
-        """
-        now = datetime.utcnow()
-        flight.last_seen_at = now
-        flight.scraped_at = now
-
-        # Try to find existing flight
-        existing = self.find_by_flight_key(flight.flight_key)
-
-        if existing:
-            # Update existing - preserve first_seen_at
-            flight.first_seen_at = existing.first_seen_at
-            flight._id = existing._id
-
-            self.collection.update_one(
-                {"flight_key": flight.flight_key},
-                {"$set": flight.to_dict()}
-            )
-            return flight, False
-        else:
-            # Insert new
-            flight.first_seen_at = now
-            result = self.collection.insert_one(flight.to_dict())
-            flight._id = result.inserted_id
-            return flight, True
+    def upsert(self, flight: FlightModel) -> dict:
+        """Upsert a single flight. Returns {"new": 0|1, "updated": 0|1}."""
+        return self.bulk_upsert([flight])
 
     def upsert_many(self, flights: list[FlightModel]) -> dict:
-        """
-        Upsert multiple flights.
-
-        Returns:
-            Dict with counts: {"new": X, "updated": Y}
-        """
-        new_count = 0
-        updated_count = 0
-
-        for flight in flights:
-            _, is_new = self.upsert(flight)
-            if is_new:
-                new_count += 1
-            else:
-                updated_count += 1
-
-        return {"new": new_count, "updated": updated_count}
+        """Alias for bulk_upsert. Returns {"new": X, "updated": Y}."""
+        return self.bulk_upsert(flights)
 
     def bulk_upsert(self, flights: list[FlightModel]) -> dict:
         """
         Upsert many flights in a single bulk_write call.
-        Uses $setOnInsert for first_seen_at so it is only written on insert.
+
+        v2 semantics:
+          1. The incoming batch is FIRST deduped by flight_key keeping the
+             LOWEST price (fli returns duplicate itineraries for the same
+             date-pair).
+          2. Each op is an aggregation-pipeline update (list-of-stages) so
+             `price_points` appends ONLY when the price changed, capped at
+             the last PRICE_POINTS_CAP entries. New docs get their first
+             price point on insert.
+          3. `first_seen_at` is preserved on existing docs via $ifNull.
 
         Returns:
             Dict with counts: {"new": X, "updated": Y}
         """
-        from pymongo import UpdateOne
         if not flights:
             return {"new": 0, "updated": 0}
 
-        now = datetime.utcnow()
-        ops = []
+        # 1. Dedupe the batch by flight_key, keeping the lowest price.
+        best: dict[str, FlightModel] = {}
         for flight in flights:
+            key = flight.flight_key
+            if key not in best or flight.price < best[key].price:
+                best[key] = flight
+
+        now = datetime.utcnow()
+        now_iso = now.isoformat(timespec="seconds") + "Z"
+
+        ops = []
+        for key, flight in best.items():
             flight.last_seen_at = now
             flight.scraped_at = now
-            doc = flight.to_dict()
-            doc.pop("first_seen_at", None)  # handled by $setOnInsert below
+            price = float(flight.price)
+
+            scalar_fields = {
+                "flight_key": key,
+                "origin": flight.origin,
+                "destination": flight.destination,
+                "outbound_date": flight.outbound_date,
+                "return_date": flight.return_date,
+                "duration_days": flight.duration_days,
+                "price": price,
+                "currency": flight.currency,
+                "airlines": flight.airlines,
+                "outbound_departure": flight.outbound_departure,
+                "outbound_arrival": flight.outbound_arrival,
+                "return_departure": flight.return_departure,
+                "return_arrival": flight.return_arrival,
+                "outbound_duration": flight.outbound_duration,
+                "return_duration": flight.return_duration,
+                "outbound_stops": flight.outbound_stops,
+                "return_stops": flight.return_stops,
+                "search_link": flight.search_link,
+                "source": flight.source,
+            }
+            # $literal-wrap plain values so strings can never be read as
+            # field paths by the aggregation pipeline.
+            set_stage = {k: {"$literal": v} for k, v in scalar_fields.items()}
+            set_stage["last_seen_at"] = now
+            set_stage["scraped_at"] = now
+            set_stage["first_seen_at"] = {"$ifNull": ["$first_seen_at", now]}
+            # Append {p, at} only when the last recorded price differs from
+            # the new price. ($arrayElemAt on an empty array yields missing,
+            # so brand-new docs always get their first point.)
+            set_stage["price_points"] = {"$let": {
+                "vars": {"pp": {"$ifNull": ["$price_points", []]}},
+                "in": {"$cond": [
+                    {"$eq": [
+                        {"$arrayElemAt": [
+                            {"$map": {"input": "$$pp", "as": "x", "in": "$$x.p"}},
+                            -1,
+                        ]},
+                        price,
+                    ]},
+                    "$$pp",
+                    {"$slice": [
+                        {"$concatArrays": [
+                            "$$pp",
+                            [{"p": {"$literal": price}, "at": {"$literal": now_iso}}],
+                        ]},
+                        -PRICE_POINTS_CAP,
+                    ]},
+                ]},
+            }}
+
             ops.append(UpdateOne(
-                {"flight_key": flight.flight_key},
-                {
-                    "$set": doc,
-                    "$setOnInsert": {"first_seen_at": now},
-                },
+                {"flight_key": key},
+                [{"$set": set_stage}],  # aggregation-pipeline update
                 upsert=True,
             ))
 
         result = self.collection.bulk_write(ops, ordered=False)
-        new_count = result.upserted_count
-        return {"new": new_count, "updated": len(ops) - new_count}
+        return {"new": result.upserted_count, "updated": result.modified_count}
 
     # Read
     def find_by_id(self, flight_id: str) -> Optional[FlightModel]:
@@ -174,34 +202,6 @@ class FlightRepository:
         docs = self.collection.find(query).sort("price", 1).limit(limit)
         return [FlightModel.from_dict(doc) for doc in docs]
 
-    def find_deals(
-        self,
-        min_score: int = 50,
-        origin: Optional[str] = None,
-        destination: Optional[str] = None,
-        limit: int = 50
-    ) -> list[FlightModel]:
-        """
-        Find flights marked as deals.
-
-        Args:
-            min_score: Minimum deal score (0-100)
-            origin: Optional origin filter
-            destination: Optional destination filter
-            limit: Max results
-        """
-        query = {
-            "is_deal": True,
-            "deal_score": {"$gte": min_score}
-        }
-        if origin:
-            query["origin"] = origin.upper()
-        if destination:
-            query["destination"] = destination.upper()
-
-        docs = self.collection.find(query).sort("deal_score", -1).limit(limit)
-        return [FlightModel.from_dict(doc) for doc in docs]
-
     def find_under_price(
         self,
         max_price: float,
@@ -225,65 +225,12 @@ class FlightRepository:
 
     def find_recent(self, hours: int = 24, limit: int = 100) -> list[FlightModel]:
         """Find recently scraped flights."""
-        cutoff = datetime.utcnow().replace(
-            hour=datetime.utcnow().hour - hours
-        )
+        from datetime import timedelta
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
         docs = self.collection.find({
             "scraped_at": {"$gte": cutoff}
         }).sort("scraped_at", -1).limit(limit)
         return [FlightModel.from_dict(doc) for doc in docs]
-
-    # Update
-    def update(self, flight: FlightModel) -> bool:
-        """Update an existing flight."""
-        if not flight._id:
-            return False
-
-        result = self.collection.update_one(
-            {"_id": flight._id},
-            {"$set": flight.to_dict()}
-        )
-        return result.modified_count > 0
-
-    def update_deal_status(
-        self,
-        flight_key: str,
-        is_deal: bool,
-        deal_score: int
-    ) -> bool:
-        """Update a flight's deal status."""
-        result = self.collection.update_one(
-            {"flight_key": flight_key},
-            {
-                "$set": {
-                    "is_deal": is_deal,
-                    "deal_score": deal_score
-                }
-            }
-        )
-        return result.modified_count > 0
-
-    def update_price_stats(
-        self,
-        flight_key: str,
-        lowest: float,
-        highest: float,
-        average: float,
-        current_vs_avg_percent: float
-    ) -> bool:
-        """Update a flight's price statistics."""
-        result = self.collection.update_one(
-            {"flight_key": flight_key},
-            {
-                "$set": {
-                    "price_stats.lowest": lowest,
-                    "price_stats.highest": highest,
-                    "price_stats.average": average,
-                    "price_stats.current_vs_avg_percent": current_vs_avg_percent
-                }
-            }
-        )
-        return result.modified_count > 0
 
     # Delete
     def delete(self, flight_id: str) -> bool:
@@ -302,10 +249,6 @@ class FlightRepository:
     def count_total(self) -> int:
         """Count all flights."""
         return self.collection.count_documents({})
-
-    def count_deals(self) -> int:
-        """Count flights marked as deals."""
-        return self.collection.count_documents({"is_deal": True})
 
     def get_cheapest_by_route(self, limit: int = 20) -> list[dict]:
         """Get cheapest flight per route."""

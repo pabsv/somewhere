@@ -103,7 +103,6 @@ def _fli_to_flight(outbound, inbound, origin_code: str, dest_code: str) -> Fligh
         return_duration=_minutes_to_hm(inbound.duration),
         outbound_stops=len(outbound.legs) - 1,
         return_stops=len(inbound.legs) - 1,
-        azair_link="",
         search_link=_build_google_flights_url(origin_code, dest_code, out_date, ret_date),
         source="fli",
     )

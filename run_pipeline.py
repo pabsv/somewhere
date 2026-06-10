@@ -3,9 +3,8 @@ Flight Scraper Pipeline - Phase 3 Integration
 
 This script connects the scraper to the database:
 1. Runs the Azair scraper
-2. Saves flights to MongoDB via FlightService
-3. Detects deals based on price thresholds and historical data
-4. Reports results
+2. Saves flights to MongoDB via FlightService (deal scoring lives in the frontend)
+3. Reports results
 
 Usage:
     python run_pipeline.py              # Quick test (2 origins, 3 destinations)
@@ -118,8 +117,8 @@ def run_pipeline(
         logger.warning("No flights found. Exiting.")
         return
 
-    # Phase 2: Save to database and detect deals
-    logger.info("\n[PHASE 2] Saving to database and detecting deals...")
+    # Phase 2: Save to database
+    logger.info("\n[PHASE 2] Saving to database...")
     result = flight_service.save_scraped_flights(flights)
 
     # Phase 3: Report results
@@ -128,32 +127,8 @@ def run_pipeline(
     logger.info("=" * 60)
     logger.info(f"New flights:     {result['new']}")
     logger.info(f"Updated flights: {result['updated']}")
-    logger.info(f"Deals found:     {result['deals']}")
-    logger.info(f"Hot deals:       {result['hot_deals']}")
-
-    # Show top deals
-    if result['deals'] > 0:
-        logger.info("\n" + "-" * 60)
-        logger.info("TOP DEALS:")
-        logger.info("-" * 60)
-
-        deals = flight_service.get_deals(min_score=50, limit=10)
-        for i, deal in enumerate(deals, 1):
-            logger.info(
-                f"{i}. {deal.origin} -> {deal.destination}: "
-                f"EUR {deal.price:.0f} (score: {deal.deal_score}) "
-                f"[{deal.outbound_date} - {deal.return_date}]"
-            )
-
-    # Show database stats
-    logger.info("\n" + "-" * 60)
-    logger.info("DATABASE STATS:")
-    logger.info("-" * 60)
-    stats = flight_service.get_stats()
-    logger.info(f"Total flights in DB:   {stats['total_flights']}")
-    logger.info(f"Total deals in DB:     {stats['total_deals']}")
-    logger.info(f"Total routes tracked:  {stats['total_routes']}")
-    logger.info(f"Price history records: {stats['total_price_history']}")
+    logger.info(f"Dropped (price sanity): {result['dropped']}")
+    logger.info(f"Total flights in DB:    {flight_service.flight_repo.count_total()}")
 
     logger.info("\n" + "=" * 60)
     logger.info("Pipeline complete!")

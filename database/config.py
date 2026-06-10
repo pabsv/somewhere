@@ -43,12 +43,13 @@ COLLECTION_SCRAPE_TARGETS = "scrape_targets"   # pool-based scraping config
 COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observability
 
 # TTL settings
-PRICE_HISTORY_TTL_DAYS = 180   # Auto-delete price history after 180 days
 FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days
 SCRAPE_RUNS_TTL_DAYS = 30      # Auto-delete scrape run logs after 30 days
 
-# Deal detection — flights at or below this price are marked as deals
-DEAL_PRICE_THRESHOLD = 200.0   # Default max price; overridden by user's max_price setting
+# Price sanity guard — flights outside (MIN, MAX] are dropped before save.
+# Deal scoring itself lives in the frontend (frontend/lib/score.ts).
+PRICE_SANITY_MIN = 5
+PRICE_SANITY_MAX = 3000
 
 # ─── Pool scheduler config ────────────────────────────────────────────────
 # Active scraping window (local time, 24h). Outside this window scheduler idles.

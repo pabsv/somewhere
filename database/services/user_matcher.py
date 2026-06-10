@@ -73,11 +73,11 @@ class UserMatcher:
 
         Args:
             user_id: User's ID
-            deals_only: Only return flights marked as deals
+            deals_only: Deprecated no-op — deal scoring moved to the frontend
             max_results: Maximum number of results
 
         Returns:
-            List of matching FlightModel objects sorted by deal_score then price
+            List of matching FlightModel objects sorted by price
         """
         # Get user
         user = self.user_repo.find_by_id(user_id)
@@ -141,8 +141,6 @@ class UserMatcher:
                             continue
                         if flight.duration_days > max_days:
                             continue
-                        if deals_only and not flight.is_deal:
-                            continue
 
                         # Check if flight dates fall within availability
                         try:
@@ -166,14 +164,14 @@ class UserMatcher:
                 seen.add(f.flight_key)
                 unique_flights.append(f)
 
-        # Sort by deal_score (desc) then price (asc)
-        unique_flights.sort(key=lambda f: (-f.deal_score, f.price))
+        # Sort by price (asc) — deal scoring lives in the frontend now
+        unique_flights.sort(key=lambda f: f.price)
 
         return unique_flights[:max_results]
 
     def find_deals_for_user(self, user_id: str, max_results: int = 20) -> list[FlightModel]:
-        """Find deals matching a user's preferences."""
-        return self.find_flights_for_user(user_id, deals_only=True, max_results=max_results)
+        """Find cheapest matching flights (deal scoring moved to frontend)."""
+        return self.find_flights_for_user(user_id, max_results=max_results)
 
     def find_users_for_flight(self, flight: FlightModel) -> list[User]:
         """
@@ -257,14 +255,11 @@ class UserMatcher:
 
         Args:
             flight: FlightModel to notify about
-            require_deal: Only notify if flight is a deal
+            require_deal: Deprecated no-op — deal scoring moved to the frontend
 
         Returns:
             List of User objects to notify
         """
-        if require_deal and not flight.is_deal:
-            return []
-
         users = self.find_users_for_flight(flight)
 
         # Filter by notification preferences
@@ -287,8 +282,6 @@ class UserMatcher:
             return {"error": "User not found"}
 
         all_flights = self.find_flights_for_user(user_id, max_results=100)
-        deals = [f for f in all_flights if f.is_deal]
-        hot_deals = [f for f in deals if f.deal_score >= 70]
 
         # Group by destination
         by_destination = {}
@@ -302,9 +295,6 @@ class UserMatcher:
         return {
             "user_id": user_id,
             "total_matches": len(all_flights),
-            "total_deals": len(deals),
-            "hot_deals": len(hot_deals),
-            "top_deals": [f.to_api_dict() for f in deals[:5]],
             "destinations": by_destination,
             "cheapest_flight": all_flights[0].to_api_dict() if all_flights else None
         }
@@ -316,13 +306,11 @@ class UserMatcher:
 
         for user in users:
             flights = self.find_flights_for_user(user.id, max_results=20)
-            deals = len([f for f in flights if f.is_deal])
 
             summaries.append({
                 "user_id": user.id,
                 "email": user.email,
                 "total_matches": len(flights),
-                "deals": deals
             })
 
         return summaries

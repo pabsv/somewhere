@@ -38,7 +38,7 @@ _state: dict = {
     "status": "idle",   # "idle" | "running" | "done" | "error"
     "started_at": None,
     "finished_at": None,
-    "result": None,     # {"new": X, "updated": Y, "deals": Z, "hot_deals": W}
+    "result": None,     # {"new": X, "updated": Y, "dropped": Z}
     "error": None,
 }
 

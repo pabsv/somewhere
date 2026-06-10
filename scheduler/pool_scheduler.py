@@ -23,6 +23,7 @@ import argparse
 import importlib.util
 import logging
 import os
+import statistics
 import sys
 import time
 from datetime import datetime, timedelta
@@ -139,12 +140,14 @@ def scrape_one_route(
             status = "success"
             err = None
 
+        median_price = statistics.median([f.price for f in flights]) if flights else None
+
         if flights:
             save_result = FlightService().save_scraped_flights(flights)
             logger.info(
                 f"[{route_key}] {len(flights)} flights "
                 f"(saved new={save_result['new']} upd={save_result['updated']} "
-                f"deals={save_result['deals']}) "
+                f"dropped={save_result['dropped']}) "
                 f"cheapest=€{stats['cheapest_price']:.0f} "
                 f"api={stats['api_calls']} dur={time.time()-t0:.1f}s"
             )
@@ -167,6 +170,7 @@ def scrape_one_route(
             status=status,
             flight_count=len(flights),
             cheapest_price=stats["cheapest_price"],
+            median_price=median_price,
             error_message=err,
         )
 
@@ -186,6 +190,7 @@ def scrape_one_route(
             status="error",
             flight_count=0,
             cheapest_price=None,
+            median_price=None,
             error_message=err,
         )
         return {"status": "error", "flight_count": 0, "api_calls": 0, "cheapest_price": None}

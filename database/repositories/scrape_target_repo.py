@@ -84,6 +84,7 @@ class ScrapeTargetRepository:
                         "error_runs": 0,
                         "consecutive_failures": 0,
                         "avg_price": None,
+                        "price_p50_ewma": None,
                         "min_price_seen": None,
                         "created_at": now,
                     },
@@ -135,6 +136,7 @@ class ScrapeTargetRepository:
         status: str,
         flight_count: int,
         cheapest_price: Optional[float],
+        median_price: Optional[float] = None,
         error_message: Optional[str] = None,
     ) -> None:
         """
@@ -142,6 +144,11 @@ class ScrapeTargetRepository:
 
         Computes next_due_at from tier cadence, updates rolling counters,
         and auto-disables if too many consecutive failures.
+
+        Price baselines (both EWMA, alpha=0.3):
+          avg_price      — EWMA of the CHEAPEST price per run (kept for compat)
+          price_p50_ewma — EWMA of the MEDIAN price per run (scoring baseline)
+        Plus min_price_seen — all-time low for the route.
         """
         now = datetime.utcnow()
         existing = self.collection.find_one({"route_key": route_key})
@@ -174,7 +181,7 @@ class ScrapeTargetRepository:
             update["$inc"]["error_runs"] = 1
             update["$inc"]["consecutive_failures"] = 1
 
-        # Rolling avg price — exponential decay (alpha=0.3).
+        # Rolling cheapest-per-run price — exponential decay (alpha=0.3).
         if cheapest_price is not None and cheapest_price > 0:
             prev_avg = existing.get("avg_price")
             new_avg = cheapest_price if prev_avg is None else 0.7 * prev_avg + 0.3 * cheapest_price
@@ -183,6 +190,12 @@ class ScrapeTargetRepository:
             prev_min = existing.get("min_price_seen")
             if prev_min is None or cheapest_price < prev_min:
                 update["$set"]["min_price_seen"] = cheapest_price
+
+        # Rolling median-per-run price — exponential decay (alpha=0.3).
+        if median_price is not None and median_price > 0:
+            prev_p50 = existing.get("price_p50_ewma")
+            new_p50 = median_price if prev_p50 is None else 0.7 * prev_p50 + 0.3 * median_price
+            update["$set"]["price_p50_ewma"] = round(new_p50, 2)
 
         self.collection.update_one({"route_key": route_key}, update)
 

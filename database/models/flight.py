@@ -1,5 +1,12 @@
 """
-Flight model - scraped flight data with price statistics.
+Flight model v2 — one document per itinerary date-pair.
+
+flight_key no longer includes price: the same (origin, destination,
+outbound_date, return_date) itinerary is a single doc whose price updates
+in place. Price changes are tracked in the embedded `price_points` array
+(appended by FlightRepository.bulk_upsert, capped at 20 entries).
+
+Python computes NO deal scores — scoring lives in frontend/lib/score.ts.
 """
 
 from dataclasses import dataclass, field
@@ -21,7 +28,7 @@ class FlightModel:
     MongoDB document structure:
     {
         "_id": ObjectId,
-        "flight_key": "EIN-BCN-2026-03-15-2026-03-20-85.0",
+        "flight_key": "EIN-BCN-2026-03-15-2026-03-20",
         "origin": "EIN",
         "destination": "BCN",
         "outbound_date": "2026-03-15",
@@ -38,10 +45,9 @@ class FlightModel:
         "return_duration": "2h 45m",
         "outbound_stops": 0,
         "return_stops": 0,
-        "azair_link": "https://...",
-        "price_stats": { "lowest": 70, "highest": 150, "average": 95, "current_vs_avg_percent": -10.5 },
-        "is_deal": true,
-        "deal_score": 75,
+        "search_link": "https://www.google.com/travel/flights?...",
+        "source": "fli",
+        "price_points": [{"p": 85.0, "at": "2026-06-10T08:00:00Z"}],
         "first_seen_at": datetime,
         "last_seen_at": datetime,
         "scraped_at": datetime
@@ -72,13 +78,11 @@ class FlightModel:
     return_stops: int = 0
 
     # Booking
-    azair_link: str = ""
     search_link: str = ""    # Google Flights URL (for Fli-sourced flights)
     source: str = "azair"    # "azair" or "fli"
 
-    # Deal detection
-    is_deal: bool = False
-    deal_score: int = 0  # 0-100, higher = better deal
+    # Price history — [{"p": float, "at": iso-string}], maintained by bulk_upsert
+    price_points: list = field(default_factory=list)
 
     # Timestamps
     first_seen_at: Optional[datetime] = None
@@ -104,8 +108,8 @@ class FlightModel:
 
     @property
     def flight_key(self) -> str:
-        """Unique identifier for this specific flight."""
-        return f"{self.origin}-{self.destination}-{self.outbound_date}-{self.return_date}-{self.price}"
+        """Unique identifier for this itinerary date-pair (price NOT included)."""
+        return f"{self.origin}-{self.destination}-{self.outbound_date}-{self.return_date}"
 
     @property
     def route_key(self) -> str:
@@ -137,11 +141,9 @@ class FlightModel:
             "return_duration": self.return_duration,
             "outbound_stops": self.outbound_stops,
             "return_stops": self.return_stops,
-            "azair_link": self.azair_link,
             "search_link": self.search_link,
             "source": self.source,
-            "is_deal": self.is_deal,
-            "deal_score": self.deal_score,
+            "price_points": self.price_points,
             "first_seen_at": self.first_seen_at,
             "last_seen_at": self.last_seen_at,
             "scraped_at": self.scraped_at,
@@ -171,11 +173,9 @@ class FlightModel:
             return_duration=data.get("return_duration", ""),
             outbound_stops=data.get("outbound_stops", 0),
             return_stops=data.get("return_stops", 0),
-            azair_link=data.get("azair_link", ""),
             search_link=data.get("search_link", ""),
             source=data.get("source", "azair"),
-            is_deal=data.get("is_deal", False),
-            deal_score=data.get("deal_score", 0),
+            price_points=data.get("price_points", []),
             first_seen_at=data.get("first_seen_at"),
             last_seen_at=data.get("last_seen_at"),
             scraped_at=data.get("scraped_at"),
@@ -209,7 +209,6 @@ class FlightModel:
             return_duration=flight.return_duration,
             outbound_stops=flight.outbound_stops,
             return_stops=flight.return_stops,
-            azair_link=flight.azair_link,
             search_link=getattr(flight, "search_link", "") or "",
             source=getattr(flight, "source", "azair"),
         )
@@ -237,19 +236,16 @@ class FlightModel:
             "outbound_stops": self.outbound_stops,
             "return_stops": self.return_stops,
             "is_direct": self.is_direct,
-            "azair_link": self.azair_link,
             "search_link": self.search_link,
             "source": self.source,
-            "is_deal": self.is_deal,
-            "deal_score": self.deal_score,
+            "price_points": self.price_points,
             "first_seen_at": self.first_seen_at.isoformat() if self.first_seen_at else None,
             "last_seen_at": self.last_seen_at.isoformat() if self.last_seen_at else None,
         }
 
     def __str__(self):
         stops = "direct" if self.is_direct else f"{self.outbound_stops}stop"
-        deal_str = f" DEAL({self.deal_score})" if self.is_deal else ""
         return (
             f"{self.origin}->{self.destination}: €{self.price:.0f} "
-            f"({self.outbound_date} to {self.return_date}, {self.duration_days}d, {stops}){deal_str}"
+            f"({self.outbound_date} to {self.return_date}, {self.duration_days}d, {stops})"
         )
