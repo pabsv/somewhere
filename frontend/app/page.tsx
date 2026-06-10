@@ -1,56 +1,274 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import DealsCalendar from "@/components/calendar/DealsCalendar";
-import { getDeals, getPreferences } from "@/lib/api";
-import { Deal, DateWindow } from "@/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import DepartureBoard, {
+  type DepartureRow,
+} from "@/components/board/DepartureBoard";
+import CityCard, { CityCardSkeleton } from "@/components/explore/CityCard";
+import ExploreControls, {
+  type SortKey,
+} from "@/components/explore/ExploreControls";
+import { countryName } from "@/components/explore/countries";
+import { getCities, ApiError } from "@/lib/client";
+import { useOrigins } from "@/lib/useOrigins";
+import { formatDateBoard } from "@/lib/format";
+import type { CitySummary } from "@/types/api";
 
-export default function Home() {
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [availability, setAvailability] = useState<DateWindow[]>([]);
+const SKELETON_COUNT = 12;
+
+export default function ExplorePage() {
+  const { origins } = useOrigins();
+  const searchParams = useSearchParams();
+  const fromQuery = searchParams.get("from");
+  // Forward only the origin filter to /city links; keeps URLs clean.
+  const cityQuery = fromQuery ? `from=${fromQuery}` : "";
+
+  const [cities, setCities] = useState<CitySummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([getDeals(), getPreferences()])
-      .then(([d, prefs]) => {
-        setDeals(d);
-        setAvailability(prefs.availability);
-      })
-      .catch(() => setError("Could not connect to the API. Is it running?"))
-      .finally(() => setLoading(false));
-  }, []);
+  // grid controls
+  const [search, setSearch] = useState("");
+  const [region, setRegion] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>("score");
 
-  const cheapest = deals.length > 0 ? Math.min(...deals.map((d) => d.price)) : null;
+  const originsKey = origins.join(",");
+
+  const load = useCallback(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getCities({ from: origins })
+      .then((res) => {
+        if (cancelled) return;
+        setCities(res.cities);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Something went wrong loading the board.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originsKey]);
+
+  useEffect(() => load(), [load]);
+
+  // ─── Hero board: top 5 steals, highest score first ──────────────────────────
+  const boardRows: DepartureRow[] = useMemo(() => {
+    if (!cities) return [];
+    return cities
+      .filter((c) => c.best.deal_tier === "steal")
+      .sort((a, b) => b.best.score - a.best.score)
+      .slice(0, 5)
+      .map((c) => ({
+        origin: c.best.origin,
+        destination: c.code,
+        city: c.name,
+        date: formatDateBoard(c.best.outbound_date),
+        nights: c.best.nights,
+        price: c.best.price,
+        tier: c.best.deal_tier,
+      }));
+  }, [cities]);
+
+  // ─── Grid: client-side filter + sort ────────────────────────────────────────
+  const visibleCities = useMemo(() => {
+    if (!cities) return [];
+    const q = search.trim().toLowerCase();
+
+    const filtered = cities.filter((c) => {
+      if (region && c.region !== region) return false;
+      if (!q) return true;
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.code.toLowerCase().includes(q) ||
+        countryName(c.country).toLowerCase().includes(q)
+      );
+    });
+
+    const sorted = [...filtered];
+    if (sort === "cheapest") {
+      sorted.sort((a, b) => a.best.price - b.best.price);
+    } else if (sort === "trips") {
+      sorted.sort((a, b) => b.trip_count - a.trip_count);
+    } else {
+      // best score, price as tiebreak
+      sorted.sort(
+        (a, b) => b.best.score - a.best.score || a.best.price - b.best.price,
+      );
+    }
+    return sorted;
+  }, [cities, search, region, sort]);
+
+  const isCold = !loading && !error && cities != null && cities.length === 0;
+  const noMatches =
+    !loading && !error && !isCold && visibleCities.length === 0;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-neutral-900">Flight Deals</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          {loading
-            ? "Loading…"
-            : `${deals.length} deals · from €${cheapest}`}
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      {/* ─── Title ───────────────────────────────────────────────────────────── */}
+      <header className="mb-6">
+        <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
+          Fly somewhere. Cheap.
+        </h1>
+        <p className="mt-2 max-w-xl text-base text-ink-muted">
+          Where could you go, cheap? Pick your airports, scan the board.
         </p>
+      </header>
+
+      {/* ─── Hero board ──────────────────────────────────────────────────────── */}
+      <div className="mb-8">
+        {loading && cities === null ? (
+          <BoardSkeleton />
+        ) : (
+          <DepartureBoard rows={boardRows} />
+        )}
       </div>
 
-      {/* Calendar */}
-      {loading ? (
-        <div className="py-16 text-sm text-neutral-400">Loading deals…</div>
-      ) : error ? (
-        <div className="py-16 text-sm text-red-500">{error}</div>
-      ) : deals.length === 0 ? (
-        <div className="py-16 text-sm text-neutral-500">No deals available.</div>
-      ) : (
-        <DealsCalendar deals={deals} availabilityWindows={availability} />
-      )}
+      {/* ─── Controls ────────────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <ExploreControls
+          search={search}
+          onSearch={setSearch}
+          region={region}
+          onRegion={setRegion}
+          sort={sort}
+          onSort={setSort}
+        />
+      </div>
 
-      {!loading && deals.length > 0 && (
-        <p className="text-sm text-neutral-500 mt-6">
-          Click a deal to see details and book.
-        </p>
+      {/* ─── Grid / states ───────────────────────────────────────────────────── */}
+      {error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : loading && cities === null ? (
+        <CityGrid>
+          {Array.from({ length: SKELETON_COUNT }, (_, i) => (
+            <CityCardSkeleton key={i} />
+          ))}
+        </CityGrid>
+      ) : isCold ? (
+        <ColdState />
+      ) : noMatches ? (
+        <NoMatchesState
+          onReset={() => {
+            setSearch("");
+            setRegion(null);
+          }}
+        />
+      ) : (
+        <CityGrid>
+          {visibleCities.map((c) => (
+            <CityCard key={c.code} city={c} query={cityQuery} />
+          ))}
+        </CityGrid>
       )}
+    </div>
+  );
+}
+
+// ─── Layout + state helpers ────────────────────────────────────────────────
+
+function CityGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {children}
+    </div>
+  );
+}
+
+function BoardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden rounded-card bg-night shadow-card"
+    >
+      <div className="h-1 bg-brand" />
+      <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+        <span className="h-2 w-2 rounded-full bg-brand/60" />
+        <span className="font-mono text-xs tracking-widest text-paper/60">
+          DEPARTURES — WARMING UP
+        </span>
+      </div>
+      <ul>
+        {Array.from({ length: 5 }, (_, i) => (
+          <li
+            key={i}
+            className="flex items-center justify-between gap-4 border-b border-white/5 px-4 py-3.5 last:border-b-0 sm:px-5"
+          >
+            <div className="h-7 w-24 animate-pulse rounded bg-white/10" />
+            <div className="hidden h-4 flex-1 animate-pulse rounded bg-white/5 sm:block" />
+            <div className="h-6 w-12 animate-pulse rounded bg-white/10" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ColdState() {
+  return (
+    <div className="rounded-card border border-line bg-card px-6 py-16 text-center shadow-card">
+      <p className="font-display text-xl font-semibold text-ink">
+        The board is warming up
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
+        First scrapes land within the hour. Check back soon — fresh fares from
+        your airports will appear here.
+      </p>
+    </div>
+  );
+}
+
+function NoMatchesState({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="rounded-card border border-line bg-card px-6 py-16 text-center shadow-card">
+      <p className="font-display text-xl font-semibold text-ink">
+        No cities match those filters
+      </p>
+      <p className="mt-2 text-sm text-ink-muted">
+        Try a different search or region.
+      </p>
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-4 rounded-full border border-ink bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+      >
+        Clear filters
+      </button>
+    </div>
+  );
+}
+
+function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="rounded-card border border-alert/30 bg-card px-6 py-16 text-center shadow-card">
+      <p className="font-display text-xl font-semibold text-ink">
+        Couldn’t load the board
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 rounded-full border border-ink bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+      >
+        Retry
+      </button>
     </div>
   );
 }

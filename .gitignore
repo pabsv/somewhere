@@ -24,3 +24,8 @@ Thumbs.db
 
 # Project specific
 scraper-azair/test_results.json
+.vercel
+
+# Claude Code local tooling (worktrees, launch config)
+.claude/
+scratch_*.py

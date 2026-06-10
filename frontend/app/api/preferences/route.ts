@@ -1,110 +1,84 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+// ─── /api/preferences — user search preferences (session-gated) ─────────────
+// GET → preferences subdoc merged over defaults (all origins, 2–10 nights…).
+// PUT → validate, enforce min<=max nights, persist on the users doc.
+// Preferences narrow results, never gate them. Spec: docs/DESIGN_V1.md D + A.
 
-function getUserId(req: NextRequest): string | null {
-  return req.headers.get("x-user-id");
-}
+import { NextRequest, NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
+import { z } from "zod";
+import { auth } from "@/auth";
+import { getDb } from "@/lib/mongodb";
+import { PreferencesSchema, type Preferences } from "@/types/api";
+import { ORIGINS } from "@/data/airports.gen";
+
+const DEFAULTS: Preferences = {
+  origins: ORIGINS.map((o) => o.code),
+  trip_min_nights: 2,
+  trip_max_nights: 10,
+  direct_only: false,
+  max_price: null,
+};
 
 // GET /api/preferences
-export async function GET(req: NextRequest) {
-  const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: "Missing X-User-ID" }, { status: 401 });
-
-  try {
-    const db = await getDb();
-    const oid = new ObjectId(userId);
-
-    const user = await db.collection("users").findOne({ _id: oid });
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
-
-    const now = new Date();
-    const availDocs = await db.collection("availability")
-      .find({ user_id: oid, is_active: true, end_date: { $gte: now } })
-      .sort({ start_date: 1 })
-      .toArray();
-
-    const destDocs = await db.collection("destination_preferences")
-      .find({ user_id: oid, is_active: true })
-      .toArray();
-
-    return NextResponse.json({
-      home_airport: user.airports?.home ?? "",
-      nearby_airports: user.airports?.nearby ?? [],
-      destinations: destDocs.map((d) => d.destination_code),
-      availability: availDocs.map((w) => ({
-        start: w.start_date.toISOString().slice(0, 10),
-        end: w.end_date.toISOString().slice(0, 10),
-        label: w.label || null,
-      })),
-      max_price: user.notifications?.max_price_alert ?? 75,
-      direct_only: user.search_preferences?.direct_only ?? false,
-    });
-  } catch {
-    return NextResponse.json({ error: "Invalid user ID" }, { status: 401 });
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const db = await getDb();
+  const user = await db
+    .collection("users")
+    .findOne(
+      { _id: new ObjectId(session.user.id) },
+      { projection: { preferences: 1 } },
+    );
+
+  const prefs: Preferences = {
+    ...DEFAULTS,
+    ...(user?.preferences ?? {}),
+  };
+
+  return NextResponse.json(PreferencesSchema.parse(prefs));
 }
 
 // PUT /api/preferences
 export async function PUT(req: NextRequest) {
-  const userId = getUserId(req);
-  if (!userId) return NextResponse.json({ error: "Missing X-User-ID" }, { status: 401 });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  let body: unknown;
   try {
-    const db = await getDb();
-    const oid = new ObjectId(userId);
-    const prefs = await req.json();
-    const now = new Date();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-    // Update user document
-    await db.collection("users").updateOne(
-      { _id: oid },
-      {
-        $set: {
-          "airports.home": prefs.home_airport,
-          "airports.nearby": prefs.nearby_airports,
-          "search_preferences.direct_only": prefs.direct_only,
-          "notifications.max_price_alert": prefs.max_price,
-          updated_at: now,
-        },
-      }
+  const parsed = PreferencesSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: z.prettifyError(parsed.error) },
+      { status: 400 },
+    );
+  }
+
+  const prefs = parsed.data;
+  if (prefs.trip_min_nights > prefs.trip_max_nights) {
+    return NextResponse.json(
+      { error: "trip_min_nights must not exceed trip_max_nights" },
+      { status: 400 },
+    );
+  }
+
+  const db = await getDb();
+  await db
+    .collection("users")
+    .updateOne(
+      { _id: new ObjectId(session.user.id) },
+      { $set: { preferences: prefs } },
     );
 
-    // Replace availability windows
-    await db.collection("availability").deleteMany({ user_id: oid });
-    if (prefs.availability?.length > 0) {
-      await db.collection("availability").insertMany(
-        prefs.availability.map((w: { start: string; end: string; label?: string }) => ({
-          user_id: oid,
-          start_date: new Date(w.start),
-          end_date: new Date(w.end),
-          label: w.label ?? "",
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-        }))
-      );
-    }
-
-    // Replace destination preferences
-    await db.collection("destination_preferences").deleteMany({ user_id: oid });
-    if (prefs.destinations?.length > 0) {
-      await db.collection("destination_preferences").insertMany(
-        prefs.destinations.map((code: string) => ({
-          user_id: oid,
-          destination_code: code.toUpperCase(),
-          destination_name: "",
-          priority: 2,
-          max_price: null,
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-        }))
-      );
-    }
-
-    return NextResponse.json({ status: "ok" });
-  } catch {
-    return NextResponse.json({ error: "Invalid user ID" }, { status: 401 });
-  }
+  return NextResponse.json(PreferencesSchema.parse(prefs));
 }
