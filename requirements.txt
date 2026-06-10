@@ -9,3 +9,5 @@ python-dotenv==1.2.1
 beautifulsoup4==4.12.3    # azair parser (loaded transitively by scraper-fli)
 lxml==5.3.0               # BeautifulSoup backend
 requests==2.32.3          # azair scraper
+bcrypt==4.2.1             # legacy user_repo (imported at database package level)
+apscheduler==3.11.2       # legacy scheduler.py (imported at scheduler package level)

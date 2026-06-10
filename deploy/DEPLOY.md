@@ -1,6 +1,6 @@
 # Flight Scraper — Linux deploy runbook (StudentSpot box)
 
-MVP goal: scrape EIN / AMS / BRU / CRL → all 239 pool destinations, tiered cadence,
+MVP goal: scrape EIN / AMS / BRU / CRL → all 230 pool destinations, tiered cadence,
 6-month lookahead, spread across a 07:00–23:00 window, daily, on the Linux box that
 runs StudentSpot/DormSpot. **DormSpot has absolute priority** — the flight scraper is
 installed as a low-priority systemd service that yields CPU/IO under contention and
@@ -69,6 +69,7 @@ sudo systemctl disable --now flight-scraper.service flight-scraper-restart.timer
 ```
 
 ## Pool math (4 origins, tiered, 180-day window)
-- ~956 routes total (4 × 239). Daily scrape load ≈ 380/day (A daily, B every 3d, C weekly)
-  vs 480 slots/day at 2-min cadence — comfortable headroom.
+- 920 routes total (4 × 230). Daily scrape load ≈ 290/day (A daily, B every 3d, C weekly)
+  vs 480 slots/day at 2-min cadence — comfortable headroom. Initial backlog of ~920
+  never-scraped routes clears in ~2 days.
 - ~15 fli HTTP calls per route per cycle (180d = 3 sub-windows × 3 durations + top-6 details).

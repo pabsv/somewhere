@@ -12,11 +12,11 @@ Personal flight deal finder. Scrapes Azair daily, detects deals, surfaces them i
 | 2 | MongoDB layer (models, repos, price history, route stats) | ✅ Complete |
 | 3 | Deal detection (scoring 0–100, user availability matching) | ✅ Complete |
 | 4 | Scheduler — legacy user-driven (`scheduler/scheduler.py`) | ✅ Still works but superseded by pool scheduler |
-| 4b | **Pool scheduler — target-driven, multi-user-ready** (`scheduler/pool_scheduler.py`) | ✅ Built 2026-05-28, in burn-in on Windows |
+| 4b | **Pool scheduler — target-driven, multi-user-ready** (`scheduler/pool_scheduler.py`) | ✅ Deployed 2026-06-10 on Linux box (`pablopc`) as systemd service |
 | 5 | Email notifications | 🔴 Not started |
 | 6 | Next.js API routes (auth, deals, preferences, admin) | ✅ Complete — FastAPI no longer needed by frontend |
 | 7 | Next.js dashboard (calendar, deals, settings) | ✅ Deployed on Vercel |
-| 8 | Deploy — frontend (Vercel) + DB (Atlas) + scheduler (home PC) | ✅ Frontend on Vercel, scheduler currently on Windows; migrating to Linux box once pool burn-in passes |
+| 8 | Deploy — frontend (Vercel) + DB (Atlas) + scheduler (Linux box) | ✅ Frontend on Vercel; pool scheduler live on `pablopc` (Tailscale 100.101.234.37) at `/mnt/hdd/flight-scraper`, systemd `flight-scraper.service` (Nice=10/CPUWeight=20 — StudentSpot keeps priority), daily 07:10 restart timer. Runbook: `deploy/DEPLOY.md` |
 
 ---
 

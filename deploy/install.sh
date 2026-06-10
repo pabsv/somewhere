@@ -35,7 +35,9 @@ echo "==> 3/6  MongoDB indexes + TTLs (idempotent)"
 "$VENV/bin/python" -m database.setup_indexes
 
 echo "==> 4/6  Seeding the route pool (idempotent, staggered over 24h)"
-"$VENV/bin/python" -m scripts.seed_targets --stagger 1440 --prune --stats
+# NOTE: --stats short-circuits and skips seeding, so it must be a separate call.
+"$VENV/bin/python" -m scripts.seed_targets --stagger 1440 --prune
+"$VENV/bin/python" -m scripts.seed_targets --stats
 
 echo "==> 5/6  Smoke test: one forced end-to-end scrape (EIN->BCN -> Atlas)"
 "$VENV/bin/python" -m scheduler.pool_scheduler --route EIN BCN
