@@ -32,6 +32,8 @@ export interface BackendFlight {
   deal_score: number;       // 0–100
   is_deal: boolean;
   azair_link: string;
+  search_link?: string;
+  source?: string;
   duration_days: number;
   outbound_departure: string;
   outbound_arrival: string;
@@ -57,7 +59,9 @@ function transformFlight(f: BackendFlight): Deal {
     airline: f.airlines.join(", "),
     is_direct: f.is_direct,
     deal_score: f.deal_score,
-    azair_link: f.azair_link,
+    azair_link: f.search_link || f.azair_link,
+    search_link: f.search_link,
+    source: f.source || "azair",
     duration_days: f.duration_days,
     outbound_departure: f.outbound_departure,
     outbound_arrival: f.outbound_arrival,
@@ -174,6 +178,20 @@ export async function getScheduleStatus(): Promise<{ states: OriginScheduleState
   return res.json();
 }
 
+export async function triggerScrape(
+  origin?: string
+): Promise<{ ok: boolean; pid: number; origin: string }> {
+  const url = origin
+    ? `/api/admin/scrape?origin=${encodeURIComponent(origin)}`
+    : `/api/admin/scrape`;
+  const res = await fetch(url, { method: "POST" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Failed to trigger scrape: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─── Azair search URL builder ─────────────────────────────────────────────────
 // Builds a flexible search URL for the same route/dates so the user can browse
 // alternatives on Azair (±3 days departure/return, ±2 days trip duration).
@@ -219,4 +237,21 @@ export function buildAzairSearchUrl(deal: Deal): string {
   });
 
   return `https://www.azair.eu/azfin.php?${params.toString()}`;
+}
+
+// ─── Google Flights search URL builder ──────────────────────────────────────
+export function buildGoogleFlightsSearchUrl(deal: Deal): string {
+  return (
+    `https://www.google.com/travel/flights?q=` +
+    `Flights+to+${deal.destination}+from+${deal.origin}` +
+    `+on+${deal.outbound_date}+returning+${deal.return_date}`
+  );
+}
+
+// ─── Universal search URL dispatcher ────────────────────────────────────────
+// Picks the right search URL based on the deal's source.
+export function getSearchUrl(deal: Deal): string {
+  if (deal.search_link) return deal.search_link;
+  if (deal.source === "fli") return buildGoogleFlightsSearchUrl(deal);
+  return deal.azair_link || buildAzairSearchUrl(deal);
 }

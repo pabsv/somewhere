@@ -1,0 +1,11 @@
+[Unit]
+Description=Restart Flight Scraper daily at 07:10 (margin after StudentSpot's 07:05 start)
+
+[Timer]
+# Box wakes 07:00 (rtcwake), StudentSpot starts 07:05, flights restarts 07:10.
+OnCalendar=*-*-* 07:10:00
+Persistent=true
+Unit=flight-scraper-restart.service
+
+[Install]
+WantedBy=timers.target

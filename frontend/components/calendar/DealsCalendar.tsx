@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { Deal, DateWindow } from "@/types";
 import { getColor } from "@/data/colors";
-import { buildAzairSearchUrl } from "@/lib/api";
+import { buildAzairSearchUrl, getSearchUrl, buildGoogleFlightsSearchUrl } from "@/lib/api";
 
 const NUM_MONTHS = 6;
 
@@ -361,15 +361,15 @@ export default function DealsCalendar({ deals, availabilityWindows = [] }: Deals
             </div>
             <div className="flex flex-col gap-2">
               <a
-                href={selectedDeal.azair_link}
+                href={getSearchUrl(selectedDeal)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full bg-blue-600 text-white text-center py-2 text-sm font-medium rounded hover:bg-blue-700"
               >
-                Book this flight →
+                {selectedDeal.source === "fli" ? "View on Google Flights →" : "Book this flight →"}
               </a>
               <a
-                href={buildAzairSearchUrl(selectedDeal)}
+                href={selectedDeal.source === "fli" ? buildGoogleFlightsSearchUrl(selectedDeal) : buildAzairSearchUrl(selectedDeal)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full border border-neutral-300 text-neutral-700 text-center py-2 text-sm font-medium rounded hover:bg-neutral-50"

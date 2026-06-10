@@ -1,4 +1,5 @@
 import { Deal } from "@/types";
+import { getSearchUrl } from "@/lib/api";
 
 interface DealCardProps {
   deal: Deal;
@@ -22,7 +23,7 @@ export default function DealCard({ deal }: DealCardProps) {
 
   return (
     <a
-      href={deal.azair_link}
+      href={getSearchUrl(deal)}
       target="_blank"
       rel="noopener noreferrer"
       className="block border border-neutral-200 p-4 hover:border-neutral-400 transition-colors"

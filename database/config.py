@@ -39,15 +39,35 @@ COLLECTION_FLIGHTS = "flights"
 COLLECTION_PRICE_HISTORY = "price_history"
 COLLECTION_ROUTE_STATS = "route_stats"
 COLLECTION_SCHEDULE_STATE = "schedule_state"
+COLLECTION_SCRAPE_TARGETS = "scrape_targets"   # pool-based scraping config
+COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observability
 
 # TTL settings
-PRICE_HISTORY_TTL_DAYS = 180  # Auto-delete price history after 180 days
+PRICE_HISTORY_TTL_DAYS = 180   # Auto-delete price history after 180 days
+FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days
+SCRAPE_RUNS_TTL_DAYS = 30      # Auto-delete scrape run logs after 30 days
 
-# Deal detection settings
-# Relative thresholds (compared to route average)
-DEAL_THRESHOLD_PERCENT = 20  # Consider it a deal if price is X% below average
-HOT_DEAL_THRESHOLD_PERCENT = 30  # Hot deal if price is X% below average
+# Deal detection — flights at or below this price are marked as deals
+DEAL_PRICE_THRESHOLD = 200.0   # Default max price; overridden by user's max_price setting
 
-# Absolute price thresholds (always a deal regardless of history)
-DEAL_PRICE_THRESHOLD = 100.0  # Anything under €100 round-trip is a deal
-HOT_DEAL_PRICE_THRESHOLD = 75.0  # Anything under €75 round-trip is a hot deal
+# ─── Pool scheduler config ────────────────────────────────────────────────
+# Active scraping window (local time, 24h). Outside this window scheduler idles.
+ACTIVE_WINDOW_START_HOUR = 7   # 07:00
+ACTIVE_WINDOW_END_HOUR = 23    # 23:00 (last slot fires 22:58)
+
+# Minutes between slots inside the active window.
+# 16h * 60 / 2 = 480 slots/day → comfortably covers ~437 daily target with headroom.
+SLOT_MINUTES = 2
+
+# Cadence per tier — how long to wait before the same route is due again.
+TIER_A_HOURS = 24    # daily
+TIER_B_HOURS = 72    # every 3 days
+TIER_C_HOURS = 168   # weekly
+
+# Per-route scrape parameters (used by pool scheduler).
+SCRAPE_WINDOW_DAYS = 180             # how far ahead to look (~6 months — MVP target)
+SCRAPE_DURATION_BUCKETS = [3, 7, 10] # trip lengths (weekend, week, long)
+SCRAPE_TOP_N_CHEAP_DATES = 6         # Phase-2 detail fetches per route per cycle
+
+# Auto-disable a route after this many consecutive empty/error runs.
+ROUTE_MAX_CONSECUTIVE_FAILURES = 5

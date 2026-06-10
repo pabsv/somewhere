@@ -23,7 +23,11 @@ from .config import (
     COLLECTION_FLIGHTS,
     COLLECTION_PRICE_HISTORY,
     COLLECTION_ROUTE_STATS,
+    COLLECTION_SCRAPE_TARGETS,
+    COLLECTION_SCRAPE_RUNS,
     PRICE_HISTORY_TTL_DAYS,
+    FLIGHTS_TTL_DAYS,
+    SCRAPE_RUNS_TTL_DAYS,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -129,8 +133,13 @@ def setup_flight_indexes(db):
         ),
         # Recently scraped
         IndexModel([("scraped_at", DESCENDING)], name="scraped_at"),
-        # Last seen (for cleanup)
-        IndexModel([("last_seen_at", ASCENDING)], name="last_seen"),
+        # Last seen TTL — auto-delete flights not re-seen in FLIGHTS_TTL_DAYS.
+        # This is the pool-scraper's primary cleanup mechanism.
+        IndexModel(
+            [("last_seen_at", ASCENDING)],
+            expireAfterSeconds=FLIGHTS_TTL_DAYS * 24 * 60 * 60,
+            name="ttl_last_seen"
+        ),
         # Combined route + price for sorted queries
         IndexModel(
             [("origin", ASCENDING), ("destination", ASCENDING), ("price", ASCENDING)],
@@ -143,8 +152,17 @@ def setup_flight_indexes(db):
         ),
     ]
 
+    # Drop the old non-TTL last_seen index if it exists, so the new TTL one
+    # can take its place without conflict.
+    try:
+        collection.drop_index("last_seen")
+        logger.info(f"Dropped legacy non-TTL 'last_seen' index on {COLLECTION_FLIGHTS}")
+    except OperationFailure:
+        pass
+
     collection.create_indexes(indexes)
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_FLIGHTS}")
+    logger.info(f"  TTL: flights expire {FLIGHTS_TTL_DAYS}d after last_seen_at")
 
 
 def setup_price_history_indexes(db):
@@ -197,35 +215,86 @@ def setup_route_stats_indexes(db):
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_ROUTE_STATS}")
 
 
+def setup_scrape_target_indexes(db):
+    """Create indexes for scrape_targets collection (pool scheduler)."""
+    collection = db[COLLECTION_SCRAPE_TARGETS]
+
+    indexes = [
+        IndexModel([("route_key", ASCENDING)], unique=True, name="route_key_unique"),
+        # Primary scheduling query: enabled + due-time.
+        IndexModel(
+            [("enabled", ASCENDING), ("next_due_at", ASCENDING)],
+            name="enabled_next_due"
+        ),
+        IndexModel([("tier", ASCENDING)], name="tier"),
+        IndexModel([("origin", ASCENDING), ("destination", ASCENDING)], name="route"),
+        IndexModel([("last_status", ASCENDING)], name="last_status"),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_SCRAPE_TARGETS}")
+
+
+def setup_scrape_run_indexes(db):
+    """Create indexes for scrape_runs collection (observability log)."""
+    collection = db[COLLECTION_SCRAPE_RUNS]
+
+    indexes = [
+        IndexModel([("started_at", DESCENDING)], name="started_at"),
+        IndexModel([("route_key", ASCENDING), ("started_at", DESCENDING)], name="route_time"),
+        IndexModel([("status", ASCENDING)], name="status"),
+        # TTL: keep run logs for SCRAPE_RUNS_TTL_DAYS, then drop.
+        IndexModel(
+            [("started_at", ASCENDING)],
+            expireAfterSeconds=SCRAPE_RUNS_TTL_DAYS * 24 * 60 * 60,
+            name="ttl_started_at"
+        ),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_SCRAPE_RUNS}")
+    logger.info(f"  TTL: scrape_runs expire {SCRAPE_RUNS_TTL_DAYS}d after started_at")
+
+
 def setup_all_indexes():
     """Create all indexes for all collections."""
     logger.info("=" * 60)
     logger.info("Setting up MongoDB indexes...")
     logger.info("=" * 60)
 
-    try:
-        db = get_database()
-        logger.info(f"Connected to database: {db.name}")
+    db = get_database()
+    logger.info(f"Connected to database: {db.name}")
 
-        setup_user_indexes(db)
-        setup_availability_indexes(db)
-        setup_destination_indexes(db)
-        setup_flight_indexes(db)
-        setup_price_history_indexes(db)
-        setup_route_stats_indexes(db)
+    steps = [
+        ("users",          setup_user_indexes),
+        ("availability",   setup_availability_indexes),
+        ("destinations",   setup_destination_indexes),
+        ("flights",        setup_flight_indexes),
+        ("price_history",  setup_price_history_indexes),
+        ("route_stats",    setup_route_stats_indexes),
+        ("scrape_targets", setup_scrape_target_indexes),
+        ("scrape_runs",    setup_scrape_run_indexes),
+    ]
+    failures = []
+    for name, fn in steps:
+        try:
+            fn(db)
+        except OperationFailure as e:
+            # Most common: an existing index already covers the same keys but
+            # has a different name. Log and continue — not fatal.
+            logger.warning(f"[{name}] skipped — {e}")
+            failures.append((name, str(e)))
+        except Exception as e:
+            logger.error(f"[{name}] error — {e}")
+            failures.append((name, str(e)))
 
-        logger.info("=" * 60)
+    logger.info("=" * 60)
+    if failures:
+        logger.warning(f"Completed with {len(failures)} skipped/failed collections")
+        for name, msg in failures:
+            logger.warning(f"  {name}: {msg[:100]}")
+    else:
         logger.info("All indexes created successfully!")
-        logger.info("=" * 60)
-
-        return True
-
-    except OperationFailure as e:
-        logger.error(f"Failed to create indexes: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Error during index setup: {e}")
-        return False
+    logger.info("=" * 60)
+    return not failures
 
 
 def list_all_indexes():
@@ -239,6 +308,8 @@ def list_all_indexes():
         COLLECTION_FLIGHTS,
         COLLECTION_PRICE_HISTORY,
         COLLECTION_ROUTE_STATS,
+        COLLECTION_SCRAPE_TARGETS,
+        COLLECTION_SCRAPE_RUNS,
     ]
 
     for coll_name in collections:
@@ -258,6 +329,8 @@ def drop_all_indexes():
         COLLECTION_FLIGHTS,
         COLLECTION_PRICE_HISTORY,
         COLLECTION_ROUTE_STATS,
+        COLLECTION_SCRAPE_TARGETS,
+        COLLECTION_SCRAPE_RUNS,
     ]
 
     for coll_name in collections:

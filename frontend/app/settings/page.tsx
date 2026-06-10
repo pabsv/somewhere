@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import TwoMonthCalendar from "@/components/calendar/TwoMonthCalendar";
 import AirportSelector from "@/components/settings/AirportSelector";
 import DestinationPicker from "@/components/settings/DestinationPicker";
@@ -23,46 +23,25 @@ export default function SettingsPage() {
     localStorage.setItem("settings_availability_open", String(next));
   };
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasLoaded = useRef(false);
-  const prefsRef = useRef<UserPreferences | null>(null);
-
   useEffect(() => {
     getPreferences().then((p) => {
       setPrefs(p);
-      prefsRef.current = p;
-      hasLoaded.current = true;
     });
   }, []);
 
-  const doSave = async (p: UserPreferences) => {
+  const handleSave = async () => {
+    if (!prefs) return;
     setSaveStatus("saving");
-    await savePreferences(p);
+    await savePreferences(prefs);
     setSaveStatus("saved");
     setTimeout(() => setSaveStatus("idle"), 1500);
-  };
-
-  // Auto-save with 800ms debounce after any preference change
-  useEffect(() => {
-    if (!hasLoaded.current || !prefs) return;
-    prefsRef.current = prefs;
-    setSaveStatus("dirty");
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSave(prefs), 800);
-
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [prefs]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSave = () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (prefsRef.current) doSave(prefsRef.current);
   };
 
   if (!prefs) return null;
 
   const updatePrefs = (partial: Partial<UserPreferences>) => {
     setPrefs({ ...prefs, ...partial });
+    setSaveStatus("dirty");
   };
 
   return (

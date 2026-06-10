@@ -1,0 +1,8 @@
+[Unit]
+Description=Restart Flight Scraper (clean morning start after rtcwake)
+# Oneshot helper fired by flight-scraper-restart.timer at 07:10.
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart flight-scraper.service

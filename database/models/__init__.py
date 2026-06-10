@@ -6,6 +6,8 @@ from .destination import DestinationPreference
 from .flight import FlightModel
 from .price_history import PriceHistory
 from .route_stats import RouteStats
+from .scrape_target import ScrapeTargetModel
+from .scrape_run import ScrapeRunModel
 
 __all__ = [
     "User",
@@ -17,4 +19,6 @@ __all__ = [
     "FlightModel",
     "PriceHistory",
     "RouteStats",
+    "ScrapeTargetModel",
+    "ScrapeRunModel",
 ]

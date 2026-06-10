@@ -54,6 +54,10 @@ class Flight:
     # Booking
     azair_link: str  # Direct link to Azair for this specific flight
 
+    # Source tracking
+    search_link: Optional[str] = None  # Google Flights URL (for Fli-sourced flights)
+    source: str = "azair"              # "azair" or "fli"
+
     # Metadata
     scraped_at: Optional[str] = None
 
@@ -203,7 +207,9 @@ def parse_single_result(result_div, origin_override: str = None) -> Optional[Fli
         from_time = ""
         if from_span:
             code_span = from_span.find("span", class_="code")
-            from_code = code_span.get_text(strip=True) if code_span else ""
+            raw = code_span.get_text(strip=True) if code_span else ""
+            m = re.match(r'^([A-Z]{3})', raw)
+            from_code = m.group(1) if m else raw
             strong = from_span.find("strong")
             from_time = strong.get_text(strip=True) if strong else ""
 
@@ -213,7 +219,9 @@ def parse_single_result(result_div, origin_override: str = None) -> Optional[Fli
         to_time = ""
         if to_span:
             code_span = to_span.find("span", class_="code")
-            to_code = code_span.get_text(strip=True) if code_span else ""
+            raw = code_span.get_text(strip=True) if code_span else ""
+            m = re.match(r'^([A-Z]{3})', raw)
+            to_code = m.group(1) if m else raw
             to_text = to_span.get_text(strip=True)
             time_match = re.match(r"(\d{1,2}:\d{2})", to_text)
             to_time = time_match.group(1) if time_match else ""

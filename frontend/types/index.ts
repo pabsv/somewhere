@@ -12,6 +12,8 @@ export interface Deal {
   is_direct: boolean;
   deal_score: number;    // 0-100
   azair_link: string;
+  search_link?: string;  // Google Flights URL (for Fli-sourced flights)
+  source?: string;       // "azair" | "fli"
   // Extended flight details (from backend)
   duration_days?: number;
   outbound_departure?: string;

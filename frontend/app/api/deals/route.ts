@@ -105,6 +105,8 @@ export async function GET(req: NextRequest) {
             return_stops:        f.return_stops,
             is_direct:           f.outbound_stops === 0 && f.return_stops === 0,
             azair_link:          f.azair_link,
+            search_link:         f.search_link ?? "",
+            source:              f.source ?? "azair",
             deal_score:          f.deal_score ?? 0,
             is_deal:             f.is_deal ?? false,
           });

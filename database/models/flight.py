@@ -14,32 +14,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scraper-
 
 
 @dataclass
-class PriceStats:
-    """Price statistics for a flight route."""
-    lowest: float = 0.0
-    highest: float = 0.0
-    average: float = 0.0
-    current_vs_avg_percent: float = 0.0  # Negative = cheaper than average
-
-    def to_dict(self) -> dict:
-        return {
-            "lowest": self.lowest,
-            "highest": self.highest,
-            "average": self.average,
-            "current_vs_avg_percent": self.current_vs_avg_percent,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "PriceStats":
-        return cls(
-            lowest=data.get("lowest", 0.0),
-            highest=data.get("highest", 0.0),
-            average=data.get("average", 0.0),
-            current_vs_avg_percent=data.get("current_vs_avg_percent", 0.0),
-        )
-
-
-@dataclass
 class FlightModel:
     """
     Flight model for database storage.
@@ -99,9 +73,10 @@ class FlightModel:
 
     # Booking
     azair_link: str = ""
+    search_link: str = ""    # Google Flights URL (for Fli-sourced flights)
+    source: str = "azair"    # "azair" or "fli"
 
-    # Price analytics
-    price_stats: PriceStats = field(default_factory=PriceStats)
+    # Deal detection
     is_deal: bool = False
     deal_score: int = 0  # 0-100, higher = better deal
 
@@ -163,7 +138,8 @@ class FlightModel:
             "outbound_stops": self.outbound_stops,
             "return_stops": self.return_stops,
             "azair_link": self.azair_link,
-            "price_stats": self.price_stats.to_dict(),
+            "search_link": self.search_link,
+            "source": self.source,
             "is_deal": self.is_deal,
             "deal_score": self.deal_score,
             "first_seen_at": self.first_seen_at,
@@ -196,7 +172,8 @@ class FlightModel:
             outbound_stops=data.get("outbound_stops", 0),
             return_stops=data.get("return_stops", 0),
             azair_link=data.get("azair_link", ""),
-            price_stats=PriceStats.from_dict(data.get("price_stats", {})),
+            search_link=data.get("search_link", ""),
+            source=data.get("source", "azair"),
             is_deal=data.get("is_deal", False),
             deal_score=data.get("deal_score", 0),
             first_seen_at=data.get("first_seen_at"),
@@ -233,6 +210,8 @@ class FlightModel:
             outbound_stops=flight.outbound_stops,
             return_stops=flight.return_stops,
             azair_link=flight.azair_link,
+            search_link=getattr(flight, "search_link", "") or "",
+            source=getattr(flight, "source", "azair"),
         )
 
     def to_api_dict(self) -> dict:
@@ -259,7 +238,8 @@ class FlightModel:
             "return_stops": self.return_stops,
             "is_direct": self.is_direct,
             "azair_link": self.azair_link,
-            "price_stats": self.price_stats.to_dict(),
+            "search_link": self.search_link,
+            "source": self.source,
             "is_deal": self.is_deal,
             "deal_score": self.deal_score,
             "first_seen_at": self.first_seen_at.isoformat() if self.first_seen_at else None,

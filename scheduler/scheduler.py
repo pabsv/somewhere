@@ -38,13 +38,29 @@ from database.repositories.schedule_repo import ScheduleRepository
 from database.services.flight_service import FlightService
 
 # Add scraper-azair to path (hyphenated dir, not a package)
-_scraper_dir = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scraper-azair"
-)
-if _scraper_dir not in sys.path:
-    sys.path.insert(0, _scraper_dir)
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_scraper_azair_dir = os.path.join(_project_root, "scraper-azair")
+if _scraper_azair_dir not in sys.path:
+    sys.path.insert(0, _scraper_azair_dir)
 
 from scraper import AzairScraper, DateRange  # noqa: E402
+
+# Scraper backend: "fli" (default) or "azair"
+SCRAPER_BACKEND = os.getenv("SCRAPER_BACKEND", "fli")
+
+
+def _get_scraper():
+    """Instantiate the configured scraper backend."""
+    if SCRAPER_BACKEND == "fli":
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "fli_scraper",
+            os.path.join(_project_root, "scraper-fli", "scraper.py"),
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.FliScraper()
+    return AzairScraper()
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 
@@ -122,8 +138,8 @@ def run_origin_job(origin: str, period_minutes: int) -> dict:
             f"{len(date_ranges)} windows, trips up to {max_window} days"
         )
 
-        scraper = AzairScraper()
-        flights = scraper.search_all(
+        scraper = _get_scraper()
+        search_kwargs = dict(
             origins=[origin],
             destinations=destinations,
             date_ranges=date_ranges,
@@ -131,6 +147,15 @@ def run_origin_job(origin: str, period_minutes: int) -> dict:
             max_days=max_window,
             direct_only=user.search_preferences.direct_only,
         )
+
+        try:
+            flights = scraper.search_all(**search_kwargs)
+        except Exception as e:
+            if SCRAPER_BACKEND == "fli":
+                logger.warning(f"[{origin}] Fli scraper failed, falling back to Azair: {e}")
+                flights = AzairScraper().search_all(**search_kwargs)
+            else:
+                raise
 
         result = FlightService().save_scraped_flights(flights)
         schedule_repo.upsert_state(

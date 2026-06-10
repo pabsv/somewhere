@@ -23,7 +23,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │  MongoDB (local)                                                │
 │  users · availability · destination_preferences                 │
-│  flights · price_history · route_stats                         │
+│  flights                                                        │
 └────────────────────────▲────────────────────────────────────────┘
                          │ write
                          │
@@ -68,12 +68,10 @@ MongoDB via pymongo. No ORM.
 | `availability` | Date ranges (start, end) the user can travel |
 | `destination_preferences` | IATA codes the user wants to fly to |
 | `flights` | All scraped flights; `flight_key` unique index for dedup |
-| `price_history` | Price snapshots per flight; TTL 180 days |
-| `route_stats` | Per-route avg/min/max; used for relative deal scoring |
 
-**Deal scoring** (0–100, `database/services/flight_service.py`):
-- Base: absolute price vs threshold (€100 deal, €75 hot)
-- Bonus: % below route average (20% = deal, 30% = hot deal)
+**Deal scoring** (`database/services/flight_service.py`):
+- A flight is a deal if its price is at or below `DEAL_PRICE_THRESHOLD` (default €200, overridden by the user's `max_price` setting)
+- `deal_score` (0–100) = how far below the threshold the price is
 
 **User matching** (`database/services/user_matcher.py`):
 - Checks if flight dates overlap with any availability window

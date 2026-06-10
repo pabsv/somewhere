@@ -1,0 +1,32 @@
+[Unit]
+Description=Flight Scraper Pool Scheduler
+Documentation=https://github.com/pabsv/flight-scraper
+# Start after the network and NordVPN are up (all traffic exits via the VPN).
+After=network-online.target nordvpnd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pablo
+WorkingDirectory=/mnt/hdd/flight-scraper
+# MONGODB_URI is read from ./.env by python-dotenv (load_dotenv) at startup.
+ExecStart=/mnt/hdd/flight-scraper/.venv/bin/python -m scheduler.pool_scheduler
+Restart=always
+RestartSec=30
+
+# ── Isolation: flights must NEVER starve StudentSpot (DormSpot) ──
+# StudentSpot runs at default weight (100); flights gets 1/5th the share and
+# yields CPU/IO under contention. Hard memory ceiling well above its real use.
+Nice=10
+CPUWeight=20
+IOWeight=20
+CPUQuota=150%
+MemoryHigh=512M
+MemoryMax=1G
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flight-scraper
+
+[Install]
+WantedBy=multi-user.target

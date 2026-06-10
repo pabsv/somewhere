@@ -8,6 +8,7 @@ import {
   clearAllUsers,
   getScheduleStatus,
   OriginScheduleState,
+  triggerScrape,
 } from "@/lib/api";
 import Button from "@/components/ui/Button";
 
@@ -300,6 +301,10 @@ export default function AdminPage() {
   const [scheduleStates, setScheduleStates] = useState<OriginScheduleState[]>([]);
   const schedulePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Scrape trigger
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [scrapeStarting, setScrapeStarting] = useState<string | null>(null); // origin or "ALL" while spawning
+
   // Clear flight data
   const [clearStatus, setClearStatus]   = useState<"idle" | "confirm" | "clearing" | "done">("idle");
   const [clearResult, setClearResult]   = useState<Record<string, number> | null>(null);
@@ -333,6 +338,21 @@ export default function AdminPage() {
   }, [anyRunning]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleScrape = async (origin?: string) => {
+    const tag = origin ?? "ALL";
+    setScrapeStarting(tag);
+    setScrapeError(null);
+    try {
+      await triggerScrape(origin);
+      // Refresh schedule state right away so the timeline reflects the new run
+      getScheduleStatus().then((d) => setScheduleStates(d.states)).catch(() => {});
+    } catch (e) {
+      setScrapeError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setScrapeStarting(null);
+    }
+  };
 
   const handleClear = async () => {
     setClearStatus("clearing");
@@ -380,13 +400,32 @@ export default function AdminPage() {
 
       {/* ── Scheduler ── */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-1">
-          Scheduler
-        </h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
+            Scheduler
+          </h2>
+          <div className="flex items-center gap-3">
+            {scrapeError && (
+              <span className="text-xs text-red-500">{scrapeError}</span>
+            )}
+            <Button
+              onClick={() => handleScrape()}
+              disabled={scrapeStarting !== null || anyRunning}
+              variant="secondary"
+            >
+              {scrapeStarting === "ALL"
+                ? "Starting…"
+                : anyRunning
+                ? "Running…"
+                : "Scrape all now"}
+            </Button>
+          </div>
+        </div>
 
         {scheduleStates.length === 0 ? (
           <p className="text-xs text-neutral-400 mt-2">
-            Scheduler not running — restart the API to start it.
+            No schedule state yet. Click <em>Scrape all now</em> to run all origins once,
+            or start <code className="font-mono">simulate.bat</code> for an auto-cycle.
           </p>
         ) : (
           <>
@@ -415,6 +454,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 font-medium text-neutral-600">Last run</th>
                     <th className="text-left px-4 py-3 font-medium text-neutral-600">Result</th>
                     <th className="text-left px-4 py-3 font-medium text-neutral-600">Next run</th>
+                    <th className="text-left px-4 py-3 font-medium text-neutral-600">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -452,6 +492,15 @@ export default function AdminPage() {
                             )}
                           </>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleScrape(s.origin)}
+                          disabled={scrapeStarting !== null || anyRunning}
+                          className="text-xs text-blue-600 hover:text-blue-700 disabled:text-neutral-300 disabled:cursor-not-allowed"
+                        >
+                          {scrapeStarting === s.origin ? "Starting…" : "Run now"}
+                        </button>
                       </td>
                     </tr>
                   ))}

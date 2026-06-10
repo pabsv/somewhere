@@ -11,6 +11,7 @@ Docs available at:
 """
 
 import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -41,8 +42,10 @@ app.include_router(scrape.router)
 
 
 # ─── Background scheduler ─────────────────────────────────────────────────────
-# Starts automatically with the API in simulate mode (1 cycle = 60 min).
-# To change the mode, set SCHEDULER_SIMULATE=false in your environment.
+# The legacy user-driven scheduler is OFF by default since 2026-05-28 — the
+# pool scheduler (scheduler/pool_scheduler.py) is the production path now and
+# runs as a separate process. To re-enable the legacy auto-start temporarily,
+# set LEGACY_SCHEDULER_AUTOSTART=true in the environment.
 
 _scheduler: BackgroundScheduler | None = None
 
@@ -50,13 +53,20 @@ _scheduler: BackgroundScheduler | None = None
 @app.on_event("startup")
 def start_background_scheduler():
     global _scheduler
+    if os.getenv("LEGACY_SCHEDULER_AUTOSTART", "false").lower() != "true":
+        logger.info(
+            "Legacy scheduler auto-start disabled "
+            "(set LEGACY_SCHEDULER_AUTOSTART=true to re-enable). "
+            "Pool scheduler runs separately via `pool` shortcut."
+        )
+        return
     try:
         from scheduler.scheduler import configure_scheduler, job_listener
         _scheduler = BackgroundScheduler()
         _scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
         configure_scheduler(_scheduler, simulate=True, warmup_minutes=1)
         _scheduler.start()
-        logger.info("Background scheduler started (simulate mode: 1 cycle = 60 min)")
+        logger.info("Legacy background scheduler started (simulate mode: 1 cycle = 60 min)")
     except RuntimeError as e:
         # No users or no airports configured yet — not a crash, just skip
         logger.warning(f"Scheduler not started: {e}")

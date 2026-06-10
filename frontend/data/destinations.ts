@@ -41,6 +41,9 @@ export const destinations: Destination[] = [
   { code: "OTP", name: "Bucharest", country: "RO", region: "Eastern Europe" },
   { code: "CLJ", name: "Cluj-Napoca", country: "RO", region: "Eastern Europe" },
 
+  // Germany
+  { code: "BER", name: "Berlin", country: "DE", region: "Northern Europe" },
+
   // Northern Europe
   { code: "CPH", name: "Copenhagen", country: "DK", region: "Northern Europe" },
   { code: "ARN", name: "Stockholm", country: "SE", region: "Northern Europe" },

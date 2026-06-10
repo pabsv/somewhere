@@ -6,6 +6,8 @@ from .destination_repo import DestinationRepository
 from .flight_repo import FlightRepository
 from .price_history_repo import PriceHistoryRepository
 from .route_stats_repo import RouteStatsRepository
+from .scrape_target_repo import ScrapeTargetRepository
+from .scrape_run_repo import ScrapeRunRepository
 
 __all__ = [
     "UserRepository",
@@ -14,4 +16,6 @@ __all__ = [
     "FlightRepository",
     "PriceHistoryRepository",
     "RouteStatsRepository",
+    "ScrapeTargetRepository",
+    "ScrapeRunRepository",
 ]
