@@ -9,10 +9,9 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Button from "@/components/ui/Button";
-import Chip from "@/components/ui/Chip";
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
 import { AVAILABILITY_UPDATED_EVENT } from "@/components/settings/AcademicCard";
-import { formatRange, parseLocalDate } from "@/lib/format";
+import { parseLocalDate } from "@/lib/format";
 import type { DateWindow } from "@/types/api";
 
 // ─── Date helpers (local, YYYY-MM-DD strings throughout) ─────────────────────
@@ -318,14 +317,6 @@ export default function YearPaint() {
     return () => clearTimeout(t);
   }, [saveMsg]);
 
-  const removeWindow = useCallback((w: DateWindow) => {
-    setPainted((prev) => {
-      const next = new Set(prev);
-      for (const k of keysBetween(w.start_date, w.end_date)) next.delete(k);
-      return next;
-    });
-  }, []);
-
   const clearAll = useCallback(() => {
     setPainted(new Set());
     setPendingStart(null);
@@ -409,37 +400,6 @@ export default function YearPaint() {
         ))}
       </div>
 
-      {/* window chips */}
-      <div className="mt-8 border-t border-line pt-5">
-        <div className="mb-3">
-          <span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
-            Free windows
-          </span>
-        </div>
-        {windows.length === 0 ? (
-          <p className="text-sm text-ink-muted/70">No dates painted yet.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {windows.map((w) => (
-              <Chip
-                key={`${w.start_date}_${w.end_date}`}
-                size="sm"
-                selected={false}
-                onClick={() => removeWindow(w)}
-                title="Remove this window"
-                className="!border-brand !bg-brand !text-brand-ink hover:opacity-90"
-              >
-                <span className="tnum font-mono">
-                  {formatRange(w.start_date, w.end_date)}
-                </span>
-                <span aria-hidden="true" className="text-brand-ink/70">
-                  ×
-                </span>
-              </Chip>
-            ))}
-          </div>
-        )}
-      </div>
 
     </div>
   );
