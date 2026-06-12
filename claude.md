@@ -1,4 +1,4 @@
-# Flight Scraper — AI Context
+# Somewhere (flight scraper) — AI Context
 
 Personal flight deal finder. Scrapes Azair daily, detects deals, surfaces them in a Next.js dashboard deployed on Vercel.
 
