@@ -10,6 +10,7 @@ import { auth } from "@/auth";
 import { getDb } from "@/lib/mongodb";
 import { PreferencesSchema, type Preferences } from "@/types/api";
 import { ORIGINS } from "@/data/airports.gen";
+import { getCalendar } from "@/lib/academic";
 
 const DEFAULTS: Preferences = {
   origins: ORIGINS.map((o) => o.code),
@@ -17,6 +18,8 @@ const DEFAULTS: Preferences = {
   trip_max_nights: 10,
   direct_only: false,
   max_price: null,
+  academic_calendar: null,
+  busy_weekdays: { q1: [], q2: [], q3: [], q4: [] },
 };
 
 // GET /api/preferences
@@ -72,13 +75,31 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const db = await getDb();
-  await db
-    .collection("users")
-    .updateOne(
-      { _id: new ObjectId(session.user.id) },
-      { $set: { preferences: prefs } },
+  if (prefs.academic_calendar != null && !getCalendar(prefs.academic_calendar)) {
+    return NextResponse.json(
+      { error: `Unknown academic calendar: ${prefs.academic_calendar}` },
+      { status: 400 },
     );
+  }
 
-  return NextResponse.json(PreferencesSchema.parse(prefs));
+  // Merge over the stored subdoc so a client sending a partial Preferences
+  // shape (e.g. the prefs card, unaware of v2 fields) can't wipe other keys.
+  const db = await getDb();
+  const users = db.collection("users");
+  const existing = await users.findOne(
+    { _id: new ObjectId(session.user.id) },
+    { projection: { preferences: 1 } },
+  );
+  const merged: Preferences = {
+    ...DEFAULTS,
+    ...((existing?.preferences ?? {}) as Partial<Preferences>),
+    ...prefs,
+  };
+
+  await users.updateOne(
+    { _id: new ObjectId(session.user.id) },
+    { $set: { preferences: merged } },
+  );
+
+  return NextResponse.json(PreferencesSchema.parse(merged));
 }

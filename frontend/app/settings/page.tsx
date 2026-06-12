@@ -1,5 +1,6 @@
 "use client";
 
+import AcademicCard from "@/components/settings/AcademicCard";
 import PreferencesCard from "@/components/settings/PreferencesCard";
 import YearPaint from "@/components/settings/YearPaint";
 
@@ -29,6 +30,23 @@ export default function SettingsPage() {
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <YearPaint />
+        </div>
+      </section>
+
+      {/* Academic calendar */}
+      <section className="mb-12">
+        <div className="mb-4">
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Academic calendar
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-muted">
+            Let the TU/e year drive your availability: exams and crunch weeks
+            blocked, recesses and post-exam weeks free, mandatory attendance
+            days respected per quartile.
+          </p>
+        </div>
+        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
+          <AcademicCard />
         </div>
       </section>
 

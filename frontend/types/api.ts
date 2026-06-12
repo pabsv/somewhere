@@ -169,14 +169,37 @@ export const DateWindowSchema = z.object({
 });
 export type DateWindow = z.infer<typeof DateWindowSchema>;
 
+/** ISO weekdays (1=Mon…7=Sun) with mandatory attendance, per quartile. */
+export const BusyWeekdaysSchema = z.object({
+  q1: z.array(z.number().int().min(1).max(7)),
+  q2: z.array(z.number().int().min(1).max(7)),
+  q3: z.array(z.number().int().min(1).max(7)),
+  q4: z.array(z.number().int().min(1).max(7)),
+});
+export type BusyWeekdaysPref = z.infer<typeof BusyWeekdaysSchema>;
+
 export const PreferencesSchema = z.object({
   origins: z.array(z.string()),
   trip_min_nights: z.number(),
   trip_max_nights: z.number(),
   direct_only: z.boolean(),
   max_price: z.number().nullable(),
+  // ─ Availability v2 (docs/AVAILABILITY_V2.md) — optional, default off ─
+  academic_calendar: z.string().nullable().optional(),
+  busy_weekdays: BusyWeekdaysSchema.optional(),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
+
+/** JSON emitted by the LLM availability interview (Settings → import). */
+export const AvailabilityImportSchema = z.object({
+  version: z.literal(1),
+  academic_calendar: z.string().nullable(),
+  busy_weekdays: BusyWeekdaysSchema,
+  trip_min_nights: z.number().int().min(1).max(21).optional(),
+  trip_max_nights: z.number().int().min(1).max(21).optional(),
+  windows: z.array(DateWindowSchema),
+});
+export type AvailabilityImport = z.infer<typeof AvailabilityImportSchema>;
 
 // ─── Admin — pool health (spec section D, /api/admin/pool) ───────────────────
 

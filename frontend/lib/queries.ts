@@ -19,6 +19,13 @@ import {
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
 import { HARD_PRICE_CEILING } from "@/lib/score";
+import {
+  EMPTY_BUSY_WEEKDAYS,
+  getCalendar,
+  tripAllowed,
+  type BusyWeekdays,
+} from "@/lib/academic";
+import type { AcademicCalendar } from "@/data/calendars/tue-2026-2027";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
 
@@ -183,18 +190,12 @@ export async function getCitiesData(
   const flights = await flightsCollection();
   const today = todayStr();
 
-  // Availability constraint: trip must fit entirely inside one window, and
-  // nights must respect the user's trip-length prefs (same rule as Calendar).
   const match: Record<string, unknown> = {
     origin: { $in: origins },
     outbound_date: { $gte: today },
     price: { $lte: HARD_PRICE_CEILING },
   };
-  if (avail && avail.windows.length > 0) {
-    match.$or = avail.windows.map((w) => ({
-      outbound_date: { $gte: w.start },
-      return_date: { $lte: w.end },
-    }));
+  if (avail) {
     const nights: Record<string, number> = {};
     if (avail.minNights !== null) nights.$gte = avail.minNights;
     if (avail.maxNights !== null) nights.$lte = avail.maxNights;
@@ -202,22 +203,46 @@ export async function getCitiesData(
   }
 
   // One cheapest doc per (destination, origin) + a count of future flights.
-  const grouped = await flights
-    .aggregate(
-      [
-        { $match: match },
-        { $sort: { price: 1 } },
-        {
-          $group: {
-            _id: { destination: "$destination", origin: "$origin" },
-            doc: { $first: "$$ROOT" },
-            count: { $sum: 1 },
+  // With an availability constraint the per-day calendar rules can't be
+  // expressed in a $match, so we group in TS over the filtered docs instead
+  // (docs/AVAILABILITY_V2.md).
+  let grouped: unknown[];
+  if (avail) {
+    const passes = (out: string, ret: string): boolean =>
+      avail.calendar
+        ? tripAllowed(out, ret, avail.calendar, avail.busyWeekdays, avail.windows)
+        : avail.windows.some((w) => out >= w.start && ret <= w.end);
+
+    const docs = (await flights.find(match).toArray()).filter((d) =>
+      passes(String(d.outbound_date), String(d.return_date)),
+    );
+    docs.sort((a, b) => Number(a.price) - Number(b.price));
+    const byRoute = new Map<string, { doc: unknown; count: number }>();
+    for (const d of docs) {
+      const k = `${d.destination}|${d.origin}`;
+      const g = byRoute.get(k);
+      if (g) g.count += 1;
+      else byRoute.set(k, { doc: d, count: 1 });
+    }
+    grouped = [...byRoute.values()];
+  } else {
+    grouped = await flights
+      .aggregate(
+        [
+          { $match: match },
+          { $sort: { price: 1 } },
+          {
+            $group: {
+              _id: { destination: "$destination", origin: "$origin" },
+              doc: { $first: "$$ROOT" },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ],
-      { allowDiskUse: true },
-    )
-    .toArray();
+        ],
+        { allowDiskUse: true },
+      )
+      .toArray();
+  }
 
   if (grouped.length === 0) return [];
 
@@ -475,6 +500,9 @@ export interface UserAvailability {
   windows: AvailWindow[];
   minNights: number | null;
   maxNights: number | null;
+  /** Academic calendar (availability v2) — null when not enabled. */
+  calendar: AcademicCalendar | null;
+  busyWeekdays: BusyWeekdays;
 }
 
 export async function loadUserAvailability(
@@ -513,7 +541,21 @@ export async function loadUserAvailability(
     if (start && end) windows.push({ start, end });
   }
 
-  return { windows, minNights, maxNights };
+  // Availability v2 — academic calendar + per-quartile mandatory weekdays.
+  const calendar = getCalendar(
+    typeof prefs.academic_calendar === "string"
+      ? prefs.academic_calendar
+      : null,
+  );
+  const bw = prefs.busy_weekdays as Partial<BusyWeekdays> | undefined;
+  const busyWeekdays: BusyWeekdays = {
+    q1: Array.isArray(bw?.q1) ? bw.q1 : [],
+    q2: Array.isArray(bw?.q2) ? bw.q2 : [],
+    q3: Array.isArray(bw?.q3) ? bw.q3 : [],
+    q4: Array.isArray(bw?.q4) ? bw.q4 : [],
+  };
+
+  return { windows, minNights, maxNights, calendar, busyWeekdays };
 }
 
 /** True if [outbound,return] fits ENTIRELY inside at least one window. */
@@ -583,21 +625,32 @@ export async function getTripsData(
   const barDocs = await flights.find(barsFilter).toArray();
 
   // ── Resolve availability (avail=1 + session) ──────────────────────────────
-  let avail: {
-    windows: AvailWindow[];
-    minNights: number | null;
-    maxNights: number | null;
-  } | null = null;
+  let avail: UserAvailability | null = null;
   if (params.avail && session?.user?.id) {
     avail = await loadUserAvailability(session.user.id);
-    // No windows at all → nothing to constrain to; ignore avail (don't blank
-    // the calendar).
-    if (avail && avail.windows.length === 0) avail = null;
+    // No constraint source at all (no windows AND no academic calendar) →
+    // ignore avail (don't blank the calendar).
+    if (avail && avail.windows.length === 0 && !avail.calendar) avail = null;
   }
 
   const passesAvail = (outbound: string, ret: string, nights: number): boolean => {
     if (!avail) return true;
-    if (!fitsAnyWindow(outbound, ret, avail.windows)) return false;
+    if (avail.calendar) {
+      // v2: every trip day must be free per the academic calendar; explicit
+      // windows act as manual overrides (docs/AVAILABILITY_V2.md).
+      if (
+        !tripAllowed(
+          outbound,
+          ret,
+          avail.calendar,
+          avail.busyWeekdays,
+          avail.windows,
+        )
+      )
+        return false;
+    } else if (!fitsAnyWindow(outbound, ret, avail.windows)) {
+      return false;
+    }
     if (avail.minNights !== null && nights < avail.minNights) return false;
     if (avail.maxNights !== null && nights > avail.maxNights) return false;
     return true;
