@@ -1,6 +1,7 @@
 # Availability v2 — academic-calendar-aware travel windows
 
-Status: implemented 2026-06-12 (first cut). Extends the v1 explicit date-window
+Status: implemented 2026-06-12; LLM-interview import removed same day.
+Extends the v1 explicit date-window
 model with TU/e academic-calendar awareness and recurring mandatory-attendance
 weekdays that vary per quartile.
 
@@ -65,32 +66,14 @@ Note: with a calendar enabled the availability filter becomes a day-loop in
 TS, so the Mongo-side `$or` window pre-filter used by `getCitiesData` is
 replaced by post-aggregation filtering for that path.
 
-## LLM interview import ("copy-paste prompt")
+## Settings UI
 
-Settings → Academic calendar card has two actions:
+"Quick setup" card at the top of Settings (`AcademicCard.tsx`): toggle the
+TU/e calendar on/off + weekday chips per quartile for mandatory attendance.
+Each click saves immediately via PUT /api/preferences.
 
-- **Copy interview prompt** — copies a self-contained prompt
-  (`frontend/data/interviewPrompt.ts`). User pastes it into any chatbot; the
-  model interviews them quartile-by-quartile (mandatory days, known busy
-  periods, trip-length tastes) and outputs a single JSON block.
-- **Paste import** — textarea accepting that JSON. Validated with zod
-  (`AvailabilityImportSchema` in `types/api.ts`), then applied via the
-  existing PUT /api/preferences and PUT /api/availability.
-
-Import JSON shape (version 1):
-
-```json
-{
-  "version": 1,
-  "academic_calendar": "tue-2026-2027",
-  "busy_weekdays": { "q1": [2, 4], "q2": [2], "q3": [], "q4": [1, 3] },
-  "trip_min_nights": 2,
-  "trip_max_nights": 8,
-  "windows": [
-    { "start_date": "2026-09-04", "end_date": "2026-09-07", "label": "skipping intro" }
-  ]
-}
-```
+(An LLM "interview prompt + JSON import" flow shipped 2026-06-12 and was
+removed the same day — manual chips are faster than a chatbot round-trip.)
 
 ## Not done yet / ideas
 

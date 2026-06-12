@@ -190,17 +190,6 @@ export const PreferencesSchema = z.object({
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 
-/** JSON emitted by the LLM availability interview (Settings → import). */
-export const AvailabilityImportSchema = z.object({
-  version: z.literal(1),
-  academic_calendar: z.string().nullable(),
-  busy_weekdays: BusyWeekdaysSchema,
-  trip_min_nights: z.number().int().min(1).max(21).optional(),
-  trip_max_nights: z.number().int().min(1).max(21).optional(),
-  windows: z.array(DateWindowSchema),
-});
-export type AvailabilityImport = z.infer<typeof AvailabilityImportSchema>;
-
 // ─── Admin — pool health (spec section D, /api/admin/pool) ───────────────────
 
 export const AdminTargetSummarySchema = z.object({

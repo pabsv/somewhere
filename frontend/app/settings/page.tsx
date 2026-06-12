@@ -17,6 +17,22 @@ export default function SettingsPage() {
         </p>
       </header>
 
+      {/* Quick setup */}
+      <section className="mb-12">
+        <div className="mb-4">
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Quick setup
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-muted">
+            Turn on the TU/e calendar and tick the days you must be on campus
+            — exams and crunch weeks are handled for you.
+          </p>
+        </div>
+        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
+          <AcademicCard />
+        </div>
+      </section>
+
       {/* Availability */}
       <section className="mb-12">
         <div className="mb-4">
@@ -30,23 +46,6 @@ export default function SettingsPage() {
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <YearPaint />
-        </div>
-      </section>
-
-      {/* Academic calendar */}
-      <section className="mb-12">
-        <div className="mb-4">
-          <h2 className="font-display text-xl font-semibold text-ink">
-            Academic calendar
-          </h2>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Let the TU/e year drive your availability: exams and crunch weeks
-            blocked, recesses and post-exam weeks free, mandatory attendance
-            days respected per quartile.
-          </p>
-        </div>
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <AcademicCard />
         </div>
       </section>
 

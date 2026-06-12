@@ -1,19 +1,15 @@
 "use client";
 
-// Academic calendar card (availability v2 — docs/AVAILABILITY_V2.md):
-// enable the TU/e calendar, set mandatory-attendance weekdays per quartile,
-// copy the LLM interview prompt, and import the resulting JSON.
+// Quick setup (availability v2 — docs/AVAILABILITY_V2.md): enable the TU/e
+// academic calendar and tick the mandatory-attendance weekdays per quartile.
+// Exams + the 2 weeks before are blocked automatically; recesses, holidays
+// and post-exam weeks are free. Painted windows below override everything.
 
 import { useEffect, useState } from "react";
 import Chip from "@/components/ui/Chip";
-import { getPreferences, putPreferences, putAvailability } from "@/lib/client";
+import { getPreferences, putPreferences } from "@/lib/client";
 import { listCalendars } from "@/lib/academic";
-import { INTERVIEW_PROMPT } from "@/data/interviewPrompt";
-import {
-  AvailabilityImportSchema,
-  type BusyWeekdaysPref,
-  type Preferences,
-} from "@/types/api";
+import type { BusyWeekdaysPref, Preferences } from "@/types/api";
 
 const WEEKDAYS: { iso: number; label: string }[] = [
   { iso: 1, label: "Mon" },
@@ -31,7 +27,6 @@ export default function AcademicCard() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [importText, setImportText] = useState("");
 
   useEffect(() => {
     getPreferences()
@@ -79,66 +74,12 @@ export default function AcademicCard() {
     );
   };
 
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(INTERVIEW_PROMPT);
-      setMessage("Interview prompt copied — paste it into any AI chat.");
-    } catch {
-      setMessage("Clipboard blocked — copy from docs/AVAILABILITY_V2.md.");
-    }
-  };
-
-  const runImport = async () => {
-    if (!prefs) return;
-    setMessage(null);
-    let raw: unknown;
-    try {
-      // tolerate a ```json fence around the block
-      raw = JSON.parse(
-        importText.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""),
-      );
-    } catch {
-      setMessage("That isn’t valid JSON.");
-      return;
-    }
-    const parsed = AvailabilityImportSchema.safeParse(raw);
-    if (!parsed.success) {
-      setMessage("JSON doesn’t match the expected shape — re-copy the prompt and retry.");
-      return;
-    }
-    const imp = parsed.data;
-    setSaving(true);
-    try {
-      const nextPrefs = await putPreferences({
-        ...prefs,
-        academic_calendar: imp.academic_calendar,
-        busy_weekdays: imp.busy_weekdays,
-        ...(imp.trip_min_nights != null
-          ? { trip_min_nights: imp.trip_min_nights }
-          : {}),
-        ...(imp.trip_max_nights != null
-          ? { trip_max_nights: imp.trip_max_nights }
-          : {}),
-      });
-      await putAvailability(imp.windows);
-      setPrefs(nextPrefs);
-      setImportText("");
-      setMessage(
-        `Imported: calendar ${imp.academic_calendar ?? "off"}, ${imp.windows.length} window(s). Painted windows were replaced.`,
-      );
-    } catch {
-      setMessage("Import failed — try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (!prefs) {
     return <p className="text-sm text-ink-muted">Loading…</p>;
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* enable toggle */}
       <div className="flex flex-wrap items-center gap-3">
         <Chip selected={enabled} onClick={toggleEnabled} disabled={saving}>
@@ -155,8 +96,7 @@ export default function AcademicCard() {
       {enabled && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Mandatory attendance days (can’t travel over these on teaching
-            weeks)
+            Days you must be on campus (per quartile)
           </p>
           {QUARTILES.map((q) => (
             <div key={q} className="flex flex-wrap items-center gap-2">
@@ -178,30 +118,6 @@ export default function AcademicCard() {
           ))}
         </div>
       )}
-
-      {/* LLM interview: copy + import */}
-      <div className="space-y-2 border-t border-line pt-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Chip onClick={copyPrompt}>Copy interview prompt</Chip>
-          <span className="text-sm text-ink-muted">
-            Paste it into any AI chat, answer the questions, paste the JSON it
-            gives you below.
-          </span>
-        </div>
-        <textarea
-          value={importText}
-          onChange={(e) => setImportText(e.target.value)}
-          placeholder='{"version": 1, "academic_calendar": "tue-2026-2027", …}'
-          rows={4}
-          className="w-full rounded-(--radius-tag) border border-line bg-paper p-3 font-mono text-xs text-ink placeholder:text-ink-muted/50 focus:border-ink-muted focus:outline-none"
-        />
-        <Chip
-          onClick={runImport}
-          disabled={saving || importText.trim().length === 0}
-        >
-          Import
-        </Chip>
-      </div>
 
       {message && <p className="text-sm text-ink-muted">{message}</p>}
     </div>
