@@ -24,8 +24,8 @@ export default function SettingsPage() {
             Quick setup
           </h2>
           <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Tick the days you&apos;re busy every week — lectures, work,
-            anything you can&apos;t travel over.
+            Fast-fill your calendar: tick the weekdays you can&apos;t travel,
+            apply, and the free days get painted below.
           </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">

@@ -19,7 +19,6 @@ import {
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
 import { HARD_PRICE_CEILING } from "@/lib/score";
-import { avoidsBusyWeekdays } from "@/lib/academic";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
 
@@ -203,9 +202,7 @@ export async function getCitiesData(
   let grouped: unknown[];
   if (avail) {
     const passes = (out: string, ret: string): boolean =>
-      avail.windows.some((w) => out >= w.start && ret <= w.end) ||
-      (avail.busyWeekdays.length > 0 &&
-        avoidsBusyWeekdays(out, ret, avail.busyWeekdays));
+      avail.windows.some((w) => out >= w.start && ret <= w.end);
 
     const docs = (await flights.find(match).toArray()).filter((d) =>
       passes(String(d.outbound_date), String(d.return_date)),
@@ -494,8 +491,6 @@ export interface UserAvailability {
   windows: AvailWindow[];
   minNights: number | null;
   maxNights: number | null;
-  /** Recurring weekly busy days, ISO 1=Mon…7=Sun (Quick setup). */
-  busyWeekdays: number[];
 }
 
 export async function loadUserAvailability(
@@ -534,14 +529,7 @@ export async function loadUserAvailability(
     if (start && end) windows.push({ start, end });
   }
 
-  // Recurring weekly busy days (Quick setup).
-  const busyWeekdays = Array.isArray(prefs.busy_weekdays)
-    ? (prefs.busy_weekdays as unknown[]).filter(
-        (d): d is number => typeof d === "number" && d >= 1 && d <= 7,
-      )
-    : [];
-
-  return { windows, minNights, maxNights, busyWeekdays };
+  return { windows, minNights, maxNights };
 }
 
 /** True if [outbound,return] fits ENTIRELY inside at least one window. */
@@ -614,21 +602,14 @@ export async function getTripsData(
   let avail: UserAvailability | null = null;
   if (params.avail && session?.user?.id) {
     avail = await loadUserAvailability(session.user.id);
-    // No constraint source at all (no windows AND no busy weekdays) →
-    // ignore avail (don't blank the calendar).
-    if (avail && avail.windows.length === 0 && avail.busyWeekdays.length === 0)
-      avail = null;
+    // No windows at all → nothing to constrain to; ignore avail (don't blank
+    // the calendar).
+    if (avail && avail.windows.length === 0) avail = null;
   }
 
-  // A trip qualifies by fitting a painted window, or — when recurring busy
-  // weekdays are set — by touching none of them. Plus trip-length prefs.
   const passesAvail = (outbound: string, ret: string, nights: number): boolean => {
     if (!avail) return true;
-    const inWindow = fitsAnyWindow(outbound, ret, avail.windows);
-    const avoids =
-      avail.busyWeekdays.length > 0 &&
-      avoidsBusyWeekdays(outbound, ret, avail.busyWeekdays);
-    if (!inWindow && !avoids) return false;
+    if (!fitsAnyWindow(outbound, ret, avail.windows)) return false;
     if (avail.minNights !== null && nights < avail.minNights) return false;
     if (avail.maxNights !== null && nights > avail.maxNights) return false;
     return true;

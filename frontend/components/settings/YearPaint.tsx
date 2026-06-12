@@ -11,6 +11,7 @@ import {
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
+import { AVAILABILITY_UPDATED_EVENT } from "@/components/settings/AcademicCard";
 import { formatRange, parseLocalDate } from "@/lib/format";
 import type { DateWindow } from "@/types/api";
 
@@ -194,6 +195,20 @@ export default function YearPaint() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // ─── Re-sync when Quick setup rewrites the windows ──────────────────────────
+  useEffect(() => {
+    const onUpdated = () => {
+      getAvailability()
+        .then((res) => setPainted(windowsToKeys(res.windows)))
+        .catch(() => {
+          /* keep current paint on refresh failure */
+        });
+    };
+    window.addEventListener(AVAILABILITY_UPDATED_EVENT, onUpdated);
+    return () =>
+      window.removeEventListener(AVAILABILITY_UPDATED_EVENT, onUpdated);
   }, []);
 
   // ─── Paint mutation helpers ─────────────────────────────────────────────────

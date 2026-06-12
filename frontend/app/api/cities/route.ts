@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       const userId = (session?.user as { id?: string } | undefined)?.id;
       const avail = userId ? await loadUserAvailability(userId) : null;
       cities =
-        avail && (avail.windows.length > 0 || avail.busyWeekdays.length > 0)
+        avail && avail.windows.length > 0
           ? await getCitiesData(originsKey.split(","), avail)
           : await citiesForOrigins(originsKey);
     } else {

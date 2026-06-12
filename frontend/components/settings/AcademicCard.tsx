@@ -1,13 +1,26 @@
 "use client";
 
-// Quick setup: recurring weekly busy days (lectures, work, sports — anything
-// you can't travel over). A trip qualifies if it fits a painted window below,
-// or touches none of these days. Empty = no weekly constraint.
+// Quick setup: tick recurring weekly busy days, hit "Apply to calendar" —
+// the free gaps for the next 12 months are painted into the availability
+// calendar below. The calendar is the single source of truth; this is just
+// a fast way to fill it.
 
 import { useEffect, useState } from "react";
 import Chip from "@/components/ui/Chip";
-import { getPreferences, putPreferences } from "@/lib/client";
+import {
+  getPreferences,
+  putPreferences,
+  putAvailability,
+} from "@/lib/client";
+import { generateFreeWindows } from "@/lib/academic";
+import { todayStr } from "@/components/tripcal/calendarMath";
 import type { Preferences } from "@/types/api";
+
+/** Matches MONTHS_AHEAD in YearPaint — the painted calendar's horizon. */
+const MONTHS_AHEAD = 12;
+
+/** YearPaint listens for this to re-fetch after we rewrite the windows. */
+export const AVAILABILITY_UPDATED_EVENT = "somewhere:availability-updated";
 
 const WEEKDAYS: { iso: number; label: string }[] = [
   { iso: 1, label: "Mon" },
@@ -21,31 +34,41 @@ const WEEKDAYS: { iso: number; label: string }[] = [
 
 export default function AcademicCard() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState<number[]>([]);
+  const [applying, setApplying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getPreferences()
-      .then(setPrefs)
+      .then((p) => {
+        setPrefs(p);
+        setBusy(p.busy_weekdays ?? []);
+      })
       .catch(() => setMessage("Couldn’t load preferences."));
   }, []);
 
-  const busy = prefs?.busy_weekdays ?? [];
+  const toggle = (iso: number) =>
+    setBusy((prev) =>
+      prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso].sort(),
+    );
 
-  const toggleWeekday = async (iso: number) => {
+  const apply = async () => {
     if (!prefs) return;
-    const list = busy.includes(iso)
-      ? busy.filter((d) => d !== iso)
-      : [...busy, iso].sort();
-    setSaving(true);
+    setApplying(true);
     setMessage(null);
     try {
-      setPrefs(await putPreferences({ ...prefs, busy_weekdays: list }));
-      setMessage(list.length === 0 ? "No weekly busy days." : "Saved.");
+      const windows = generateFreeWindows(busy, todayStr(), MONTHS_AHEAD);
+      await putAvailability(windows);
+      // remember the chip selection for next time
+      setPrefs(await putPreferences({ ...prefs, busy_weekdays: busy }));
+      window.dispatchEvent(new Event(AVAILABILITY_UPDATED_EVENT));
+      setMessage(
+        `Painted ${windows.length} free window(s) into your calendar below — fine-tune there.`,
+      );
     } catch {
-      setMessage("Save failed — try again.");
+      setMessage("Couldn’t apply — try again.");
     } finally {
-      setSaving(false);
+      setApplying(false);
     }
   };
 
@@ -61,19 +84,26 @@ export default function AcademicCard() {
             key={d.iso}
             size="sm"
             selected={busy.includes(d.iso)}
-            onClick={() => toggleWeekday(d.iso)}
-            disabled={saving}
+            onClick={() => toggle(d.iso)}
+            disabled={applying}
           >
             {d.label}
           </Chip>
         ))}
+        <Chip
+          onClick={apply}
+          disabled={applying || busy.length === 0 || busy.length === 7}
+          className="ml-2"
+        >
+          {applying ? "Applying…" : "Apply to calendar"}
+        </Chip>
       </div>
       <p className="text-sm text-ink-muted">
-        {busy.length === 0
-          ? "No recurring busy days — trips can land on any weekday."
-          : "Trips spanning these days are hidden, unless they fit a painted window below."}
+        Tick the days you can’t travel, then apply: the next {MONTHS_AHEAD}{" "}
+        months of free days get painted into the calendar below, replacing
+        what’s there. Adjust individual days in the calendar afterwards.
       </p>
-      {message && <p className="text-xs text-ink-muted">{message}</p>}
+      {message && <p className="text-sm text-ink-muted">{message}</p>}
     </div>
   );
 }
