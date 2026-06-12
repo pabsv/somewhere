@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Input from "@/components/ui/Input";
@@ -12,7 +13,7 @@ function LoginForm() {
   const urlError = params.get("error");
 
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
@@ -20,7 +21,7 @@ function LoginForm() {
     setLoading(true);
     await signIn("credentials", {
       email: email.trim().toLowerCase(),
-      name: name.trim(),
+      password,
       redirectTo: callbackUrl,
     });
     // signIn redirects on success; on failure it returns here via ?error=.
@@ -51,26 +52,26 @@ function LoginForm() {
 
       <div>
         <label
-          htmlFor="name"
+          htmlFor="password"
           className="mb-1 block font-mono text-xs uppercase tracking-wide text-ink-muted"
         >
-          Display name
+          Password
         </label>
         <Input
-          id="name"
-          type="text"
+          id="password"
+          type="password"
           required
-          autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Alex"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
           className="rounded-(--radius-tag) border-line"
         />
       </div>
 
       {urlError && (
         <p className="text-sm text-alert">
-          Could not sign you in. Check your email and name, then try again.
+          Could not sign you in. Check your email and password, then try again.
         </p>
       )}
 
@@ -103,8 +104,11 @@ export default function LoginPage() {
         </Suspense>
 
         <p className="mt-6 font-mono text-xs leading-relaxed text-ink-muted">
-          No password — this is a personal beta. Enter an email and a display
-          name and we&apos;ll create your account automatically.
+          No account yet?{" "}
+          <Link href="/register" className="underline hover:text-ink">
+            Create one
+          </Link>
+          .
         </p>
       </div>
     </div>

@@ -6,6 +6,7 @@
 
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { getDb } from "@/lib/mongodb";
 
@@ -15,37 +16,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       credentials: {
         email: {},
-        name: {},
+        password: {},
       },
-      // No password in v1 (documented limitation): identity is email + name.
-      // Upsert into `users` keyed on the unique email, set role on insert.
+      // Sign-in only — account creation happens via POST /api/auth/register.
+      // Looks up the user by email and verifies the bcrypt password hash.
       authorize: async (credentials) => {
         const email =
           typeof credentials?.email === "string"
             ? credentials.email.trim().toLowerCase()
             : "";
-        const name =
-          typeof credentials?.name === "string" ? credentials.name.trim() : "";
+        const password =
+          typeof credentials?.password === "string" ? credentials.password : "";
 
-        if (!email || !name) return null;
+        if (!email || !password) return null;
 
         const db = await getDb();
-        const result = await db.collection("users").findOneAndUpdate(
-          { email },
-          {
-            $setOnInsert: { email, role: "user", created_at: new Date() },
-            $set: { name },
-          },
-          { upsert: true, returnDocument: "after" },
-        );
+        const user = await db.collection("users").findOne({ email });
+        if (!user || typeof user.password_hash !== "string") return null;
 
-        if (!result) return null;
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) return null;
 
         return {
-          id: result._id.toString(),
+          id: user._id.toString(),
           email,
-          name: result.name as string,
-          role: (result.role as string) ?? "user",
+          name: user.name as string,
+          role: (user.role as string) ?? "user",
         };
       },
     }),
