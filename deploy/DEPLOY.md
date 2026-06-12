@@ -43,7 +43,7 @@ systemctl status flight-scraper 2>/dev/null   # is anything already installed?
 ## Code transfer (decide after recon)
 - **If repo already at /mnt/hdd/flight-scraper:** `git pull` (after we commit+push the
   origins→4 / window→180 edits) — reproducible, preferred long-term.
-- **If not present:** `git clone https://github.com/pabsv/flight-scraper.git /mnt/hdd/flight-scraper`
+- **If not present:** `git clone https://github.com/pabsv/somewhere.git /mnt/hdd/flight-scraper`
 - **Quick path (no commit):** `rsync` the local working tree over Tailscale SSH.
 
 ## Install

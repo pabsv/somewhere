@@ -49,7 +49,7 @@ Built via 6 parallel agent tracks + integration, all against `docs/DESIGN_V1.md`
 
 ## ⬜ Left to do
 1. **Production promotion** (`vercel deploy --prod` or promote the preview) →
-   clean public test URL `https://flight-scraper.vercel.app`. BLOCKED on explicit
+   clean public test URL `https://fly-somewhere.vercel.app`. BLOCKED on explicit
    user approval (safety classifier flags prod deploys).
 2. **Push to GitHub master** — committed locally as `2c5126c`. Holding because a
    push may trigger Vercel's GitHub auto-deploy to production. Push together with
