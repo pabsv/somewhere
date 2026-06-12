@@ -24,8 +24,8 @@ export default function SettingsPage() {
             Quick setup
           </h2>
           <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Turn on the TU/e calendar and tick the days you must be on campus
-            — exams and crunch weeks are handled for you.
+            Tick the days you&apos;re busy every week — lectures, work,
+            anything you can&apos;t travel over.
           </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">

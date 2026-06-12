@@ -10,7 +10,6 @@ import { auth } from "@/auth";
 import { getDb } from "@/lib/mongodb";
 import { PreferencesSchema, type Preferences } from "@/types/api";
 import { ORIGINS } from "@/data/airports.gen";
-import { getCalendar } from "@/lib/academic";
 
 const DEFAULTS: Preferences = {
   origins: ORIGINS.map((o) => o.code),
@@ -18,8 +17,7 @@ const DEFAULTS: Preferences = {
   trip_max_nights: 10,
   direct_only: false,
   max_price: null,
-  academic_calendar: null,
-  busy_weekdays: { q1: [], q2: [], q3: [], q4: [] },
+  busy_weekdays: [],
 };
 
 // GET /api/preferences
@@ -37,9 +35,15 @@ export async function GET() {
       { projection: { preferences: 1 } },
     );
 
+  const stored = (user?.preferences ?? {}) as Record<string, unknown>;
+  // Drop legacy/corrupt shapes (e.g. the per-quartile busy_weekdays object
+  // from the removed v2 calendar) instead of 500ing.
+  if (!Array.isArray(stored.busy_weekdays)) delete stored.busy_weekdays;
+  delete stored.academic_calendar;
+
   const prefs: Preferences = {
     ...DEFAULTS,
-    ...(user?.preferences ?? {}),
+    ...stored,
   };
 
   return NextResponse.json(PreferencesSchema.parse(prefs));
@@ -71,13 +75,6 @@ export async function PUT(req: NextRequest) {
   if (prefs.trip_min_nights > prefs.trip_max_nights) {
     return NextResponse.json(
       { error: "trip_min_nights must not exceed trip_max_nights" },
-      { status: 400 },
-    );
-  }
-
-  if (prefs.academic_calendar != null && !getCalendar(prefs.academic_calendar)) {
-    return NextResponse.json(
-      { error: `Unknown academic calendar: ${prefs.academic_calendar}` },
       { status: 400 },
     );
   }
