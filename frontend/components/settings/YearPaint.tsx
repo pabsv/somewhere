@@ -346,12 +346,38 @@ export default function YearPaint() {
 
   return (
     <div>
-      {/* hint line */}
-      <p className="mb-4 text-sm text-ink-muted">
-        Click and drag to paint the days you&apos;re free. Drag again to erase.
-        On touch or keyboard, tap a start day then an end day.
+      {/* actions + hint */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="rounded-(--radius-tag) bg-ink text-paper hover:bg-night"
+        >
+          {saving ? "Saving…" : "Save"}
+        </Button>
+        <button
+          type="button"
+          onClick={clearAll}
+          disabled={windows.length === 0}
+          className="text-sm text-ink-muted transition-colors hover:text-alert disabled:opacity-40"
+        >
+          Clear all
+        </button>
+        {saveMsg && (
+          <span
+            className={`text-sm transition-opacity ${
+              saveMsg.kind === "ok" ? "text-steal" : "text-alert"
+            }`}
+          >
+            {saveMsg.text}
+          </span>
+        )}
+        <span className="text-sm text-ink-muted/70">
+          Drag to paint free days, drag again to erase.
+        </span>
         {pendingStart && (
-          <span className="ml-2 font-mono text-xs text-ink">
+          <span className="font-mono text-xs text-ink">
             Pick an end day for {prettyDay(pendingStart)} — or{" "}
             <button
               type="button"
@@ -362,7 +388,7 @@ export default function YearPaint() {
             </button>
           </span>
         )}
-      </p>
+      </div>
 
       {/* month grids */}
       <div
@@ -385,24 +411,13 @@ export default function YearPaint() {
 
       {/* window chips */}
       <div className="mt-8 border-t border-line pt-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3">
           <span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
             Free windows
           </span>
-          {windows.length > 0 && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-xs text-ink-muted transition-colors hover:text-alert"
-            >
-              Clear all
-            </button>
-          )}
         </div>
         {windows.length === 0 ? (
-          <p className="text-sm text-ink-muted/70">
-            No dates painted yet. Paint a stretch above to add a window.
-          </p>
+          <p className="text-sm text-ink-muted/70">No dates painted yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {windows.map((w) => (
@@ -426,26 +441,6 @@ export default function YearPaint() {
         )}
       </div>
 
-      {/* save row */}
-      <div className="mt-6 flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="rounded-(--radius-tag) bg-ink text-paper hover:bg-night"
-        >
-          {saving ? "Saving…" : "Save availability"}
-        </Button>
-        {saveMsg && (
-          <span
-            className={`text-sm transition-opacity ${
-              saveMsg.kind === "ok" ? "text-steal" : "text-alert"
-            }`}
-          >
-            {saveMsg.text}
-          </span>
-        )}
-      </div>
     </div>
   );
 }

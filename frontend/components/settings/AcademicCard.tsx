@@ -99,9 +99,8 @@ export default function AcademicCard() {
         </Chip>
       </div>
       <p className="text-sm text-ink-muted">
-        Tick the days you can’t travel, then apply: the next {MONTHS_AHEAD}{" "}
-        months of free days get painted into the calendar below, replacing
-        what’s there. Adjust individual days in the calendar afterwards.
+        Tick busy weekdays, apply — free days get painted below (replaces
+        current paint).
       </p>
       {message && <p className="text-sm text-ink-muted">{message}</p>}
     </div>

@@ -11,10 +11,6 @@ export default function SettingsPage() {
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
           Settings
         </h1>
-        <p className="mt-2 max-w-xl text-base text-ink-muted">
-          Tune what counts as your kind of trip. Nothing here hides deals — it
-          just decides which ones get the spotlight.
-        </p>
       </header>
 
       {/* Quick setup */}
@@ -23,10 +19,6 @@ export default function SettingsPage() {
           <h2 className="font-display text-xl font-semibold text-ink">
             Quick setup
           </h2>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Fast-fill your calendar: tick the weekdays you can&apos;t travel,
-            apply, and the free days get painted below.
-          </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <AcademicCard />
@@ -39,10 +31,6 @@ export default function SettingsPage() {
           <h2 className="font-display text-xl font-semibold text-ink">
             Availability
           </h2>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Paint the dates you&apos;re free to fly. We&apos;ll surface trips
-            that fit your windows.
-          </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <YearPaint />
@@ -55,9 +43,6 @@ export default function SettingsPage() {
           <h2 className="font-display text-xl font-semibold text-ink">
             Preferences
           </h2>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Your defaults for airports, trip length, and price.
-          </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <PreferencesCard />
