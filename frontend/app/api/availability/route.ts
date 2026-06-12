@@ -4,6 +4,7 @@
 // Spec: docs/DESIGN_V1.md sections D + A.
 
 import { NextRequest, NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { getDb } from "@/lib/mongodb";
@@ -25,17 +26,40 @@ export async function GET() {
   }
 
   const db = await getDb();
+  // Legacy docs store user_id as ObjectId and dates as Date; current PUT
+  // writes session-id strings and YYYY-MM-DD strings. Read both.
+  const ids: unknown[] = [session.user.id];
+  try {
+    ids.push(new ObjectId(session.user.id));
+  } catch {
+    // non-ObjectId session id — string match only
+  }
   const docs = await db
     .collection("availability")
-    .find({ user_id: session.user.id })
+    .find({ user_id: { $in: ids } })
     .sort({ start_date: 1 })
     .toArray();
 
-  const windows: DateWindow[] = docs.map((d) => ({
-    start_date: d.start_date as string,
-    end_date: d.end_date as string,
-    ...(d.label != null ? { label: d.label as string } : {}),
-  }));
+  const toDateStr = (v: unknown): string | null => {
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === "string") {
+      const m = v.match(/^\d{4}-\d{2}-\d{2}/);
+      return m ? m[0] : null;
+    }
+    return null;
+  };
+
+  const windows: DateWindow[] = [];
+  for (const d of docs) {
+    const start = toDateStr(d.start_date);
+    const end = toDateStr(d.end_date);
+    if (start && end)
+      windows.push({
+        start_date: start,
+        end_date: end,
+        ...(d.label != null ? { label: d.label as string } : {}),
+      });
+  }
 
   return NextResponse.json(AvailabilityResponseSchema.parse({ windows }));
 }
@@ -91,7 +115,16 @@ export async function PUT(req: NextRequest) {
 
   const userId = session.user.id;
   const db = await getDb();
-  await db.collection("availability").deleteMany({ user_id: userId });
+  // Replace-all must also clear legacy docs keyed by ObjectId.
+  const delIds: unknown[] = [userId];
+  try {
+    delIds.push(new ObjectId(userId));
+  } catch {
+    // non-ObjectId session id — string match only
+  }
+  await db
+    .collection("availability")
+    .deleteMany({ user_id: { $in: delIds } });
   if (sorted.length > 0) {
     await db.collection("availability").insertMany(
       sorted.map((w) => ({

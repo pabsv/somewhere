@@ -78,6 +78,8 @@ export type CitiesParams = {
   from?: string[];
   /** time window filter, e.g. "all" */
   window?: string;
+  /** restrict to the signed-in user's availability windows */
+  avail?: boolean;
 };
 
 /** GET /api/cities */

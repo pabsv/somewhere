@@ -11,6 +11,7 @@ import {
   dayStr,
   isWeekend,
   spansMonth,
+  weekdayLetter,
 } from "./calendarMath";
 
 interface MonthBlockProps {
@@ -122,7 +123,10 @@ export default function MonthBlock({
               }`}
               title={`Trips spanning ${dayStr(spec.year, spec.month, d)}`}
             >
-              {d}
+              <span className="block text-[8px] leading-none opacity-70">
+                {weekdayLetter(spec.year, spec.month, d)}
+              </span>
+              <span className="mt-0.5 block">{d}</span>
             </button>
           );
         })}

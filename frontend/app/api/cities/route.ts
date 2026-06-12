@@ -6,8 +6,13 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
+import { auth } from "@/auth";
 import { CitiesResponseSchema } from "@/types/api";
-import { getCitiesData, parseOrigins } from "@/lib/queries";
+import {
+  getCitiesData,
+  loadUserAvailability,
+  parseOrigins,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +33,24 @@ function citiesForOrigins(originsKey: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    const origins = parseOrigins(req.nextUrl.searchParams.get("from"));
+    const sp = req.nextUrl.searchParams;
+    const origins = parseOrigins(sp.get("from"));
     const originsKey = [...origins].sort().join(",");
 
-    const cities = await citiesForOrigins(originsKey);
+    // avail=1 → per-user availability filter; bypass the shared cache.
+    const wantAvail = sp.get("avail") === "1" || sp.get("avail") === "true";
+    let cities;
+    if (wantAvail) {
+      const session = await auth();
+      const userId = (session?.user as { id?: string } | undefined)?.id;
+      const avail = userId ? await loadUserAvailability(userId) : null;
+      cities =
+        avail && avail.windows.length > 0
+          ? await getCitiesData(originsKey.split(","), avail)
+          : await citiesForOrigins(originsKey);
+    } else {
+      cities = await citiesForOrigins(originsKey);
+    }
 
     const body = CitiesResponseSchema.parse({
       cities,

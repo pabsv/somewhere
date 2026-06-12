@@ -41,6 +41,13 @@ export function dayStr(year: number, month: number, day: number): string {
   return `${year}-${pad(month + 1)}-${pad(day)}`;
 }
 
+const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+
+/** Single-letter weekday for a day of a month ("M", "T", …). */
+export function weekdayLetter(year: number, month: number, day: number): string {
+  return WEEKDAY_LETTERS[new Date(year, month, day).getDay()];
+}
+
 /** 0=Sun … 6=Sat — weekend = Sat/Sun. */
 export function isWeekend(year: number, month: number, day: number): boolean {
   const dow = new Date(year, month, day).getDay();

@@ -173,15 +173,33 @@ function monthKey(date: string): string {
  */
 export async function getCitiesData(
   origins: string[],
+  avail?: UserAvailability | null,
 ): Promise<CitySummary[]> {
   const flights = await flightsCollection();
   const today = todayStr();
+
+  // Availability constraint: trip must fit entirely inside one window, and
+  // nights must respect the user's trip-length prefs (same rule as Calendar).
+  const match: Record<string, unknown> = {
+    origin: { $in: origins },
+    outbound_date: { $gte: today },
+  };
+  if (avail && avail.windows.length > 0) {
+    match.$or = avail.windows.map((w) => ({
+      outbound_date: { $gte: w.start },
+      return_date: { $lte: w.end },
+    }));
+    const nights: Record<string, number> = {};
+    if (avail.minNights !== null) nights.$gte = avail.minNights;
+    if (avail.maxNights !== null) nights.$lte = avail.maxNights;
+    if (Object.keys(nights).length > 0) match.duration_days = nights;
+  }
 
   // One cheapest doc per (destination, origin) + a count of future flights.
   const grouped = await flights
     .aggregate(
       [
-        { $match: { origin: { $in: origins }, outbound_date: { $gte: today } } },
+        { $match: match },
         { $sort: { price: 1 } },
         {
           $group: {
@@ -446,11 +464,15 @@ function toDateStr(v: unknown): string | null {
  * Load a signed-in user's availability windows + trip-length prefs.
  * Returns null when the user can't be resolved (treated as "no avail filter").
  */
-async function loadUserAvailability(userId: string): Promise<{
+export interface UserAvailability {
   windows: AvailWindow[];
   minNights: number | null;
   maxNights: number | null;
-} | null> {
+}
+
+export async function loadUserAvailability(
+  userId: string,
+): Promise<UserAvailability | null> {
   let oid: import("mongodb").ObjectId;
   try {
     const { ObjectId } = await import("mongodb");
@@ -463,7 +485,12 @@ async function loadUserAvailability(userId: string): Promise<{
 
   const [user, availDocs] = await Promise.all([
     db.collection("users").findOne({ _id: oid }),
-    db.collection("availability").find({ user_id: oid }).toArray(),
+    // availability docs store user_id as a session-id STRING (current PUT
+    // route) or a legacy ObjectId — match both.
+    db
+      .collection("availability")
+      .find({ user_id: { $in: [userId, oid] } })
+      .toArray(),
   ]);
 
   const prefs = (user?.preferences ?? {}) as Record<string, unknown>;

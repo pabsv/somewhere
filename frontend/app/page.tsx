@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Chip from "@/components/ui/Chip";
 import DepartureBoard, {
   type DepartureRow,
 } from "@/components/board/DepartureBoard";
@@ -10,7 +12,7 @@ import ExploreControls, {
   type SortKey,
 } from "@/components/explore/ExploreControls";
 import { countryName } from "@/components/explore/countries";
-import { getCities, ApiError } from "@/lib/client";
+import { getCities, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { formatDateBoard } from "@/lib/format";
 import type { CitySummary } from "@/types/api";
@@ -33,13 +35,39 @@ export default function ExplorePage() {
   const [region, setRegion] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("score");
 
+  // "Only my free dates" — mirrors the Calendar chip (signed-in + has windows)
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
+  const [hasWindows, setHasWindows] = useState(false);
+  const [onlyFree, setOnlyFree] = useState(false);
+
+  useEffect(() => {
+    if (!signedIn) {
+      setHasWindows(false);
+      setOnlyFree(false);
+      return;
+    }
+    let cancelled = false;
+    getAvailability()
+      .then((res) => {
+        if (!cancelled) setHasWindows(res.windows.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setHasWindows(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
+
   const originsKey = origins.join(",");
+  const availActive = onlyFree && signedIn;
 
   const load = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getCities({ from: origins })
+    getCities({ from: origins, avail: availActive ? true : undefined })
       .then((res) => {
         if (cancelled) return;
         setCities(res.cities);
@@ -59,7 +87,7 @@ export default function ExplorePage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originsKey]);
+  }, [originsKey, availActive]);
 
   useEffect(() => load(), [load]);
 
@@ -145,6 +173,17 @@ export default function ExplorePage() {
           sort={sort}
           onSort={setSort}
         />
+        {hasWindows && (
+          <div className="mt-3">
+            <Chip
+              size="sm"
+              selected={onlyFree}
+              onClick={() => setOnlyFree((v) => !v)}
+            >
+              Only my free dates
+            </Chip>
+          </div>
+        )}
       </div>
 
       {/* ─── Grid / states ───────────────────────────────────────────────────── */}
