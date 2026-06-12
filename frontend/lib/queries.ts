@@ -18,6 +18,7 @@ import {
   type Trip,
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
+import { HARD_PRICE_CEILING } from "@/lib/score";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
 
@@ -106,9 +107,13 @@ export function buildTripFilter(params: TripFilterParams): Filter<FlightDoc> {
   if (end) outbound.$lte = end;
   filter.outbound_date = outbound;
 
-  if (typeof maxPrice === "number" && Number.isFinite(maxPrice)) {
-    filter.price = { $lte: maxPrice };
-  }
+  // Hard ceiling always applies — routing-artifact fares (€2000+ multi-leg
+  // tickets Google returns when a route has no real option) are never shown.
+  const effectiveMax =
+    typeof maxPrice === "number" && Number.isFinite(maxPrice)
+      ? Math.min(maxPrice, HARD_PRICE_CEILING)
+      : HARD_PRICE_CEILING;
+  filter.price = { $lte: effectiveMax };
 
   if (direct) {
     filter.outbound_stops = 0;
@@ -183,6 +188,7 @@ export async function getCitiesData(
   const match: Record<string, unknown> = {
     origin: { $in: origins },
     outbound_date: { $gte: today },
+    price: { $lte: HARD_PRICE_CEILING },
   };
   if (avail && avail.windows.length > 0) {
     match.$or = avail.windows.map((w) => ({
@@ -330,6 +336,7 @@ export async function getCityData(
       destination: code,
       origin: { $in: origins },
       outbound_date: { $gte: today },
+      price: { $lte: HARD_PRICE_CEILING },
     })
     .toArray();
 

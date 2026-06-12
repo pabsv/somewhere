@@ -53,6 +53,12 @@ FliScraper = _fli_mod.FliScraper
 
 logger = logging.getLogger("pool_scheduler")
 
+# Fares above this are routing artifacts (absurd multi-leg tickets Google
+# returns when a route has no real option) — exclude them from the p50 EWMA
+# baseline so deal scoring stays anchored to realistic prices. Mirrors
+# HARD_PRICE_CEILING in frontend/lib/score.ts.
+BASELINE_PRICE_CAP = 700
+
 
 # ─── Logging ──────────────────────────────────────────────────────────────
 
@@ -140,7 +146,9 @@ def scrape_one_route(
             status = "success"
             err = None
 
-        median_price = statistics.median([f.price for f in flights]) if flights else None
+        # Baseline median over realistic fares only — see BASELINE_PRICE_CAP.
+        sane_prices = [f.price for f in flights if f.price <= BASELINE_PRICE_CAP]
+        median_price = statistics.median(sane_prices) if sane_prices else None
 
         if flights:
             save_result = FlightService().save_scraped_flights(flights)

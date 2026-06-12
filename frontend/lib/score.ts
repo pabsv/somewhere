@@ -21,6 +21,18 @@ export const STEAL_SCORE_THRESHOLD = 85;
 export const STEAL_PRICE_THRESHOLD = 35;
 /** score >= this (and not a steal) → "deal" */
 export const DEAL_SCORE_THRESHOLD = 68;
+/**
+ * price > this (EUR) → never "steal"/"deal", score capped at the midpoint.
+ * Guards against routes where Google only returns absurd multi-leg fares
+ * (e.g. €2985 BRU→OSR): the EWMA baseline is equally absurd, so a relative
+ * delta can look like "30% below typical" on a €2000+ ticket.
+ */
+export const MAX_DEAL_PRICE = 400;
+/**
+ * price > this (EUR) → not a real option for this app at all; read queries
+ * exclude such fares entirely (they're routing artifacts, not trips).
+ */
+export const HARD_PRICE_CEILING = 700;
 
 // Fallback-score curve when the route baseline is cold (null).
 const FALLBACK_PRICE_CEILING = 150;
@@ -60,6 +72,16 @@ export function scoreTrip(price: number, baseline: number | null): TripScore {
   } else {
     delta_pct = ((price - baseline) / baseline) * 100;
     score = clamp(Math.round(SCORE_MIDPOINT - delta_pct * DELTA_WEIGHT), 0, 100);
+  }
+
+  // Absolute sanity gate: an expensive ticket is never a deal, no matter how
+  // far below its (possibly absurd) baseline it sits.
+  if (price > MAX_DEAL_PRICE) {
+    return {
+      score: Math.min(score, SCORE_MIDPOINT),
+      delta_pct,
+      deal_tier: "fair",
+    };
   }
 
   const deal_tier: DealTier =
