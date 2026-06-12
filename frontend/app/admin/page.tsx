@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import DangerZone from "@/components/admin/DangerZone";
+import LiveBoard from "@/components/admin/LiveBoard";
 import PoolTiles, { PoolTilesSkeleton } from "@/components/admin/PoolTiles";
 import RunFeed from "@/components/admin/RunFeed";
 import TargetsTable, {
@@ -52,6 +53,12 @@ export default function AdminPage() {
           Read-only pool health and the live scrape feed.
         </p>
       </header>
+
+      {/* Live board (self-loading, 10s refresh) */}
+      <section className="mb-10 space-y-4">
+        <h2 className="font-display text-xl font-semibold text-ink">Live</h2>
+        <LiveBoard />
+      </section>
 
       {/* Pool tiles + targets */}
       <section className="mb-10 space-y-6">
