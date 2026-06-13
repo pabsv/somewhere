@@ -78,3 +78,33 @@ export default function DepartureBoard({
     </section>
   );
 }
+
+/** Loading placeholder matching the board's footprint while fares load. */
+export function BoardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden rounded-card bg-night shadow-card"
+    >
+      <div className="h-1 bg-brand" />
+      <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+        <span className="h-2 w-2 rounded-full bg-brand/60" />
+        <span className="font-mono text-xs tracking-widest text-paper/60">
+          DEPARTURES — WARMING UP
+        </span>
+      </div>
+      <ul>
+        {Array.from({ length: 5 }, (_, i) => (
+          <li
+            key={i}
+            className="flex items-center justify-between gap-4 border-b border-white/5 px-4 py-3.5 last:border-b-0 sm:px-5"
+          >
+            <div className="h-7 w-24 animate-pulse rounded bg-white/10" />
+            <div className="hidden h-4 flex-1 animate-pulse rounded bg-white/5 sm:block" />
+            <div className="h-6 w-12 animate-pulse rounded bg-white/10" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

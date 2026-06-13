@@ -141,6 +141,7 @@ flight-scraper/
 - Azair only — Kiwi dropped (too rate-limited). Azair scraper kept as fallback backend.
 - Multi-user, no password — identity via `X-User-ID` header (stored in localStorage). Login is name + email only.
 - Frontend connects directly to Atlas via Next.js API routes (serverless) — no backend HTTP server needed
+- **Landing / Explore split (2026-06-13):** `/` (`app/page.tsx`) is now a promo landing page — pitch headline ("Open to go anywhere, on any free day."), the live cheapest-steals `DepartureBoard`, CTA → `/explore`. `/explore` (`app/explore/page.tsx`) is the moved browsing page: board + grid. Explore sort is **cheapest-only** (no Best score / Most trips); the old region chip row + text input are replaced by one `SearchCombobox` (city / country / region typeahead, `components/explore/SearchCombobox.tsx` → `SearchSelection`); the "Only my free dates" toggle sits in the search row's trailing slot. Nav "Explore" + city back-link point at `/explore`; the wordmark points at `/`.
 - Legacy `scheduler/scheduler.py` writes state to `schedule_state` and reads from user prefs at runtime. Still works, but pool scheduler is the production path now.
 - FastAPI (`api/`) still exists and works locally but is not used by the deployed frontend
 - Frontend deduplicates deals on calendar view (best per destination+outbound+return dates)

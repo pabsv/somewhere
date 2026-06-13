@@ -1,67 +1,60 @@
 "use client";
 
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import Chip from "@/components/ui/Chip";
-import { REGIONS } from "@/data/destinations.gen";
+import SearchCombobox, {
+  type SearchSelection,
+} from "@/components/explore/SearchCombobox";
 import { ORIGINS } from "@/data/airports.gen";
 import { useOrigins } from "@/lib/useOrigins";
-
-export type SortKey = "score" | "cheapest" | "trips";
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "score", label: "Best score" },
-  { value: "cheapest", label: "Cheapest" },
-  { value: "trips", label: "Most trips" },
-];
+import type { CitySummary } from "@/types/api";
 
 interface ExploreControlsProps {
-  search: string;
-  onSearch: (value: string) => void;
-  region: string | null;
-  onRegion: (region: string | null) => void;
-  sort: SortKey;
-  onSort: (sort: SortKey) => void;
+  /** Loaded cities — feeds the search combobox suggestions. */
+  cities: CitySummary[];
+  selection: SearchSelection | null;
+  onSelect: (selection: SearchSelection | null) => void;
+  /** "Only my free dates" — shown only when signed in with saved windows. */
+  showFree: boolean;
+  onlyFree: boolean;
+  onToggleFree: () => void;
 }
 
 /**
- * Explore controls: free-text search (client-side, name/country), region filter
- * chips, sort select, and origin chips (?from= via useOrigins). All filtering
- * happens in the parent; this is presentational + delegating.
+ * Explore controls: one search combobox (city / country / region), the
+ * "Only my free dates" toggle in the trailing slot, and origin chips
+ * (?from= via useOrigins). Sorting is cheapest-only and handled in the parent.
  */
 export default function ExploreControls({
-  search,
-  onSearch,
-  region,
-  onRegion,
-  sort,
-  onSort,
+  cities,
+  selection,
+  onSelect,
+  showFree,
+  onlyFree,
+  onToggleFree,
 }: ExploreControlsProps) {
   const { toggle, isSelected } = useOrigins();
 
   return (
     <div className="space-y-4">
-      {/* search + sort */}
+      {/* search + free-dates toggle */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex-1">
-          <Input
-            type="search"
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            placeholder="Search a city or country…"
-            aria-label="Search destinations"
-            className="rounded-tag border-line bg-card text-ink placeholder:text-ink-muted/60 focus:border-ink-muted"
+          <SearchCombobox
+            cities={cities}
+            selection={selection}
+            onSelect={onSelect}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-sm text-ink-muted">Sort</span>
-          <Select
-            value={sort}
-            onChange={(v) => onSort(v as SortKey)}
-            options={SORT_OPTIONS}
-            className="rounded-tag border-line bg-card text-ink focus:border-ink-muted"
-          />
-        </div>
+        {showFree && (
+          <Chip
+            size="md"
+            selected={onlyFree}
+            onClick={onToggleFree}
+            className="shrink-0 self-start sm:self-auto"
+          >
+            Only my free dates
+          </Chip>
+        )}
       </div>
 
       {/* origin chips */}
@@ -80,23 +73,6 @@ export default function ExploreControls({
             <span className="tnum font-mono uppercase tracking-wide">
               {o.code}
             </span>
-          </Chip>
-        ))}
-      </div>
-
-      {/* region chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip size="sm" selected={region === null} onClick={() => onRegion(null)}>
-          All regions
-        </Chip>
-        {REGIONS.map((r) => (
-          <Chip
-            key={r}
-            size="sm"
-            selected={region === r}
-            onClick={() => onRegion(region === r ? null : r)}
-          >
-            {r}
           </Chip>
         ))}
       </div>

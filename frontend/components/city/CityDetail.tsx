@@ -31,7 +31,7 @@ export default function CityDetail({ code }: CityDetailProps) {
   const searchParams = useSearchParams();
   const fromQuery = searchParams.get("from");
   // Back link preserves the origin filter.
-  const exploreHref = fromQuery ? `/?from=${fromQuery}` : "/";
+  const exploreHref = fromQuery ? `/explore?from=${fromQuery}` : "/explore";
 
   const [data, setData] = useState<CityDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
