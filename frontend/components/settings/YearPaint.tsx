@@ -382,9 +382,11 @@ export default function YearPaint() {
       </div>
 
       {/* month grids */}
+      {/* pan-y (not none) so the page still scrolls past the 12-month grid on
+          touch; a tap toggles a day, a horizontal drag paints a range. */}
       <div
         className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3"
-        style={{ touchAction: "none" }}
+        style={{ touchAction: "pan-y" }}
       >
         {months.map((m) => (
           <MonthGrid
