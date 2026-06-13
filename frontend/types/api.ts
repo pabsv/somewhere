@@ -280,6 +280,16 @@ export const AvailabilityResponseSchema = z.object({
 });
 export type AvailabilityResponse = z.infer<typeof AvailabilityResponseSchema>;
 
+/**
+ * GET + PUT /api/saved-cities — the user's starred destinations (IATA codes).
+ * Replace-all semantics, like availability. Codes are uppercased + deduped
+ * server-side; order is not significant.
+ */
+export const SavedCitiesResponseSchema = z.object({
+  cities: z.array(z.string().min(1)),
+});
+export type SavedCitiesResponse = z.infer<typeof SavedCitiesResponseSchema>;
+
 /** GET /api/admin/runs */
 export const AdminRunsResponseSchema = z.object({
   runs: z.array(ScrapeRunSummarySchema),

@@ -13,9 +13,11 @@ import { useSearchParams } from "next/navigation";
 import type { CityDetailResponse, Trip } from "@/types/api";
 import { getCity, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useSavedCities } from "@/lib/saved-cities";
 import { getDestination } from "@/data/destinations.gen";
 import { ORIGINS } from "@/data/airports.gen";
 import Chip from "@/components/ui/Chip";
+import StarButton from "@/components/ui/StarButton";
 import CityHeader from "./CityHeader";
 import BestPerMonth from "./BestPerMonth";
 import TripRow, { TripRowSkeleton } from "./TripRow";
@@ -28,6 +30,11 @@ const ORIGIN_NAME = new Map(ORIGINS.map((o) => [o.code, o.name]));
 
 export default function CityDetail({ code }: CityDetailProps) {
   const { origins, toggle, isSelected } = useOrigins();
+  const {
+    signedIn: savedSignedIn,
+    isSaved,
+    toggle: toggleSaved,
+  } = useSavedCities();
   const searchParams = useSearchParams();
   const fromQuery = searchParams.get("from");
   // Back link preserves the origin filter.
@@ -139,6 +146,16 @@ export default function CityDetail({ code }: CityDetailProps) {
         country={city.country}
         region={city.region}
         baseline={baseline}
+        action={
+          savedSignedIn ? (
+            <StarButton
+              active={isSaved(city.code)}
+              onToggle={() => toggleSaved(city.code)}
+              label={displayName}
+              size="md"
+            />
+          ) : null
+        }
       />
 
       {/* ─── Origin + direct-only filters ─────────────────────────────────── */}

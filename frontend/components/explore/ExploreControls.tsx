@@ -17,6 +17,11 @@ interface ExploreControlsProps {
   showFree: boolean;
   onlyFree: boolean;
   onToggleFree: () => void;
+  /** "★ Saved" filter — shown only when signed in with ≥1 starred city. */
+  showSaved: boolean;
+  savedOnly: boolean;
+  savedCount: number;
+  onToggleSaved: () => void;
 }
 
 /**
@@ -31,12 +36,16 @@ export default function ExploreControls({
   showFree,
   onlyFree,
   onToggleFree,
+  showSaved,
+  savedOnly,
+  savedCount,
+  onToggleSaved,
 }: ExploreControlsProps) {
   const { toggle, isSelected } = useOrigins();
 
   return (
     <div className="space-y-4">
-      {/* search + free-dates toggle */}
+      {/* search + saved / free-dates toggles */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex-1">
           <SearchCombobox
@@ -45,6 +54,16 @@ export default function ExploreControls({
             onSelect={onSelect}
           />
         </div>
+        {showSaved && (
+          <Chip
+            size="md"
+            selected={savedOnly}
+            onClick={onToggleSaved}
+            className="shrink-0 self-start sm:self-auto"
+          >
+            ★ Saved{savedCount > 0 ? ` (${savedCount})` : ""}
+          </Chip>
+        )}
         {showFree && (
           <Chip
             size="md"

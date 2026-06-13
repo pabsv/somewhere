@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import FareTag from "@/components/ui/FareTag";
+import StarButton from "@/components/ui/StarButton";
+import { useSavedCities } from "@/lib/saved-cities";
 import type { CitySummary } from "@/types/api";
 import { countryName } from "./countries";
 
@@ -19,6 +21,7 @@ interface CityCardProps {
  */
 export default function CityCard({ city, query }: CityCardProps) {
   const { best } = city;
+  const { signedIn, isSaved, toggle } = useSavedCities();
   const belowPct =
     best.delta_pct != null && best.delta_pct < 0
       ? Math.round(-best.delta_pct)
@@ -45,7 +48,18 @@ export default function CityCard({ city, query }: CityCardProps) {
             </span>
           </div>
         </div>
-        <FareTag price={best.price} tier={best.deal_tier} size="md" />
+        <div className="flex shrink-0 items-start gap-1">
+          {signedIn && (
+            <StarButton
+              active={isSaved(city.code)}
+              onToggle={() => toggle(city.code)}
+              label={city.name}
+              size="sm"
+              className="-mt-1 -mr-1"
+            />
+          )}
+          <FareTag price={best.price} tier={best.deal_tier} size="md" />
+        </div>
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3">

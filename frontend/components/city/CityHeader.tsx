@@ -18,6 +18,8 @@ interface CityHeaderProps {
   region?: string | null;
   /** Route baseline (typical round-trip). Null = cold route, no line. */
   baseline?: number | null;
+  /** Optional trailing control (e.g. the save-city star), right-aligned. */
+  action?: React.ReactNode;
 }
 
 export default function CityHeader({
@@ -26,6 +28,7 @@ export default function CityHeader({
   country,
   region,
   baseline,
+  action,
 }: CityHeaderProps) {
   return (
     <header className="border-b border-line pb-6">
@@ -36,6 +39,7 @@ export default function CityHeader({
         <span className="tnum shrink-0 rounded-tag bg-brand px-2 py-0.5 font-mono text-sm font-semibold uppercase tracking-wide text-brand-ink">
           {code}
         </span>
+        {action ? <div className="ml-auto shrink-0">{action}</div> : null}
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">

@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import type { Trip, DateWindow } from "@/types/api";
 import { getTrips, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useSavedCities } from "@/lib/saved-cities";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
@@ -39,8 +40,11 @@ export default function CalendarPage() {
   const rangeEnd = useMemo(() => addMonths(today, MONTHS), [today]);
   const months = useMemo(() => monthSpan(today, MONTHS), [today]);
 
+  const { saved, signedIn: savedSignedIn } = useSavedCities();
+
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
   const [onlyFree, setOnlyFree] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
 
   const [trips, setTrips] = useState<Trip[] | null>(null);
   const [density, setDensity] = useState<Record<string, number>>({});
@@ -130,16 +134,30 @@ export default function CalendarPage() {
 
   const hasWindows = signedIn && windows.length > 0;
 
+  // Saved-only narrows the loaded trips to starred destinations (client-side;
+  // the density underlay still reflects the full set).
+  const savedKey = [...saved].sort().join(",");
+  const shownTrips = useMemo(() => {
+    const all = trips ?? [];
+    return savedOnly ? all.filter((t) => saved.has(t.destination)) : all;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, savedOnly, savedKey]);
+
+  // Drop the saved-only filter if the last starred city is removed.
+  useEffect(() => {
+    if (savedOnly && saved.size === 0) setSavedOnly(false);
+  }, [savedOnly, saved]);
+
   // ─── Slice trips per month (a trip can appear in each month it spans) ─────
   const tripsByMonth = useMemo(() => {
     return months.map((spec) =>
-      (trips ?? []).filter((t) =>
+      shownTrips.filter((t) =>
         spansMonth(t.outbound_date, t.return_date, spec),
       ),
     );
-  }, [trips, months]);
+  }, [shownTrips, months]);
 
-  const totalShown = trips?.length ?? 0;
+  const totalShown = shownTrips.length;
   const isCold = !loading && !error && trips != null && totalShown === 0;
 
   // close transient overlays when the popover / sheet opens
@@ -164,15 +182,26 @@ export default function CalendarPage() {
       {/* ─── Controls row ──────────────────────────────────────────────────── */}
       <div className="mb-6 space-y-3">
         <CalendarFilters value={filters} onChange={setFilters} />
-        {hasWindows && (
-          <Chip
-            size="sm"
-            selected={onlyFree}
-            onClick={() => setOnlyFree((v) => !v)}
-          >
-            Only my free dates
-          </Chip>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {savedSignedIn && saved.size > 0 && (
+            <Chip
+              size="sm"
+              selected={savedOnly}
+              onClick={() => setSavedOnly((v) => !v)}
+            >
+              ★ Saved ({saved.size})
+            </Chip>
+          )}
+          {hasWindows && (
+            <Chip
+              size="sm"
+              selected={onlyFree}
+              onClick={() => setOnlyFree((v) => !v)}
+            >
+              Only my free dates
+            </Chip>
+          )}
+        </div>
       </div>
 
       {/* ─── Body ──────────────────────────────────────────────────────────── */}

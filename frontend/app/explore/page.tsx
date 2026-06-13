@@ -13,6 +13,7 @@ import { type SearchSelection } from "@/components/explore/SearchCombobox";
 import { countryName } from "@/components/explore/countries";
 import { getCities, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useSavedCities } from "@/lib/saved-cities";
 import { formatDateBoard } from "@/lib/format";
 import type { CitySummary } from "@/types/api";
 
@@ -56,6 +57,10 @@ export default function ExplorePage() {
 
   // grid control — one search selection (city / country / region / text)
   const [selection, setSelection] = useState<SearchSelection | null>(null);
+
+  // saved "interest" cities — pinned to the top of the grid, optional filter
+  const { saved, signedIn: savedSignedIn } = useSavedCities();
+  const [savedOnly, setSavedOnly] = useState(false);
 
   // "Only my free dates" — mirrors the Calendar chip (signed-in + has windows)
   const { status } = useSession();
@@ -113,6 +118,12 @@ export default function ExplorePage() {
 
   useEffect(() => load(), [load]);
 
+  // Drop the saved-only filter if the last starred city is removed, so the
+  // grid doesn't strand the user on an empty "Saved" view.
+  useEffect(() => {
+    if (savedOnly && saved.size === 0) setSavedOnly(false);
+  }, [savedOnly, saved]);
+
   // ─── Hero board: 5 cheapest steals ──────────────────────────────────────────
   const boardRows: DepartureRow[] = useMemo(() => {
     if (!cities) return [];
@@ -131,13 +142,23 @@ export default function ExplorePage() {
       }));
   }, [cities]);
 
-  // ─── Grid: filter by selection, always sort cheapest first ──────────────────
+  // ─── Grid: filter by selection (+ optional saved-only), sort cheapest, then
+  // pin saved cities to the top (stable: price order is preserved within each
+  // group). ────────────────────────────────────────────────────────────────
+  const savedKey = [...saved].sort().join(",");
   const visibleCities = useMemo(() => {
     if (!cities) return [];
     return cities
       .filter((c) => matchesSelection(c, selection))
-      .sort((a, b) => a.best.price - b.best.price);
-  }, [cities, selection]);
+      .filter((c) => !savedOnly || saved.has(c.code))
+      .sort((a, b) => {
+        const ra = saved.has(a.code) ? 0 : 1;
+        const rb = saved.has(b.code) ? 0 : 1;
+        if (ra !== rb) return ra - rb;
+        return a.best.price - b.best.price;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cities, selection, savedOnly, savedKey]);
 
   const isCold = !loading && !error && cities != null && cities.length === 0;
   const noMatches =
@@ -173,6 +194,10 @@ export default function ExplorePage() {
           showFree={hasWindows}
           onlyFree={onlyFree}
           onToggleFree={() => setOnlyFree((v) => !v)}
+          showSaved={savedSignedIn && saved.size > 0}
+          savedOnly={savedOnly}
+          savedCount={saved.size}
+          onToggleSaved={() => setSavedOnly((v) => !v)}
         />
       </div>
 

@@ -12,6 +12,7 @@ import type {
   CityDetailResponse,
   DateWindow,
   Preferences,
+  SavedCitiesResponse,
   TripsResponse,
   WipeResponse,
 } from "@/types/api";
@@ -141,6 +142,21 @@ export function putPreferences(p: Preferences): Promise<Preferences> {
   return request(`/api/preferences`, {
     method: "PUT",
     body: JSON.stringify(p),
+  });
+}
+
+/** GET /api/saved-cities */
+export function getSavedCities(): Promise<SavedCitiesResponse> {
+  return request(`/api/saved-cities`);
+}
+
+/** PUT /api/saved-cities — replace-all semantics */
+export function putSavedCities(
+  cities: string[],
+): Promise<SavedCitiesResponse> {
+  return request(`/api/saved-cities`, {
+    method: "PUT",
+    body: JSON.stringify({ cities }),
   });
 }
 
