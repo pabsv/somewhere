@@ -18,6 +18,7 @@ import { getDestination } from "@/data/destinations.gen";
 import { ORIGINS } from "@/data/airports.gen";
 import Chip from "@/components/ui/Chip";
 import StarButton from "@/components/ui/StarButton";
+import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import CityHeader from "./CityHeader";
 import BestPerMonth from "./BestPerMonth";
 import TripRow, { TripRowSkeleton } from "./TripRow";
@@ -235,6 +236,8 @@ export default function CityDetail({ code }: CityDetailProps) {
                 ))}
               </div>
             )}
+
+            <PriceDisclaimer className="mt-6" />
           </section>
         </>
       )}

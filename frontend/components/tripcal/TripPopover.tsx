@@ -5,6 +5,7 @@ import Sheet from "@/components/ui/Sheet";
 import FareTag from "@/components/ui/FareTag";
 import Badge from "@/components/ui/Badge";
 import Spark from "@/components/ui/Spark";
+import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import type { Trip } from "@/types/api";
 import { getDestination } from "@/data/destinations.gen";
 import { getSearchUrl } from "@/lib/searchUrl";
@@ -172,6 +173,9 @@ export default function TripPopover({
             >
               More trips to {city} →
             </Link>
+            <PriceDisclaimer className="pt-1 text-center">
+              Snapshot fare — confirm the live price on Google Flights.
+            </PriceDisclaimer>
           </div>
         </div>
       )}

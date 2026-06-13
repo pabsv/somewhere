@@ -9,6 +9,7 @@ import DepartureBoard, {
 } from "@/components/board/DepartureBoard";
 import CityCard, { CityCardSkeleton } from "@/components/explore/CityCard";
 import ExploreControls from "@/components/explore/ExploreControls";
+import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import { type SearchSelection } from "@/components/explore/SearchCombobox";
 import { countryName } from "@/components/explore/countries";
 import { getCities, getAvailability, ApiError } from "@/lib/client";
@@ -215,11 +216,14 @@ export default function ExplorePage() {
       ) : noMatches ? (
         <NoMatchesState onReset={() => setSelection(null)} />
       ) : (
-        <CityGrid>
-          {visibleCities.map((c) => (
-            <CityCard key={c.code} city={c} query={cityQuery} />
-          ))}
-        </CityGrid>
+        <>
+          <CityGrid>
+            {visibleCities.map((c) => (
+              <CityCard key={c.code} city={c} query={cityQuery} />
+            ))}
+          </CityGrid>
+          <PriceDisclaimer className="mt-6 text-center" />
+        </>
       )}
     </div>
   );

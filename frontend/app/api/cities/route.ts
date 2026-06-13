@@ -1,7 +1,9 @@
 // ─── GET /api/cities — Explore city grid ─────────────────────────────────────
 // Public. ?from=EIN,AMS&window=all → { cities: CitySummary[], updated_at }.
 // Best trip per destination across the selected origins, scored against route
-// baselines, joined with generated city metadata. Cached 15 min per origin set.
+// baselines, joined with generated city metadata. Cached 2 min per origin set
+// (short TTL keeps the grid close to the latest scrape; fares are still
+// last-seen snapshots — the UI disclaims that prices may rise at checkout).
 // Spec: docs/DESIGN_V1.md section D.
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -16,7 +18,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const REVALIDATE_SECONDS = 900; // 15 min
+const REVALIDATE_SECONDS = 120; // 2 min
 
 /**
  * Cache the (expensive) aggregation + scoring keyed by the sorted origin set.
