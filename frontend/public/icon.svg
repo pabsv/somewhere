@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Somewhere">
+  <rect width="512" height="512" rx="112" fill="#14171d"/>
+  <!-- wayfinding chevron — same arrow as the wordmark, scaled up and centered -->
+  <path d="M150 156 H318 L398 256 L318 356 H150 Z" fill="#ffc72c"/>
+</svg>
