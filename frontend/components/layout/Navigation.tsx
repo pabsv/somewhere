@@ -54,7 +54,7 @@ function ShieldIcon({ className }: { className?: string }) {
 const LINKS: NavLink[] = [
   { href: "/explore", label: "Explore", icon: CompassIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
-  { href: "/settings", label: "Settings", icon: SlidersIcon },
+  { href: "/settings", label: "Availabilities", icon: SlidersIcon },
 ];
 
 export default function Navigation({ user }: NavigationProps) {

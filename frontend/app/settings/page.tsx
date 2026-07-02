@@ -9,9 +9,21 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="mb-8">
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
-          Settings
+          Availabilities
         </h1>
       </header>
+
+      {/* Preferences */}
+      <section className="mb-12">
+        <div className="mb-4">
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Preferences
+          </h2>
+        </div>
+        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
+          <PreferencesCard />
+        </div>
+      </section>
 
       {/* Quick setup */}
       <section className="mb-12">
@@ -25,27 +37,15 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Availability */}
+      {/* Free dates */}
       <section className="mb-12">
         <div className="mb-4">
           <h2 className="font-display text-xl font-semibold text-ink">
-            Availability
+            Free dates
           </h2>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <YearPaint />
-        </div>
-      </section>
-
-      {/* Preferences */}
-      <section className="mb-12">
-        <div className="mb-4">
-          <h2 className="font-display text-xl font-semibold text-ink">
-            Preferences
-          </h2>
-        </div>
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <PreferencesCard />
         </div>
       </section>
     </div>
