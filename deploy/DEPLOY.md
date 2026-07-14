@@ -1,7 +1,7 @@
 # Flight Scraper — Linux deploy runbook (StudentSpot box)
 
 MVP goal: scrape EIN / AMS / BRU / CRL → all 230 pool destinations, tiered cadence,
-6-month lookahead, spread across a 07:00–23:00 window, daily, on the Linux box that
+6-month lookahead, spread across the full 24h day, on the Linux box that
 runs StudentSpot/DormSpot. **DormSpot has absolute priority** — the flight scraper is
 installed as a low-priority systemd service that yields CPU/IO under contention and
 shares no local resources (DB is Atlas/cloud).
@@ -20,7 +20,7 @@ shares no local resources (DB is Atlas/cloud).
 - Never modifies StudentSpot units, files, or ports
 
 ## Scheduling model (no cron needed)
-- `flight-scraper.service` runs continuously; the scheduler **idles outside 07:00–23:00**
+- `flight-scraper.service` runs continuously; the scheduler **runs 24h (window 00:00–24:00 since 2026-07-14)**
   on its own (`pool_scheduler.in_active_window`), so a single long-running service is enough.
 - `flight-scraper-restart.timer` fires a clean restart at 07:10 daily (margin after the
   box wakes 07:00 and StudentSpot starts 07:05). Handles "PC turns on whenever".

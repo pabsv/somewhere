@@ -47,7 +47,7 @@ cd frontend && npm run dev        # http://localhost:4173
 indexes           # one-time: create indexes + TTLs on Atlas
 seed              # one-time: upsert 1380 routes into scrape_targets (staggered 24h)
 seed --stats      # show pool stats
-pool              # continuous loop, 07:00–23:00 local, 2-min slots
+pool              # continuous loop, 24h (00:00–24:00), 2-min slots
 pool --once       # claim & scrape one due route, exit
 pool --route EIN BCN  # force-run a specific route, exit
 pool --dry-run    # list next 20 due routes, scrape nothing
@@ -131,7 +131,7 @@ flight-scraper/
 
 ## Architectural Decisions
 
-- **Pool scraping (2026-05-28):** decoupled scraping from users. Pool of 1380 (origin, dest) routes lives in `scrape_targets`, tier A/B/C cadenced (24h / 72h / 168h). Scheduler claims one route per 2-min slot, 07-23 local. Users will be matched to the pool later, but scraping does not depend on user prefs.
+- **Pool scraping (2026-05-28):** decoupled scraping from users. Pool of 1380 (origin, dest) routes lives in `scrape_targets`, tier A/B/C cadenced (24h / 72h / 168h). Scheduler claims one route per 2-min slot, 24h (widened from 07-23 on 2026-07-14 — box runs always-on). Users will be matched to the pool later, but scraping does not depend on user prefs.
 - **Origins (6):** EIN, AMS, BRU, DUS, NRN, CRL — top 5 closest to Eindhoven with usable route coverage, plus EIN.
 - **Destinations (230):** Europe + N.Africa + Levant + Türkiye + Atlantic. Curated in `scraper/targets.py`. Tier A=28 popular, B=84 mid, C=118 long-tail.
 - **Per-route scrape recipe:** 3 trip-duration buckets (3d / 7d / 10d) × 2 sub-windows for Phase 1 SearchDates = 6 calls. Phase 2 fetches top 6 cheapest date combos = 6 SearchFlights calls. ≈12 fli HTTP calls per route per cycle.
