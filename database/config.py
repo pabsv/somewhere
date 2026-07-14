@@ -53,11 +53,13 @@ PRICE_SANITY_MAX = 3000
 
 # ─── Pool scheduler config ────────────────────────────────────────────────
 # Active scraping window (local time, 24h). Outside this window scheduler idles.
-ACTIVE_WINDOW_START_HOUR = 7   # 07:00
-ACTIVE_WINDOW_END_HOUR = 23    # 23:00 (last slot fires 22:58)
+# 0–24 = always on: the box runs 24/7, and spreading slots over the full day
+# leaves headroom for more origin airports later.
+ACTIVE_WINDOW_START_HOUR = 0   # 00:00
+ACTIVE_WINDOW_END_HOUR = 24    # 24:00 (never idles)
 
 # Minutes between slots inside the active window.
-# 16h * 60 / 2 = 480 slots/day → comfortably covers ~437 daily target with headroom.
+# 24h * 60 / 2 = 720 slots/day → comfortably covers ~437 daily target with headroom.
 SLOT_MINUTES = 2
 
 # Cadence per tier — how long to wait before the same route is due again.
