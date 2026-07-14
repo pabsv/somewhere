@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import GoogleButton from "@/components/auth/GoogleButton";
 
 function LoginForm() {
   const params = useSearchParams();
@@ -29,6 +30,7 @@ function LoginForm() {
   }
 
   return (
+    <div className="space-y-4">
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label
@@ -83,6 +85,17 @@ function LoginForm() {
         {loading ? "Signing in…" : "Sign in"}
       </Button>
     </form>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-line" />
+        <span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
+          or
+        </span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
+
+      <GoogleButton callbackUrl={callbackUrl} />
+    </div>
   );
 }
 

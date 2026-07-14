@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import GoogleButton from "@/components/auth/GoogleButton";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -125,6 +126,18 @@ export default function RegisterPage() {
             {loading ? "Creating account…" : "Create account"}
           </Button>
         </form>
+
+        <div className="mt-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-line" />
+          <span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
+            or
+          </span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+
+        <div className="mt-4">
+          <GoogleButton label="Sign up with Google" />
+        </div>
 
         <p className="mt-6 font-mono text-xs leading-relaxed text-ink-muted">
           Already have an account?{" "}
