@@ -166,6 +166,10 @@ export const DateWindowSchema = z.object({
   start_date: DateStringSchema,
   end_date: DateStringSchema,
   label: z.string().nullable().optional(),
+  /** Hour (5–23) the user becomes free on start_date; absent/null = all day. */
+  start_time: z.number().int().min(5).max(23).nullable().optional(),
+  /** Hour (1–23) the user must be back by on end_date; absent/null = all day. */
+  end_time: z.number().int().min(1).max(23).nullable().optional(),
 });
 export type DateWindow = z.infer<typeof DateWindowSchema>;
 

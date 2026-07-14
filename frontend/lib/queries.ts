@@ -201,11 +201,14 @@ export async function getCitiesData(
   // (docs/AVAILABILITY_V2.md).
   let grouped: unknown[];
   if (avail) {
-    const passes = (out: string, ret: string): boolean =>
-      avail.windows.some((w) => out >= w.start && ret <= w.end);
-
     const docs = (await flights.find(match).toArray()).filter((d) =>
-      passes(String(d.outbound_date), String(d.return_date)),
+      fitsAnyWindow(
+        String(d.outbound_date),
+        String(d.return_date),
+        avail.windows,
+        hourOf(d.outbound_departure),
+        hourOf(d.return_arrival),
+      ),
     );
     docs.sort((a, b) => Number(a.price) - Number(b.price));
     const byRoute = new Map<string, { doc: unknown; count: number }>();
@@ -470,6 +473,23 @@ export interface TripsData {
 interface AvailWindow {
   start: string;
   end: string;
+  /** Hour (5–23) the user gets free on `start`; null = all day. */
+  startTime: number | null;
+  /** Hour (1–23) the user must be back by on `end`; null = all day. */
+  endTime: number | null;
+}
+
+/**
+ * Extract the hour (0–23) from a flight leg timestamp string
+ * ("2026-08-14T17:35:00", "2026-08-14 17:35" or "17:35"). Null when unknown —
+ * unknown hours are never filtered out.
+ */
+function hourOf(v: unknown): number | null {
+  if (typeof v !== "string") return null;
+  const m = v.match(/(?:[T ])(\d{2}):\d{2}/) ?? v.match(/^(\d{1,2}):\d{2}/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  return h >= 0 && h <= 23 ? h : null;
 }
 
 /** Normalize a Mongo date field (BSON Date or string) → YYYY-MM-DD, or null. */
@@ -526,20 +546,48 @@ export async function loadUserAvailability(
   for (const w of availDocs) {
     const start = toDateStr(w.start_date);
     const end = toDateStr(w.end_date);
-    if (start && end) windows.push({ start, end });
+    if (start && end)
+      windows.push({
+        start,
+        end,
+        startTime: typeof w.start_time === "number" ? w.start_time : null,
+        endTime: typeof w.end_time === "number" ? w.end_time : null,
+      });
   }
 
   return { windows, minNights, maxNights };
 }
 
-/** True if [outbound,return] fits ENTIRELY inside at least one window. */
+/**
+ * True if [outbound,return] fits ENTIRELY inside at least one window,
+ * respecting the window's edge times: on the first day the outbound must
+ * depart at/after startTime, on the last day the return must arrive at/before
+ * endTime. Legs with unparseable times are never filtered out.
+ */
 function fitsAnyWindow(
   outbound: string,
   ret: string,
   windows: AvailWindow[],
+  depHour: number | null = null,
+  arrHour: number | null = null,
 ): boolean {
   for (const w of windows) {
-    if (outbound >= w.start && ret <= w.end) return true;
+    if (outbound < w.start || ret > w.end) continue;
+    if (
+      w.startTime !== null &&
+      outbound === w.start &&
+      depHour !== null &&
+      depHour < w.startTime
+    )
+      continue;
+    if (
+      w.endTime !== null &&
+      ret === w.end &&
+      arrHour !== null &&
+      arrHour > w.endTime
+    )
+      continue;
+    return true;
   }
   return false;
 }
@@ -579,6 +627,8 @@ export async function getTripsData(
     return_date: 1,
     // fields needed only when avail filtering is active:
     duration_days: 1,
+    outbound_departure: 1,
+    return_arrival: 1,
   };
 
   const densityDocs = await flights
@@ -607,9 +657,16 @@ export async function getTripsData(
     if (avail && avail.windows.length === 0) avail = null;
   }
 
-  const passesAvail = (outbound: string, ret: string, nights: number): boolean => {
+  const passesAvail = (
+    outbound: string,
+    ret: string,
+    nights: number,
+    depHour: number | null = null,
+    arrHour: number | null = null,
+  ): boolean => {
     if (!avail) return true;
-    if (!fitsAnyWindow(outbound, ret, avail.windows)) return false;
+    if (!fitsAnyWindow(outbound, ret, avail.windows, depHour, arrHour))
+      return false;
     if (avail.minNights !== null && nights < avail.minNights) return false;
     if (avail.maxNights !== null && nights > avail.maxNights) return false;
     return true;
@@ -621,9 +678,17 @@ export async function getTripsData(
       outbound_date: String(d.outbound_date),
       return_date: String(d.return_date),
       duration_days: typeof d.duration_days === "number" ? d.duration_days : 0,
+      dep_hour: hourOf(d.outbound_departure),
+      arr_hour: hourOf(d.return_arrival),
     }))
     .filter((d) =>
-      passesAvail(d.outbound_date, d.return_date, d.duration_days),
+      passesAvail(
+        d.outbound_date,
+        d.return_date,
+        d.duration_days,
+        d.dep_hour,
+        d.arr_hour,
+      ),
     );
   const density = buildDensity(densityInput);
 
@@ -632,7 +697,13 @@ export async function getTripsData(
 
   if (avail) {
     bars = bars.filter((t) =>
-      passesAvail(t.outbound_date, t.return_date, t.duration_days),
+      passesAvail(
+        t.outbound_date,
+        t.return_date,
+        t.duration_days,
+        hourOf(t.outbound.dep),
+        hourOf(t.ret.arr),
+      ),
     );
   }
 

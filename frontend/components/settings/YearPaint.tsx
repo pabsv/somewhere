@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Button from "@/components/ui/Button";
@@ -26,12 +28,19 @@ const MONTHS_AHEAD = 12;
 
 // Brand-yellow diagonal hatch for painted (available) days — the single
 // sanctioned yellow use on this surface (DESIGN_V1 §F). Inline so we don't
-// touch the frozen globals.css.
+// touch the frozen globals.css. Rendered as an inner overlay so edge days can
+// show a PARTIAL day (free from / back by): the cell maps time vertically,
+// top = 00:00 → bottom = 24:00.
 const HATCH_STYLE = {
   backgroundColor: "color-mix(in srgb, var(--color-brand) 22%, transparent)",
   backgroundImage:
     "repeating-linear-gradient(45deg, var(--color-brand) 0, var(--color-brand) 2px, transparent 2px, transparent 6px)",
 } as const;
+
+// vertical time-scrub: pixels of drag per hour step
+const PX_PER_HOUR = 8;
+// movement (px) below which a pointer gesture counts as a tap
+const TAP_SLOP = 5;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -112,6 +121,32 @@ function windowsToKeys(windows: DateWindow[]): Set<string> {
   return set;
 }
 
+// ─── Edge roles + times ───────────────────────────────────────────────────────
+// A day's role within its painted window decides which edge time it can carry:
+//   first  → "free from" (start_time)      last → "back by" (end_time)
+//   single → both                          mid  → none (always a full day)
+
+type Role = "first" | "last" | "mid" | "single";
+
+function buildRoles(windows: DateWindow[]): Map<string, Role> {
+  const roles = new Map<string, Role>();
+  for (const w of windows) {
+    if (w.start_date === w.end_date) {
+      roles.set(w.start_date, "single");
+      continue;
+    }
+    roles.set(w.start_date, "first");
+    roles.set(w.end_date, "last");
+    for (const k of keysBetween(addDays(w.start_date, 1), addDays(w.end_date, -1)))
+      roles.set(k, "mid");
+  }
+  return roles;
+}
+
+function fmtHour(h: number): string {
+  return `${pad(h)}:00`;
+}
+
 // ─── Month grid model ────────────────────────────────────────────────────────
 
 interface MonthModel {
@@ -145,11 +180,29 @@ function buildMonths(count: number): MonthModel[] {
 
 type Mode = "loading" | "ready" | "error";
 
+type DragMode = "pending" | "paint" | "time";
+type Edge = "from" | "back";
+
 interface DragState {
   /** the day where the pointer went down */
   anchor: string;
-  /** true = painting (anchor was empty), false = erasing (anchor was painted) */
+  x0: number;
+  y0: number;
+  pointerId: number;
+  mode: DragMode;
+  /** press position within the anchor cell: top or bottom half (single days) */
+  topHalf: boolean;
+  /** paint mode: true = painting (anchor was empty), false = erasing */
   painting: boolean;
+  /** time mode */
+  edge: Edge | null;
+  base: number;
+}
+
+interface BadgeState {
+  x: number;
+  y: number;
+  text: string;
 }
 
 export default function YearPaint() {
@@ -157,6 +210,10 @@ export default function YearPaint() {
   const today = useMemo(() => todayKey(), []);
 
   const [painted, setPainted] = useState<Set<string>>(new Set());
+  // edge times: keyed by day key; only meaningful while that key is a window
+  // first/last day (pruned when windows change)
+  const [fromT, setFromT] = useState<Map<string, number>>(new Map());
+  const [backT, setBackT] = useState<Map<string, number>>(new Map());
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -164,20 +221,71 @@ export default function YearPaint() {
   const [saveMsg, setSaveMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
   );
+  const [badge, setBadge] = useState<BadgeState | null>(null);
 
-  // pointer-drag paint state
+  // pointer-drag state (paint ranges OR scrub an edge time)
   const drag = useRef<DragState | null>(null);
   // keyboard fallback (Enter/Space): a pending start day for the two-click flow
   const [pendingStart, setPendingStart] = useState<string | null>(null);
 
+  // ─── Derived windows + roles ────────────────────────────────────────────────
+  const windows = useMemo(() => {
+    const base = keysToWindows(painted);
+    return base.map((w) => {
+      const st = fromT.get(w.start_date);
+      const et = backT.get(w.end_date);
+      return {
+        ...w,
+        ...(st != null ? { start_time: st } : {}),
+        ...(et != null ? { end_time: et } : {}),
+      };
+    });
+  }, [painted, fromT, backT]);
+
+  const roles = useMemo(() => buildRoles(windows), [windows]);
+
+  // prune edge times whose day stopped being a window edge (repaint/erase)
+  useEffect(() => {
+    const firsts = new Set<string>();
+    const lasts = new Set<string>();
+    for (const [k, r] of roles) {
+      if (r === "first" || r === "single") firsts.add(k);
+      if (r === "last" || r === "single") lasts.add(k);
+    }
+    setFromT((prev) => {
+      if (![...prev.keys()].some((k) => !firsts.has(k))) return prev;
+      const next = new Map(prev);
+      for (const k of prev.keys()) if (!firsts.has(k)) next.delete(k);
+      return next;
+    });
+    setBackT((prev) => {
+      if (![...prev.keys()].some((k) => !lasts.has(k))) return prev;
+      const next = new Map(prev);
+      for (const k of prev.keys()) if (!lasts.has(k)) next.delete(k);
+      return next;
+    });
+  }, [roles]);
+
   // ─── Load existing windows on mount ────────────────────────────────────────
+  const seedFromWindows = useCallback((ws: DateWindow[]) => {
+    setPainted(windowsToKeys(ws));
+    const f = new Map<string, number>();
+    const b = new Map<string, number>();
+    for (const w of ws) {
+      if (w.start_time != null) f.set(w.start_date, w.start_time);
+      if (w.end_time != null) b.set(w.end_date, w.end_time);
+    }
+    setFromT(f);
+    setBackT(b);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setMode("loading");
     getAvailability()
       .then((res) => {
         if (cancelled) return;
-        setPainted(windowsToKeys(res.windows));
+        seedFromWindows(res.windows);
         setMode("ready");
       })
       .catch((e) => {
@@ -194,13 +302,13 @@ export default function YearPaint() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [seedFromWindows]);
 
   // ─── Re-sync when Quick setup rewrites the windows ──────────────────────────
   useEffect(() => {
     const onUpdated = () => {
       getAvailability()
-        .then((res) => setPainted(windowsToKeys(res.windows)))
+        .then((res) => seedFromWindows(res.windows))
         .catch(() => {
           /* keep current paint on refresh failure */
         });
@@ -208,7 +316,7 @@ export default function YearPaint() {
     window.addEventListener(AVAILABILITY_UPDATED_EVENT, onUpdated);
     return () =>
       window.removeEventListener(AVAILABILITY_UPDATED_EVENT, onUpdated);
-  }, []);
+  }, [seedFromWindows]);
 
   // ─── Paint mutation helpers ─────────────────────────────────────────────────
   const applyRange = useCallback(
@@ -225,54 +333,168 @@ export default function YearPaint() {
     [],
   );
 
-  // ─── Pointer drag (mouse / touch / pen) ─────────────────────────────────────
-  // pointerdown arms a drag from the anchor cell; pointerenter extends it;
-  // pointerup (window listener) commits. A down+up on the SAME cell with no
-  // movement is treated as a single-day toggle. All painting happens here, so
-  // we suppress the synthetic mouse `click` to avoid double-handling.
+  const toggleDay = useCallback((key: string) => {
+    setPainted((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // "free from" — clamp 5..23; below 5 clears to all-day; on a single day it
+  // must leave at least one hour before "back by"
+  const setFrom = useCallback(
+    (key: string, raw: number, backHere: number | null) => {
+      let v = Math.min(raw, 23);
+      if (backHere != null) v = Math.min(v, backHere - 1);
+      setFromT((prev) => {
+        const next = new Map(prev);
+        if (v < 5) next.delete(key);
+        else next.set(key, v);
+        return next;
+      });
+      return v < 5 ? null : v;
+    },
+    [],
+  );
+
+  // "back by" — clamp 1..23; above 23 clears to all-day; on a single day it
+  // must sit at least one hour after "free from"
+  const setBack = useCallback(
+    (key: string, raw: number, fromHere: number | null) => {
+      let v = Math.max(raw, 1);
+      if (fromHere != null) v = Math.max(v, fromHere + 1);
+      setBackT((prev) => {
+        const next = new Map(prev);
+        if (v > 23) next.delete(key);
+        else next.set(key, v);
+        return next;
+      });
+      return v > 23 ? null : v;
+    },
+    [],
+  );
+
+  // ─── Pointer gestures ────────────────────────────────────────────────────────
+  // pointerdown arms a PENDING gesture. The first move past TAP_SLOP decides:
+  //   mostly-vertical on a window edge day → TIME scrub (badge follows pointer)
+  //   anything else                        → PAINT range (elementFromPoint)
+  // pointerup with no move → tap = toggle the day. Pointer capture stays on the
+  // anchor cell, so we hit-test with elementFromPoint for range painting.
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLButtonElement>, key: string) => {
       if (e.button !== 0) return; // primary button / touch only
-      const painting = !painted.has(key);
-      drag.current = { anchor: key, painting };
-      applyRange(key, key, painting);
+      const rect = e.currentTarget.getBoundingClientRect();
+      drag.current = {
+        anchor: key,
+        x0: e.clientX,
+        y0: e.clientY,
+        pointerId: e.pointerId,
+        mode: "pending",
+        topHalf: e.clientY - rect.top < rect.height / 2,
+        painting: !painted.has(key),
+        edge: null,
+        base: 0,
+      };
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
         // capture is best-effort; harmless if unsupported
       }
     },
-    [painted, applyRange],
+    [painted],
   );
 
-  const onPointerEnter = useCallback(
-    (key: string) => {
-      const d = drag.current;
-      if (!d) return;
-      // repaint the whole anchor→current span so reversing direction is clean
-      applyRange(d.anchor, key, d.painting);
-    },
-    [applyRange],
-  );
-
-  // end the drag on pointer-up anywhere (window listener so drags off-grid end)
   useEffect(() => {
-    function end() {
-      drag.current = null;
+    function keyUnderPointer(e: PointerEvent): string | null {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const btn = el?.closest?.("[data-daykey]");
+      return btn?.getAttribute("data-daykey") ?? null;
     }
-    window.addEventListener("pointerup", end);
-    window.addEventListener("pointercancel", end);
-    return () => {
-      window.removeEventListener("pointerup", end);
-      window.removeEventListener("pointercancel", end);
-    };
-  }, []);
 
-  // ─── Keyboard fallback (two-click window flow) ──────────────────────────────
-  // Keyboard-activated clicks have detail === 0 (no associated pointer). Mouse
-  // clicks (detail >= 1) are already handled by the pointer drag above, so we
-  // ignore them here. First keyboard activation sets a pending start; the second
-  // paints the inclusive span.
+    function onMove(e: PointerEvent) {
+      const d = drag.current;
+      if (!d || e.pointerId !== d.pointerId) return;
+      const dx = e.clientX - d.x0;
+      const dy = e.clientY - d.y0;
+
+      if (d.mode === "pending") {
+        if (Math.hypot(dx, dy) < TAP_SLOP) return;
+        const role = roles.get(d.anchor);
+        const vertical = Math.abs(dy) > Math.abs(dx);
+        const canTime =
+          role === "first" || role === "last" || role === "single";
+        if (vertical && canTime) {
+          d.mode = "time";
+          d.edge =
+            role === "first"
+              ? "from"
+              : role === "last"
+                ? "back"
+                : d.topHalf
+                  ? "from"
+                  : "back";
+          d.base =
+            d.edge === "from"
+              ? (fromT.get(d.anchor) ?? 4)
+              : (backT.get(d.anchor) ?? 24);
+        } else {
+          d.mode = "paint";
+        }
+      }
+
+      if (d.mode === "paint") {
+        const cur = keyUnderPointer(e) ?? d.anchor;
+        // repaint the whole anchor→current span so reversing direction is clean
+        applyRange(d.anchor, cur, d.painting);
+        return;
+      }
+
+      // time scrub
+      const raw = d.base + Math.round((e.clientY - d.y0) / PX_PER_HOUR);
+      const role = roles.get(d.anchor);
+      let text: string;
+      if (d.edge === "from") {
+        const backHere =
+          role === "single" ? (backT.get(d.anchor) ?? null) : null;
+        const v = setFrom(d.anchor, raw, backHere);
+        text = v == null ? "free all day" : `free from ${fmtHour(v)}`;
+      } else {
+        const fromHere =
+          role === "single" ? (fromT.get(d.anchor) ?? null) : null;
+        const v = setBack(d.anchor, raw, fromHere);
+        text = v == null ? "free all day" : `back by ${fmtHour(v)}`;
+      }
+      setBadge({ x: e.clientX, y: e.clientY, text });
+    }
+
+    function onUp(e: PointerEvent) {
+      const d = drag.current;
+      if (!d || e.pointerId !== d.pointerId) return;
+      if (d.mode === "pending") toggleDay(d.anchor);
+      drag.current = null;
+      setBadge(null);
+    }
+
+    function onCancel() {
+      drag.current = null;
+      setBadge(null);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [roles, fromT, backT, applyRange, toggleDay, setFrom, setBack]);
+
+  // ─── Keyboard ────────────────────────────────────────────────────────────────
+  // Enter/Space keeps the two-click window flow. Arrow Up/Down adjusts the
+  // focused edge day's time (Shift+arrows = "back by" on a single-day window).
   const onKeyActivate = useCallback(
     (key: string) => {
       if (pendingStart === null) {
@@ -285,8 +507,31 @@ export default function YearPaint() {
     [pendingStart, applyRange],
   );
 
-  // ─── Derived windows ────────────────────────────────────────────────────────
-  const windows = useMemo(() => keysToWindows(painted), [painted]);
+  const onCellKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLButtonElement>, key: string) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      const role = roles.get(key);
+      if (!role || role === "mid") return;
+      e.preventDefault();
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      const edge: Edge =
+        role === "first"
+          ? "from"
+          : role === "last"
+            ? "back"
+            : e.shiftKey
+              ? "back"
+              : "from";
+      if (edge === "from") {
+        const backHere = role === "single" ? (backT.get(key) ?? null) : null;
+        setFrom(key, (fromT.get(key) ?? 4) + step, backHere);
+      } else {
+        const fromHere = role === "single" ? (fromT.get(key) ?? null) : null;
+        setBack(key, (backT.get(key) ?? 24) + step, fromHere);
+      }
+    },
+    [roles, fromT, backT, setFrom, setBack],
+  );
 
   // ─── Save ────────────────────────────────────────────────────────────────────
   const onSave = useCallback(() => {
@@ -294,7 +539,7 @@ export default function YearPaint() {
     setSaveMsg(null);
     putAvailability(windows)
       .then((res) => {
-        setPainted(windowsToKeys(res.windows));
+        seedFromWindows(res.windows);
         setSaveMsg({ kind: "ok", text: "Saved ✓" });
       })
       .catch((e) => {
@@ -308,7 +553,7 @@ export default function YearPaint() {
         }
       })
       .finally(() => setSaving(false));
-  }, [windows]);
+  }, [windows, seedFromWindows]);
 
   // auto-fade the saved message
   useEffect(() => {
@@ -319,6 +564,8 @@ export default function YearPaint() {
 
   const clearAll = useCallback(() => {
     setPainted(new Set());
+    setFromT(new Map());
+    setBackT(new Map());
     setPendingStart(null);
   }, []);
 
@@ -365,7 +612,8 @@ export default function YearPaint() {
           </span>
         )}
         <span className="text-sm text-ink-muted/70">
-          Drag to paint free days, drag again to erase.
+          Drag across days to paint free days. Drag a trip&apos;s first or last
+          day up/down to set when you get free / must be back.
         </span>
         {pendingStart && (
           <span className="font-mono text-xs text-ink">
@@ -383,7 +631,7 @@ export default function YearPaint() {
 
       {/* month grids */}
       {/* pan-y (not none) so the page still scrolls past the 12-month grid on
-          touch; a tap toggles a day, a horizontal drag paints a range. */}
+          touch; edge-time cells opt into touch-action:none individually. */}
       <div
         className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3"
         style={{ touchAction: "pan-y" }}
@@ -394,15 +642,27 @@ export default function YearPaint() {
             model={m}
             today={today}
             painted={painted}
+            roles={roles}
+            fromT={fromT}
+            backT={backT}
             pendingStart={pendingStart}
             onPointerDown={onPointerDown}
-            onPointerEnter={onPointerEnter}
             onKeyActivate={onKeyActivate}
+            onCellKeyDown={onCellKeyDown}
           />
         ))}
       </div>
 
-
+      {/* time-scrub badge */}
+      {badge && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed z-50 rounded-(--radius-tag) bg-ink px-2 py-1 font-mono text-sm font-semibold text-paper"
+          style={{ left: badge.x + 14, top: badge.y - 34 }}
+        >
+          {badge.text}
+        </div>
+      )}
     </div>
   );
 }
@@ -413,20 +673,29 @@ interface MonthGridProps {
   model: MonthModel;
   today: string;
   painted: Set<string>;
+  roles: Map<string, Role>;
+  fromT: Map<string, number>;
+  backT: Map<string, number>;
   pendingStart: string | null;
   onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>, key: string) => void;
-  onPointerEnter: (key: string) => void;
   onKeyActivate: (key: string) => void;
+  onCellKeyDown: (
+    e: ReactKeyboardEvent<HTMLButtonElement>,
+    key: string,
+  ) => void;
 }
 
-function MonthGrid({
+const MonthGrid = memo(function MonthGrid({
   model,
   today,
   painted,
+  roles,
+  fromT,
+  backT,
   pendingStart,
   onPointerDown,
-  onPointerEnter,
   onKeyActivate,
+  onCellKeyDown,
 }: MonthGridProps) {
   const { year, month, label, lead, days } = model;
 
@@ -454,21 +723,48 @@ function MonthGrid({
           const isToday = key === today;
           const isPainted = painted.has(key);
           const isPending = pendingStart === key;
+          const role = isPainted ? roles.get(key) : undefined;
+          const isEdge =
+            role === "first" || role === "last" || role === "single";
+
+          // partial-day hatch: top = 00:00, bottom = 24:00
+          const from =
+            role === "first" || role === "single"
+              ? (fromT.get(key) ?? 0)
+              : 0;
+          const back =
+            role === "last" || role === "single" ? (backT.get(key) ?? 24) : 24;
+          const hatchTop = (from / 24) * 100;
+          const hatchHeight = ((back - from) / 24) * 100;
+          const timeLabel =
+            from > 0 && back < 24
+              ? `${from}→${back}`
+              : from > 0
+                ? `${from}→`
+                : back < 24
+                  ? `→${back}`
+                  : "";
+
+          const ariaTime =
+            from > 0 && back < 24
+              ? `, free from ${fmtHour(from)}, back by ${fmtHour(back)}`
+              : from > 0
+                ? `, free from ${fmtHour(from)}`
+                : back < 24
+                  ? `, back by ${fmtHour(back)}`
+                  : "";
 
           return (
             <button
               key={key}
               type="button"
               disabled={isPast}
+              data-daykey={isPast ? undefined : key}
               aria-pressed={isPainted}
-              aria-label={`${day} ${label}${isPainted ? " — free" : ""}`}
+              aria-label={`${day} ${label}${isPainted ? ` — free${ariaTime}` : ""}`}
               onPointerDown={(e) => {
                 if (isPast) return;
                 onPointerDown(e, key);
-              }}
-              onPointerEnter={() => {
-                if (isPast) return;
-                onPointerEnter(key);
               }}
               onClick={(e) => {
                 if (isPast) return;
@@ -476,25 +772,49 @@ function MonthGrid({
                 // only keyboard activations (detail === 0) take this path.
                 if (e.detail === 0) onKeyActivate(key);
               }}
-              style={isPainted ? HATCH_STYLE : undefined}
+              onKeyDown={(e) => {
+                if (isPast) return;
+                onCellKeyDown(e, key);
+              }}
+              style={isEdge ? { touchAction: "none" } : undefined}
               className={[
-                "tnum relative aspect-square rounded-[5px] text-center font-mono text-xs transition-colors",
+                "tnum relative aspect-square overflow-hidden rounded-[5px] text-center font-mono text-xs transition-colors",
                 isPast
                   ? "cursor-default text-ink-muted/25"
                   : "cursor-pointer hover:ring-1 hover:ring-ink/15",
                 isPainted ? "text-brand-ink font-semibold" : "text-ink",
+                isEdge ? "cursor-ns-resize" : "",
                 isPending ? "ring-2 ring-ink" : "",
                 isToday && !isPainted ? "ring-1 ring-ink/40" : "",
               ].join(" ")}
             >
-              {day}
+              {isPainted && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0"
+                  style={{
+                    ...HATCH_STYLE,
+                    top: `${hatchTop}%`,
+                    height: `${hatchHeight}%`,
+                  }}
+                />
+              )}
+              <span className="relative z-[1]">{day}</span>
+              {timeLabel && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-px z-[1] text-center font-mono text-[8px] font-semibold leading-none text-brand-ink"
+                >
+                  {timeLabel}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
     </div>
   );
-}
+});
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────
 

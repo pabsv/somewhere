@@ -58,6 +58,10 @@ export async function GET() {
         start_date: start,
         end_date: end,
         ...(d.label != null ? { label: d.label as string } : {}),
+        ...(typeof d.start_time === "number"
+          ? { start_time: d.start_time }
+          : {}),
+        ...(typeof d.end_time === "number" ? { end_time: d.end_time } : {}),
       });
   }
 
@@ -98,6 +102,20 @@ export async function PUT(req: NextRequest) {
         { status: 400 },
       );
     }
+    // Single-day window: "back by" must leave room after "free from".
+    if (
+      w.start_date === w.end_date &&
+      w.start_time != null &&
+      w.end_time != null &&
+      w.end_time <= w.start_time
+    ) {
+      return NextResponse.json(
+        {
+          error: `Window ${w.start_date}: end_time (${w.end_time}) must be after start_time (${w.start_time})`,
+        },
+        { status: 400 },
+      );
+    }
   }
 
   // Reject overlapping windows. Sort by start, then check adjacency.
@@ -132,6 +150,8 @@ export async function PUT(req: NextRequest) {
         start_date: w.start_date,
         end_date: w.end_date,
         ...(w.label != null ? { label: w.label } : {}),
+        ...(w.start_time != null ? { start_time: w.start_time } : {}),
+        ...(w.end_time != null ? { end_time: w.end_time } : {}),
       })),
     );
   }
