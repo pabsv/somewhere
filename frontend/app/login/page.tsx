@@ -73,7 +73,9 @@ function LoginForm() {
 
       {urlError && (
         <p className="text-sm text-alert">
-          Could not sign you in. Check your email and password, then try again.
+          {urlError === "CredentialsSignin"
+            ? "Could not sign you in. Check your email and password, then try again."
+            : "Could not sign you in with Google. Please try again."}
         </p>
       )}
 
