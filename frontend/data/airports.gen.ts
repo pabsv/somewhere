@@ -13,4 +13,5 @@ export const ORIGINS: Origin[] = [
   { code: "AMS", name: "Amsterdam Schiphol", country: "NL" },
   { code: "BRU", name: "Brussels", country: "BE" },
   { code: "CRL", name: "Brussels-Charleroi", country: "BE" },
+  { code: "MST", name: "Maastricht", country: "NL" },
 ];

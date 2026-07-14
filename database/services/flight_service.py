@@ -56,16 +56,28 @@ class FlightService:
 
         flight_models = [FlightModel.from_scraper_flight(f) for f in flights]
 
-        # Price sanity guard.
-        sane = [
-            f for f in flight_models
-            if PRICE_SANITY_MIN < f.price <= PRICE_SANITY_MAX
-        ]
-        dropped = len(flight_models) - len(sane)
-        if dropped:
+        # Sanity guards: bogus prices, and non-EUR fares — Google picks the
+        # response currency itself unless the request pins curr=EUR, and a
+        # non-EUR number is meaningless against EUR baselines.
+        sane = []
+        dropped_price = 0
+        dropped_currency = 0
+        for f in flight_models:
+            if not (PRICE_SANITY_MIN < f.price <= PRICE_SANITY_MAX):
+                dropped_price += 1
+            elif f.currency != "EUR":
+                dropped_currency += 1
+            else:
+                sane.append(f)
+        dropped = dropped_price + dropped_currency
+        if dropped_price:
             logger.warning(
-                f"Price sanity guard dropped {dropped} flights "
+                f"Price sanity guard dropped {dropped_price} flights "
                 f"(price <= {PRICE_SANITY_MIN} or > {PRICE_SANITY_MAX})"
+            )
+        if dropped_currency:
+            logger.warning(
+                f"Currency guard dropped {dropped_currency} non-EUR flights"
             )
 
         if not sane:

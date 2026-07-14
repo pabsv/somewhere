@@ -17,7 +17,7 @@ Personal flight deal finder. Scrapes Azair daily, detects deals, surfaces them i
 | 6 | Next.js API routes (auth, deals, preferences, admin) | ✅ Complete — FastAPI no longer needed by frontend |
 | 7 | Next.js dashboard (calendar, deals, settings) | ✅ Deployed on Vercel |
 | 8 | Deploy — frontend (Vercel) + DB (Atlas) + scheduler (Linux box) | ✅ Frontend on Vercel; pool scheduler live on `pablopc` (Tailscale 100.101.234.37) at `/mnt/hdd/flight-scraper`, systemd `flight-scraper.service` (Nice=10/CPUWeight=20 — StudentSpot keeps priority), daily 07:10 restart timer. Runbook: `deploy/DEPLOY.md` |
-| **v1** | **"Somewhere" rebuild** — data-layer v2 (flight_key drops price, embedded price_points, p50 EWMA baseline, read-time scoring), new IA (Explore / Calendar / City / Settings / Admin), NextAuth credentials, departure-board design system | ✅ Built + verified locally (commit `2c5126c`). Spec `docs/DESIGN_V1.md`, progress `docs/V1_PROGRESS.md`. Atlas migrated via `scripts/migrate_v2.py` (2026-06-10). Frontend builds green (16 routes + middleware). **Production promoted 2026-07-14** — `master` (cb3545f) live at fly-somewhere.vercel.app, incl. Google OAuth |
+| **v1** | **"Somewhere" rebuild** — data-layer v2 (flight_key drops price, embedded price_points, p50 EWMA baseline, read-time scoring), new IA (Explore / Calendar / City / Settings / Admin), NextAuth credentials, departure-board design system | ✅ Built + verified locally (commit `2c5126c`). Spec `docs/DESIGN_V1.md`, progress `docs/V1_PROGRESS.md`. Atlas migrated via `scripts/migrate_v2.py` (2026-06-10). Frontend builds green (16 routes + middleware). Preview deployed; **production promotion pending user OK** |
 
 ---
 

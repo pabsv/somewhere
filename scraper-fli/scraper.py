@@ -50,6 +50,10 @@ logger = logging.getLogger(__name__)
 # Config
 TOP_N_DATES_PER_ROUTE = 12  # How many cheap dates to fetch full details for
 
+# Google decides the response currency from GeoIP unless the request URL pins
+# it — unpinned runs came back in HKD/GBP/DKK/... depending on the route.
+GOOGLE_URL_PARAMS = "?gl=NL&hl=en&curr=EUR"
+
 
 def _minutes_to_hm(minutes: int) -> str:
     """Convert minutes to '2h 30m' format."""
@@ -121,7 +125,9 @@ class FliScraper:
     def __init__(self, top_n_dates: int = TOP_N_DATES_PER_ROUTE):
         self.top_n_dates = top_n_dates
         self._search_flights = SearchFlights()
+        self._search_flights.BASE_URL = SearchFlights.BASE_URL + GOOGLE_URL_PARAMS
         self._search_dates = SearchDates()
+        self._search_dates.BASE_URL = SearchDates.BASE_URL + GOOGLE_URL_PARAMS
         self.stats = {
             "date_searches": 0,
             "flight_searches": 0,

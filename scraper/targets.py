@@ -12,16 +12,18 @@ Tiers:
 All IATA codes here have been verified against fli's Airport enum.
 """
 
-# Top 5 airports closest to Eindhoven that have meaningful route coverage,
-# plus EIN itself. MST (Maastricht) is closer than DUS/BRU/AMS but too small
-# to be worth scraping. WEZ/NRN is the Ryanair Niederrhein hub (~80km).
-# MVP scope (2026-06-10): only the 4 origins the user flies from.
+# Airports closest to Eindhoven that have meaningful route coverage,
+# plus EIN itself. WEZ/NRN is the Ryanair Niederrhein hub (~80km).
+# MST (Maastricht) added 2026-07-14 by user request — small airport, so most
+# of its routes will come back empty and auto-disable after
+# ROUTE_MAX_CONSECUTIVE_FAILURES runs; the handful it actually serves survive.
 # DUS / NRN kept commented for trivial re-add once we expand.
 ORIGINS = [
     {"code": "EIN", "name": "Eindhoven",          "country": "NL"},
     {"code": "AMS", "name": "Amsterdam Schiphol", "country": "NL"},
     {"code": "BRU", "name": "Brussels",           "country": "BE"},
     {"code": "CRL", "name": "Brussels-Charleroi", "country": "BE"},
+    {"code": "MST", "name": "Maastricht",         "country": "NL"},
     # {"code": "DUS", "name": "Düsseldorf",         "country": "DE"},
     # {"code": "NRN", "name": "Niederrhein-Weeze",  "country": "DE"},
 ]
