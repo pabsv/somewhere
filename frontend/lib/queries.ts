@@ -77,9 +77,10 @@ export function parseOrigins(fromParam: string | null | undefined): string[] {
 
 export interface TripFilterParams {
   origins: string[];
-  /** inclusive lower bound on outbound_date (YYYY-MM-DD) */
+  /** inclusive start of the date range (YYYY-MM-DD) — trips whose
+   *  [outbound_date, return_date] interval OVERLAPS [start, end] match */
   start: string;
-  /** inclusive upper bound on outbound_date (YYYY-MM-DD); omit for none */
+  /** inclusive end of the date range (YYYY-MM-DD); omit for none */
   end?: string | null;
   /** max price in EUR; omit for no cap */
   maxPrice?: number | null;
@@ -103,9 +104,14 @@ export function buildTripFilter(params: TripFilterParams): Filter<FlightDoc> {
     origin: { $in: origins },
   };
 
-  const outbound: Record<string, string> = { $gte: start };
+  // Overlap semantics: a trip matches when its [outbound_date, return_date]
+  // interval intersects [start, end] — not only when it departs inside the
+  // range. Outbound is still floored at today: a trip that already departed
+  // can't be booked, so it never shows even when it overlaps the range.
+  const outbound: Record<string, string> = { $gte: todayStr() };
   if (end) outbound.$lte = end;
   filter.outbound_date = outbound;
+  filter.return_date = { $gte: start };
 
   // Hard ceiling always applies — routing-artifact fares (€2000+ multi-leg
   // tickets Google returns when a route has no real option) are never shown.
