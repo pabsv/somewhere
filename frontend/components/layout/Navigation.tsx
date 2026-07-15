@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 interface NavigationProps {
   /**
@@ -54,8 +55,104 @@ function ShieldIcon({ className }: { className?: string }) {
 const LINKS: NavLink[] = [
   { href: "/explore", label: "Explore", icon: CompassIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
-  { href: "/settings", label: "Settings", icon: SlidersIcon },
 ];
+
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="9" cy="8" r="3.25" />
+      <path d="M3.5 19.5c.6-3 2.9-4.75 5.5-4.75s4.9 1.75 5.5 4.75" />
+      <path d="M15.5 5.2a3.25 3.25 0 0 1 0 5.6M17.8 15.1c1.5.7 2.4 2.1 2.7 4.4" />
+    </svg>
+  );
+}
+
+/**
+ * Profile menu — avatar/name button top-right; dropdown holds the
+ * account-scoped destinations (Settings, Friends) plus Sign out. Closes on
+ * outside click, Escape, and route change.
+ */
+function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const initial = user.name.trim().charAt(0).toUpperCase() || "?";
+
+  const itemClass =
+    "flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink-muted transition-colors hover:bg-paper hover:text-ink";
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="group flex items-center gap-2"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15 text-sm font-semibold text-brand">
+          {initial}
+        </span>
+        <span className="hidden text-sm text-ink-muted transition-colors group-hover:text-ink sm:inline">
+          {user.name}
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className={`h-3.5 w-3.5 text-ink-muted transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-(--radius-card) border border-line bg-card py-1.5 shadow-(--shadow-card)"
+        >
+          <Link href="/settings" role="menuitem" className={itemClass}>
+            <SlidersIcon className="h-4.5 w-4.5" />
+            Settings
+          </Link>
+          <Link href="/friends" role="menuitem" className={itemClass}>
+            <UsersIcon className="h-4.5 w-4.5" />
+            Friends
+          </Link>
+          <div aria-hidden="true" className="mx-4 my-1.5 border-t border-line" />
+          <form action="/api/auth/signout" method="post">
+            <button type="submit" role="menuitem" className={`${itemClass} w-full`}>
+              Sign out
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Navigation({ user }: NavigationProps) {
   const pathname = usePathname();
@@ -114,19 +211,7 @@ export default function Navigation({ user }: NavigationProps) {
           {/* Session slot */}
           <div className="flex shrink-0 items-center gap-3">
             {user ? (
-              <>
-                <span className="hidden text-sm text-ink-muted sm:inline">
-                  {user.name}
-                </span>
-                <form action="/api/auth/signout" method="post">
-                  <button
-                    type="submit"
-                    className="text-sm text-ink-muted transition-colors hover:text-ink"
-                  >
-                    Sign out
-                  </button>
-                </form>
-              </>
+              <ProfileMenu user={user} />
             ) : (
               <Link
                 href="/login"
