@@ -1,4 +1,4 @@
-// Edge middleware — gates /settings and /admin/* via the edge-safe authConfig.
+// Edge middleware — gates /settings, /friends and /admin/* via the edge-safe authConfig.
 // mongodb MUST NOT appear in this import graph; that's why the Credentials
 // provider and DB lookup live in auth.ts, separate from auth.config.ts.
 // Spec: docs/DESIGN_V1.md section E.
@@ -14,5 +14,5 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 export const config = {
-  matcher: ["/settings", "/admin/:path*"],
+  matcher: ["/settings", "/friends", "/admin/:path*"],
 };

@@ -41,6 +41,7 @@ COLLECTION_ROUTE_STATS = "route_stats"
 COLLECTION_SCHEDULE_STATE = "schedule_state"
 COLLECTION_SCRAPE_TARGETS = "scrape_targets"   # pool-based scraping config
 COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observability
+COLLECTION_FRIENDSHIPS = "friendships"         # friend requests + accepted pairs (written by frontend)
 
 # TTL settings
 FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days

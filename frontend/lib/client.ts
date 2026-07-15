@@ -11,9 +11,11 @@ import type {
   CitiesResponse,
   CityDetailResponse,
   DateWindow,
+  FriendsResponse,
   Preferences,
   SavedCitiesResponse,
   TripsResponse,
+  UsersResponse,
   WipeResponse,
 } from "@/types/api";
 
@@ -157,6 +159,46 @@ export function putSavedCities(
   return request(`/api/saved-cities`, {
     method: "PUT",
     body: JSON.stringify({ cities }),
+  });
+}
+
+// ─── Session: friends ────────────────────────────────────────────────────────
+// Every mutation returns the full FriendsResponse — replace client state
+// wholesale, no refetch needed.
+
+/** GET /api/friends */
+export function getFriends(): Promise<FriendsResponse> {
+  return request(`/api/friends`);
+}
+
+/** GET /api/users — people directory (everyone except me) */
+export function getUsers(): Promise<UsersResponse> {
+  return request(`/api/users`);
+}
+
+/** POST /api/friends/requests — send a friend request by email */
+export function sendFriendRequest(email: string): Promise<FriendsResponse> {
+  return request(`/api/friends/requests`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** PATCH /api/friends/requests/[id] — accept or decline an incoming request */
+export function respondToFriendRequest(
+  id: string,
+  action: "accept" | "decline",
+): Promise<FriendsResponse> {
+  return request(`/api/friends/requests/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ action }),
+  });
+}
+
+/** DELETE /api/friends/[id] — unfriend, or cancel my outgoing request */
+export function removeFriend(id: string): Promise<FriendsResponse> {
+  return request(`/api/friends/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
 

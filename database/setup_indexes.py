@@ -27,6 +27,7 @@ from .config import (
     COLLECTION_FLIGHTS,
     COLLECTION_SCRAPE_TARGETS,
     COLLECTION_SCRAPE_RUNS,
+    COLLECTION_FRIENDSHIPS,
     FLIGHTS_TTL_DAYS,
     SCRAPE_RUNS_TTL_DAYS,
 )
@@ -62,6 +63,29 @@ def setup_availability_indexes(db):
 
     collection.create_indexes(indexes)
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_AVAILABILITY}")
+
+
+def setup_friendship_indexes(db):
+    """Create indexes for friendships collection (written by the frontend)."""
+    collection = db[COLLECTION_FRIENDSHIPS]
+
+    indexes = [
+        # Canonical sorted user-id pair — at most one live relationship per
+        # pair in either direction; also the dupe/race guard for requests.
+        IndexModel([("pair_key", ASCENDING)], unique=True, name="pair_key_unique"),
+        # Per-side lookups (my outgoing / my incoming, by status).
+        IndexModel(
+            [("requester_id", ASCENDING), ("status", ASCENDING)],
+            name="requester_status"
+        ),
+        IndexModel(
+            [("recipient_id", ASCENDING), ("status", ASCENDING)],
+            name="recipient_status"
+        ),
+    ]
+
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_FRIENDSHIPS}")
 
 
 # The ONLY indexes allowed on flights (besides the implicit _id).
@@ -173,6 +197,7 @@ def setup_all_indexes():
     steps = [
         ("users",          setup_user_indexes),
         ("availability",   setup_availability_indexes),
+        ("friendships",    setup_friendship_indexes),
         ("flights",        setup_flight_indexes),
         ("scrape_targets", setup_scrape_target_indexes),
         ("scrape_runs",    setup_scrape_run_indexes),
@@ -208,6 +233,7 @@ def list_all_indexes():
     collections = [
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
+        COLLECTION_FRIENDSHIPS,
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
@@ -226,6 +252,7 @@ def drop_all_indexes():
     collections = [
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
+        COLLECTION_FRIENDSHIPS,
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,

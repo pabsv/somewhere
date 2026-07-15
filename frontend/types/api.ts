@@ -294,6 +294,50 @@ export const SavedCitiesResponseSchema = z.object({
 });
 export type SavedCitiesResponse = z.infer<typeof SavedCitiesResponseSchema>;
 
+/**
+ * One row in the friends UI: the OTHER user plus the friendship doc id.
+ * Used for accepted friends and both pending directions.
+ */
+export const FriendEntrySchema = z.object({
+  friendship_id: z.string(),
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  created_at: z.string(),
+});
+export type FriendEntry = z.infer<typeof FriendEntrySchema>;
+
+/**
+ * GET /api/friends + every friends mutation — the full friends state.
+ * Mutations return this authoritative shape so the client replaces its
+ * state wholesale instead of refetching.
+ */
+export const FriendsResponseSchema = z.object({
+  friends: z.array(FriendEntrySchema),
+  /** Pending requests awaiting MY accept. */
+  incoming: z.array(FriendEntrySchema),
+  /** Pending requests I sent, awaiting THEIR accept. */
+  outgoing: z.array(FriendEntrySchema),
+});
+export type FriendsResponse = z.infer<typeof FriendsResponseSchema>;
+
+/** One row in the people directory: any registered user (never self). */
+export const DirectoryUserSchema = z.object({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+});
+export type DirectoryUser = z.infer<typeof DirectoryUserSchema>;
+
+/**
+ * GET /api/users — every registered user except the caller. Deliberately
+ * unpaginated: the user base is tiny; revisit if it ever isn't.
+ */
+export const UsersResponseSchema = z.object({
+  users: z.array(DirectoryUserSchema),
+});
+export type UsersResponse = z.infer<typeof UsersResponseSchema>;
+
 /** GET /api/admin/runs */
 export const AdminRunsResponseSchema = z.object({
   runs: z.array(ScrapeRunSummarySchema),
