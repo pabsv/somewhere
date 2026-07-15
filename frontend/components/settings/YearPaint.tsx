@@ -26,16 +26,19 @@ const MONTH_NAMES = [
 
 const MONTHS_AHEAD = 12;
 
-// Brand-yellow diagonal hatch for painted (available) days — the single
-// sanctioned yellow use on this surface (DESIGN_V1 §F). Inline so we don't
-// touch the frozen globals.css. Rendered as an inner overlay so edge days can
-// show a PARTIAL day (free from / back by): the cell maps time vertically,
-// top = 00:00 → bottom = 24:00.
-const HATCH_STYLE = {
-  backgroundColor: "color-mix(in srgb, var(--color-brand) 22%, transparent)",
-  backgroundImage:
-    "repeating-linear-gradient(45deg, var(--color-brand) 0, var(--color-brand) 2px, transparent 2px, transparent 6px)",
-} as const;
+// Brand-yellow paint for available days — the single sanctioned yellow use on
+// this surface (DESIGN_V1 §F). Inline so we don't touch the frozen globals.css.
+// A window renders as one connected run: SOLID brand on its first/last day
+// (the endpoints), a faint tint on the days in between, bridged across the
+// grid gaps. Endpoint overlays still map time vertically (top = 00:00 →
+// bottom = 24:00) so a partial day (free from / back by) reads as a partial
+// fill.
+const ENDPOINT_BG = "var(--color-brand)";
+const MID_BG = "color-mix(in srgb, var(--color-brand) 16%, transparent)";
+
+// grid gap-1 = 4px — how far a run overlay reaches into the gap to fuse with
+// the horizontally-adjacent cell
+const GAP_PX = 4;
 
 // vertical time-scrub: pixels of drag per hour step
 const PX_PER_HOUR = 8;
@@ -685,6 +688,13 @@ interface MonthGridProps {
   ) => void;
 }
 
+/** Corner radii for a run overlay: rounded only at the true window caps. */
+function capRadius(capLeft: boolean, capRight: boolean): string {
+  const l = capLeft ? "5px" : "0";
+  const r = capRight ? "5px" : "0";
+  return `${l} ${r} ${r} ${l}`;
+}
+
 const MonthGrid = memo(function MonthGrid({
   model,
   today,
@@ -754,6 +764,20 @@ const MonthGrid = memo(function MonthGrid({
                   ? `, back by ${fmtHour(back)}`
                   : "";
 
+          // run-connection geometry: a window renders as one fused shape
+          const col = (lead + i) % 7;
+          const prevPainted = isPainted && painted.has(addDays(key, -1));
+          const nextPainted = isPainted && painted.has(addDays(key, 1));
+          // bridge = reach across the 4px gap to the horizontally-adjacent cell
+          const bridgeLeft = prevPainted && col > 0 && day > 1;
+          const bridgeRight = nextPainted && col < 6 && day < days;
+          // continuation without a bridge = run wraps a row or crosses a month
+          const contPrev = prevPainted && !bridgeLeft;
+          const contNext = nextPainted && !bridgeRight;
+          // true window caps (first/last day of the whole range)
+          const capLeft = isPainted && !prevPainted;
+          const capRight = isPainted && !nextPainted;
+
           return (
             <button
               key={key}
@@ -778,7 +802,7 @@ const MonthGrid = memo(function MonthGrid({
               }}
               style={isEdge ? { touchAction: "none" } : undefined}
               className={[
-                "tnum relative aspect-square overflow-hidden rounded-[5px] text-center font-mono text-xs transition-colors",
+                "tnum relative aspect-square rounded-[5px] text-center font-mono text-xs transition-colors",
                 isPast
                   ? "cursor-default text-ink-muted/25"
                   : "cursor-pointer hover:ring-1 hover:ring-ink/15",
@@ -791,13 +815,42 @@ const MonthGrid = memo(function MonthGrid({
               {isPainted && (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0"
-                  style={{
-                    ...HATCH_STYLE,
-                    top: `${hatchTop}%`,
-                    height: `${hatchHeight}%`,
-                  }}
+                  className="pointer-events-none absolute"
+                  style={
+                    isEdge
+                      ? {
+                          top: `${hatchTop}%`,
+                          height: `${hatchHeight}%`,
+                          left: bridgeLeft ? -GAP_PX : 0,
+                          right: bridgeRight ? -GAP_PX : 0,
+                          borderRadius: capRadius(capLeft, capRight),
+                          backgroundColor: ENDPOINT_BG,
+                        }
+                      : {
+                          top: 0,
+                          height: "100%",
+                          left: bridgeLeft ? -GAP_PX : 0,
+                          right: bridgeRight ? -GAP_PX : 0,
+                          backgroundColor: MID_BG,
+                        }
+                  }
                 />
+              )}
+              {contPrev && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-0 top-1/2 z-[1] -translate-y-1/2 text-[8px] leading-none text-brand-ink/70"
+                >
+                  ◂
+                </span>
+              )}
+              {contNext && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-0 top-1/2 z-[1] -translate-y-1/2 text-[8px] leading-none text-brand-ink/70"
+                >
+                  ▸
+                </span>
               )}
               <span className="relative z-[1]">{day}</span>
               {timeLabel && (
