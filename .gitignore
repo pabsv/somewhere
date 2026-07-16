@@ -29,3 +29,4 @@ scraper-azair/test_results.json
 # Claude Code local tooling (worktrees, launch config)
 .claude/
 scratch_*.py
+graphify-out/cost.json
