@@ -13,7 +13,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Button from "@/components/ui/Button";
-import SharedDatesStrip from "@/components/groups/SharedDatesStrip";
 import GroupTripsBoard from "@/components/groups/GroupTripsBoard";
 import GroupTripsCalendar from "@/components/groups/GroupTripsCalendar";
 import Chip from "@/components/ui/Chip";
@@ -178,15 +177,6 @@ export default function GroupDetailPage() {
           {isOwner ? "Owner" : "Member"}
         </span>
       </header>
-
-      <section className="mb-10">
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <SharedDatesStrip
-            windows={trips.shared_windows}
-            knownCount={trips.known_count}
-          />
-        </div>
-      </section>
 
       <section className="mb-10">
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">

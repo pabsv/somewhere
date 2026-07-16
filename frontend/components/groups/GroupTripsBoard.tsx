@@ -23,7 +23,7 @@ export default function GroupTripsBoard({
   return (
     <div>
       <h2 className="font-display text-xl font-semibold text-ink">
-        Upcoming trips
+        Trips that fit the group
       </h2>
 
       {knownCount === 0 ? (
