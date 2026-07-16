@@ -15,6 +15,8 @@ import { useSession } from "next-auth/react";
 import Button from "@/components/ui/Button";
 import SharedDatesStrip from "@/components/groups/SharedDatesStrip";
 import GroupTripsBoard from "@/components/groups/GroupTripsBoard";
+import GroupTripsCalendar from "@/components/groups/GroupTripsCalendar";
+import Chip from "@/components/ui/Chip";
 import MembersCard from "@/components/groups/MembersCard";
 import InviteCard from "@/components/groups/InviteCard";
 import {
@@ -38,6 +40,7 @@ export default function GroupDetailPage() {
 
   const [detail, setDetail] = useState<GroupDetailResponse | null>(null);
   const [trips, setTrips] = useState<GroupTripsResponse | null>(null);
+  const [tripsView, setTripsView] = useState<"list" | "calendar">("list");
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -187,12 +190,35 @@ export default function GroupDetailPage() {
 
       <section className="mb-10">
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <GroupTripsBoard
-            trips={trips.trips}
-            truncated={trips.truncated}
-            knownCount={trips.known_count}
-            unknownCount={trips.unknown_count}
-          />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Chip
+              size="sm"
+              selected={tripsView === "list"}
+              onClick={() => setTripsView("list")}
+            >
+              List
+            </Chip>
+            <Chip
+              size="sm"
+              selected={tripsView === "calendar"}
+              onClick={() => setTripsView("calendar")}
+            >
+              Calendar
+            </Chip>
+          </div>
+          {tripsView === "list" ? (
+            <GroupTripsBoard
+              trips={trips.trips}
+              truncated={trips.truncated}
+              knownCount={trips.known_count}
+              unknownCount={trips.unknown_count}
+            />
+          ) : (
+            <GroupTripsCalendar
+              trips={trips.trips}
+              sharedWindows={trips.shared_windows}
+            />
+          )}
         </div>
       </section>
 

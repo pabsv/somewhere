@@ -265,9 +265,9 @@
     "semantic_hash": "c24b6c2c1280e14ecac430b062b48892"
   },
   "frontend/app/calendar/page.tsx": {
-    "mtime": 1781349879.0533352,
-    "ast_hash": "2d8998a97bac0353ce3cdc4fa7c3174b",
-    "semantic_hash": "2d8998a97bac0353ce3cdc4fa7c3174b"
+    "mtime": 1784207495.4714513,
+    "ast_hash": "1bea5701cb984f760abc488b79b31d2a",
+    "semantic_hash": ""
   },
   "frontend/app/city/[code]/page.tsx": {
     "mtime": 1781113547.7285576,
@@ -465,9 +465,9 @@
     "semantic_hash": "2f008d956e540f38208cde2732d42541"
   },
   "frontend/components/tripcal/CalendarFilters.tsx": {
-    "mtime": 1781113563.683228,
-    "ast_hash": "7017f36d81d7210bd0765a0db919c7a7",
-    "semantic_hash": "7017f36d81d7210bd0765a0db919c7a7"
+    "mtime": 1784207482.1202164,
+    "ast_hash": "8725830fd3959557db30e16fd73aeb0f",
+    "semantic_hash": ""
   },
   "frontend/components/tripcal/DaySheet.tsx": {
     "mtime": 1781113545.857352,
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784192761.4219205,
-    "ast_hash": "4572508d17f72461b7d70180ab550baa",
+    "mtime": 1784196210.799228,
+    "ast_hash": "7cdcb23ea1316fa723d75762b1a8e533",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -895,8 +895,8 @@
     "semantic_hash": ""
   },
   "frontend/app/groups/[id]/page.tsx": {
-    "mtime": 1784190379.1992497,
-    "ast_hash": "c13c0354bc86c61fbece9b9b13d13916",
+    "mtime": 1784195531.2842746,
+    "ast_hash": "91527348f5acd705bc4714afd3f31cf3",
     "semantic_hash": ""
   },
   "frontend/app/groups/page.tsx": {
@@ -927,6 +927,11 @@
   "frontend/components/groups/SharedDatesStrip.tsx": {
     "mtime": 1784189934.0979679,
     "ast_hash": "367477f9f2d8cd02e2f0d40b37d9f49a",
+    "semantic_hash": ""
+  },
+  "frontend/components/groups/GroupTripsCalendar.tsx": {
+    "mtime": 1784195514.0024085,
+    "ast_hash": "60bb93366d23f4f72d2dc51787324ef6",
     "semantic_hash": ""
   }
 }
