@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Trip } from "@/types/api";
-import { formatPrice, formatRange, nightsLabel } from "@/lib/format";
+import { countryFlag, formatPrice, formatRange, nightsLabel } from "@/lib/format";
 import { getDestination } from "@/data/destinations.gen";
 
 interface TripTooltipProps {
@@ -36,6 +36,9 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
       ? Math.round(-trip.delta_pct)
       : null;
 
+  const dest = getDestination(trip.destination);
+  const flag = countryFlag(dest?.country);
+
   return (
     <div
       ref={ref}
@@ -48,7 +51,8 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
       className="pointer-events-none fixed z-[60] w-max max-w-[15rem] rounded-card border border-line bg-card px-3 py-2 shadow-card"
     >
       <p className="text-sm font-semibold text-ink">
-        {getDestination(trip.destination)?.name ?? trip.destination}
+        {flag && <span className="mr-1">{flag}</span>}
+        {dest?.name ?? trip.destination}
         <span className="tnum ml-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-muted">
           {trip.origin} → {trip.destination}
         </span>

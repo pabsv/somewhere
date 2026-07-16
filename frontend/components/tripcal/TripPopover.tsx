@@ -9,7 +9,7 @@ import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import type { Trip } from "@/types/api";
 import { getDestination } from "@/data/destinations.gen";
 import { getSearchUrl } from "@/lib/searchUrl";
-import { formatRange, nightsLabel, formatPrice } from "@/lib/format";
+import { countryFlag, formatRange, nightsLabel, formatPrice } from "@/lib/format";
 
 interface TripPopoverProps {
   trip: Trip | null;
@@ -64,7 +64,10 @@ export default function TripPopover({
   onClose,
 }: TripPopoverProps) {
   const open = trip != null;
-  const city = trip ? getDestination(trip.destination)?.name ?? trip.city : "";
+  const dest = trip ? getDestination(trip.destination) : undefined;
+  const city = dest?.name ?? trip?.city ?? "";
+  const flag = countryFlag(dest?.country);
+  const title = trip ? (flag ? `${flag} ${city}` : city) : undefined;
   const belowPct =
     trip?.delta_pct != null && trip.delta_pct < 0
       ? Math.round(-trip.delta_pct)
@@ -76,7 +79,7 @@ export default function TripPopover({
     : "#";
 
   return (
-    <Sheet open={open} onClose={onClose} title={trip ? city : undefined}>
+    <Sheet open={open} onClose={onClose} title={title}>
       {trip && (
         <div className="space-y-5">
           {/* ─── Headline ─────────────────────────────────────────────── */}
