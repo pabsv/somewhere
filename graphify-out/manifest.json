@@ -763,5 +763,90 @@
     "mtime": 1779989048.9926229,
     "ast_hash": "0214bbfa855f32771e56816acd2cf9bd",
     "semantic_hash": "0214bbfa855f32771e56816acd2cf9bd"
+  },
+  "AGENTS.md": {
+    "mtime": 1784013199.179767,
+    "ast_hash": "4b3bb17130d96709c9e18f5d80525a5c",
+    "semantic_hash": ""
+  },
+  "ARCHITECTURE.md": {
+    "mtime": 1772630984.3554242,
+    "ast_hash": "9dca0dc938f4ccca8f1e5596250849bd",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1784113472.2152157,
+    "ast_hash": "c425de0b16a5bab42b10e3152da4a2b6",
+    "semantic_hash": ""
+  },
+  "TODO.md": {
+    "mtime": 1779989614.339356,
+    "ast_hash": "b9a3512a52234f999c7a42a0d665f2e6",
+    "semantic_hash": ""
+  },
+  "VISION.md": {
+    "mtime": 1771944855.789459,
+    "ast_hash": "58bcd0e1bff8a934adfa31659f6b4b99",
+    "semantic_hash": ""
+  },
+  "database/requirements.txt": {
+    "mtime": 1771204285.8213172,
+    "ast_hash": "cf2a0c219c8afd61be04868841139e8e",
+    "semantic_hash": ""
+  },
+  "deploy/DEPLOY.md": {
+    "mtime": 1784000829.7359397,
+    "ast_hash": "8f8ecd29fe4fcd52eabf73317d4e4d28",
+    "semantic_hash": ""
+  },
+  "docs/DESIGN_V1.md": {
+    "mtime": 1781078995.5813572,
+    "ast_hash": "a4404a48003110bdccfce1690838ddd9",
+    "semantic_hash": ""
+  },
+  "docs/V1_PROGRESS.md": {
+    "mtime": 1781291260.232368,
+    "ast_hash": "581bcf7648b99b49a05a74cc51ab0356",
+    "semantic_hash": ""
+  },
+  "requirements.txt": {
+    "mtime": 1781076698.1191418,
+    "ast_hash": "4eecdb2f9312c6ab48f18d129f2d7549",
+    "semantic_hash": ""
+  },
+  "scraper-azair/requirements.txt": {
+    "mtime": 1771120631.1457543,
+    "ast_hash": "c18d8bb60d6a2c9aff6104b46a9be926",
+    "semantic_hash": ""
+  },
+  "frontend/public/file.svg": {
+    "mtime": 1771252540.2036943,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": ""
+  },
+  "frontend/public/globe.svg": {
+    "mtime": 1771252540.2413042,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": ""
+  },
+  "frontend/public/icon.svg": {
+    "mtime": 1781345702.9127347,
+    "ast_hash": "125daea99ff318a813de4a7cfc39d76b",
+    "semantic_hash": ""
+  },
+  "frontend/public/next.svg": {
+    "mtime": 1771252540.2706602,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": ""
+  },
+  "frontend/public/vercel.svg": {
+    "mtime": 1771252540.2961724,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": ""
+  },
+  "frontend/public/window.svg": {
+    "mtime": 1771252540.3225956,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": ""
   }
 }
