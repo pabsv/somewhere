@@ -43,7 +43,7 @@ export default function CalendarPage() {
   const { saved, signedIn: savedSignedIn } = useSavedCities();
 
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
-  const [onlyFree, setOnlyFree] = useState(false);
+  const [onlyFree, setOnlyFree] = useState(true);
   const [savedOnly, setSavedOnly] = useState(false);
 
   const [trips, setTrips] = useState<Trip[] | null>(null);
@@ -180,28 +180,33 @@ export default function CalendarPage() {
       </header>
 
       {/* ─── Controls row ──────────────────────────────────────────────────── */}
-      <div className="mb-6 space-y-3">
-        <CalendarFilters value={filters} onChange={setFilters} />
-        <div className="flex flex-wrap items-center gap-2">
-          {savedSignedIn && saved.size > 0 && (
-            <Chip
-              size="sm"
-              selected={savedOnly}
-              onClick={() => setSavedOnly((v) => !v)}
-            >
-              ★ Saved ({saved.size})
-            </Chip>
-          )}
-          {hasWindows && (
-            <Chip
-              size="sm"
-              selected={onlyFree}
-              onClick={() => setOnlyFree((v) => !v)}
-            >
-              Only my free dates
-            </Chip>
-          )}
-        </div>
+      <div className="mb-6">
+        <CalendarFilters
+          value={filters}
+          onChange={setFilters}
+          extra={
+            <>
+              {savedSignedIn && saved.size > 0 && (
+                <Chip
+                  size="sm"
+                  selected={savedOnly}
+                  onClick={() => setSavedOnly((v) => !v)}
+                >
+                  ★ Saved ({saved.size})
+                </Chip>
+              )}
+              {hasWindows && (
+                <Chip
+                  size="sm"
+                  selected={onlyFree}
+                  onClick={() => setOnlyFree((v) => !v)}
+                >
+                  Only my free dates
+                </Chip>
+              )}
+            </>
+          }
+        />
       </div>
 
       {/* ─── Body ──────────────────────────────────────────────────────────── */}

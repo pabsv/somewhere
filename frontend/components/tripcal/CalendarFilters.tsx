@@ -23,6 +23,7 @@ export const EMPTY_FILTERS: CalendarFilterState = {
 interface CalendarFiltersProps {
   value: CalendarFilterState;
   onChange: (next: CalendarFilterState) => void;
+  extra?: React.ReactNode;
 }
 
 const TIERS: { key: TierFilter; label: string }[] = [
@@ -71,6 +72,7 @@ function NumField({
 export default function CalendarFilters({
   value,
   onChange,
+  extra,
 }: CalendarFiltersProps) {
   const set = <K extends keyof CalendarFilterState>(
     key: K,
@@ -130,6 +132,8 @@ export default function CalendarFilters({
           </Chip>
         ))}
       </div>
+
+      {extra}
     </div>
   );
 }
