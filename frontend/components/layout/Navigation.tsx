@@ -67,6 +67,16 @@ function UsersIcon({ className }: { className?: string }) {
   );
 }
 
+function GroupsIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="9" cy="9" r="5" />
+      <circle cx="15" cy="9" r="5" />
+      <circle cx="12" cy="15" r="5" />
+    </svg>
+  );
+}
+
 /**
  * Profile menu — avatar/name button top-right; dropdown holds the
  * account-scoped destinations (Settings, Friends) plus Sign out. Closes on
@@ -77,6 +87,8 @@ function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
+  // Close the dropdown whenever the route changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
@@ -141,6 +153,10 @@ function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
           <Link href="/friends" role="menuitem" className={itemClass}>
             <UsersIcon className="h-4.5 w-4.5" />
             Friends
+          </Link>
+          <Link href="/groups" role="menuitem" className={itemClass}>
+            <GroupsIcon className="h-4.5 w-4.5" />
+            Groups
           </Link>
           <div aria-hidden="true" className="mx-4 my-1.5 border-t border-line" />
           <form action="/api/auth/signout" method="post">

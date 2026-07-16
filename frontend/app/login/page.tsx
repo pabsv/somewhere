@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -8,25 +8,54 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import GoogleButton from "@/components/auth/GoogleButton";
 
+// NextAuth's error redirect (both a failed Credentials POST and a failed
+// Google OAuth round trip land back here via next-auth's own server-side
+// redirect) only carries `error`/`code` — it drops `callbackUrl` entirely.
+// Without this, retrying after a wrong password bounces you to "/" instead
+// of back to e.g. /join/<token>. Stash it in sessionStorage on the way in so
+// a bare /login?error=... reload can still recover it.
+const CALLBACK_URL_KEY = "auth:callbackUrl";
+
 function LoginForm() {
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") ?? "/";
+  const urlCallbackUrl = params.get("callbackUrl");
   const urlError = params.get("error");
+
+  // Lazy-read, not an effect: this form only ever mounts client-side (it's
+  // the child of a Suspense boundary around useSearchParams), so there's no
+  // SSR value to mismatch against.
+  const [storedCallbackUrl] = useState(() =>
+    typeof window === "undefined" ? null : sessionStorage.getItem(CALLBACK_URL_KEY),
+  );
+  const callbackUrl = urlCallbackUrl ?? storedCallbackUrl ?? "/";
+
+  useEffect(() => {
+    if (urlCallbackUrl) sessionStorage.setItem(CALLBACK_URL_KEY, urlCallbackUrl);
+  }, [urlCallbackUrl]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [credError, setCredError] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await signIn("credentials", {
+    setCredError(false);
+    // redirect:false so a failed attempt never leaves this page (and never
+    // loses callbackUrl to next-auth's error redirect) — we drive
+    // navigation ourselves on success instead.
+    const result = await signIn("credentials", {
       email: email.trim().toLowerCase(),
       password,
-      redirectTo: callbackUrl,
+      redirect: false,
     });
-    // signIn redirects on success; on failure it returns here via ?error=.
-    setLoading(false);
+    if (result?.error) {
+      setCredError(true);
+      setLoading(false);
+      return;
+    }
+    window.location.href = callbackUrl;
   }
 
   return (
@@ -71,9 +100,9 @@ function LoginForm() {
         />
       </div>
 
-      {urlError && (
+      {(credError || urlError) && (
         <p className="text-sm text-alert">
-          {urlError === "CredentialsSignin"
+          {credError || urlError === "CredentialsSignin"
             ? "Could not sign you in. Check your email and password, then try again."
             : "Could not sign you in with Google. Please try again."}
         </p>
@@ -97,6 +126,21 @@ function LoginForm() {
       </div>
 
       <GoogleButton callbackUrl={callbackUrl} />
+
+      <p className="mt-6 font-mono text-xs leading-relaxed text-ink-muted">
+        No account yet?{" "}
+        <Link
+          href={
+            callbackUrl !== "/"
+              ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+              : "/register"
+          }
+          className="underline hover:text-ink"
+        >
+          Create one
+        </Link>
+        .
+      </p>
     </div>
   );
 }
@@ -117,14 +161,6 @@ export default function LoginPage() {
         <Suspense fallback={null}>
           <LoginForm />
         </Suspense>
-
-        <p className="mt-6 font-mono text-xs leading-relaxed text-ink-muted">
-          No account yet?{" "}
-          <Link href="/register" className="underline hover:text-ink">
-            Create one
-          </Link>
-          .
-        </p>
       </div>
     </div>
   );

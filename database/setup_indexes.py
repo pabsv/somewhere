@@ -28,6 +28,7 @@ from .config import (
     COLLECTION_SCRAPE_TARGETS,
     COLLECTION_SCRAPE_RUNS,
     COLLECTION_FRIENDSHIPS,
+    COLLECTION_GROUPS,
     FLIGHTS_TTL_DAYS,
     SCRAPE_RUNS_TTL_DAYS,
 )
@@ -86,6 +87,25 @@ def setup_friendship_indexes(db):
 
     collection.create_indexes(indexes)
     logger.info(f"Created {len(indexes)} indexes for {COLLECTION_FRIENDSHIPS}")
+
+
+def setup_group_indexes(db):
+    """Create indexes for groups collection (written by the frontend)."""
+    collection = db[COLLECTION_GROUPS]
+
+    indexes = [
+        # Multikey: "my groups" lookup for the list page and membership guards.
+        IndexModel([("members.user_id", ASCENDING)], name="members_user"),
+        # Invite-link resolution; unique so a token maps to exactly one group.
+        IndexModel(
+            [("invite.token", ASCENDING)],
+            unique=True,
+            name="invite_token_unique",
+            partialFilterExpression={"invite.token": {"$exists": True}},
+        ),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_GROUPS}")
 
 
 # The ONLY indexes allowed on flights (besides the implicit _id).
@@ -198,6 +218,7 @@ def setup_all_indexes():
         ("users",          setup_user_indexes),
         ("availability",   setup_availability_indexes),
         ("friendships",    setup_friendship_indexes),
+        ("groups",         setup_group_indexes),
         ("flights",        setup_flight_indexes),
         ("scrape_targets", setup_scrape_target_indexes),
         ("scrape_runs",    setup_scrape_run_indexes),
@@ -234,6 +255,7 @@ def list_all_indexes():
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
         COLLECTION_FRIENDSHIPS,
+        COLLECTION_GROUPS,
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
@@ -253,6 +275,7 @@ def drop_all_indexes():
         COLLECTION_USERS,
         COLLECTION_AVAILABILITY,
         COLLECTION_FRIENDSHIPS,
+        COLLECTION_GROUPS,
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,

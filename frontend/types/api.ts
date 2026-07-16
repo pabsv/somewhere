@@ -351,3 +351,89 @@ export const WipeResponseSchema = z.object({
   deleted: z.number(),
 });
 export type WipeResponse = z.infer<typeof WipeResponseSchema>;
+
+// ─── Groups (travel crews) ────────────────────────────────────────────────
+
+export const GroupRoleSchema = z.enum(["owner", "member"]);
+export type GroupRole = z.infer<typeof GroupRoleSchema>;
+
+export const GroupSummarySchema = z.object({
+  group_id: z.string(),
+  name: z.string(),
+  my_role: GroupRoleSchema,
+  member_count: z.number(),
+  member_names: z.array(z.string()),
+  created_at: z.string(),
+});
+export type GroupSummary = z.infer<typeof GroupSummarySchema>;
+
+/** GET /api/groups + every list-level groups mutation (create/leave/delete). */
+export const GroupsResponseSchema = z.object({
+  groups: z.array(GroupSummarySchema),
+});
+export type GroupsResponse = z.infer<typeof GroupsResponseSchema>;
+
+export const GroupMemberEntrySchema = z.object({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: GroupRoleSchema,
+  joined_at: z.string(),
+  /** false = zero availability windows -> counted as "unknown" in matching. */
+  has_availability: z.boolean(),
+});
+export type GroupMemberEntry = z.infer<typeof GroupMemberEntrySchema>;
+
+/** GET /api/groups/[id] + every group-scoped mutation — members-only response. */
+export const GroupDetailResponseSchema = z.object({
+  group_id: z.string(),
+  name: z.string(),
+  my_role: GroupRoleSchema,
+  created_at: z.string(),
+  members: z.array(GroupMemberEntrySchema),
+  invite_token: z.string(),
+});
+export type GroupDetailResponse = z.infer<typeof GroupDetailResponseSchema>;
+
+/** GET /api/join/[token] — public, deliberately minimal (no emails/ids). */
+export const JoinInfoResponseSchema = z.object({
+  group_name: z.string(),
+  member_count: z.number(),
+  inviter_name: z.string(),
+});
+export type JoinInfoResponse = z.infer<typeof JoinInfoResponseSchema>;
+
+/** POST /api/join/[token] */
+export const JoinResultSchema = z.object({
+  group_id: z.string(),
+  already_member: z.boolean(),
+});
+export type JoinResult = z.infer<typeof JoinResultSchema>;
+
+export const GroupTripSchema = TripSchema.extend({
+  /** members with >=1 availability window who fit this trip */
+  free_count: z.number(),
+  /** members with >=1 availability window (the denominator) */
+  known_count: z.number(),
+  /** members with zero availability windows — never blocks a full-group match */
+  unknown_count: z.number(),
+  free_user_ids: z.array(z.string()),
+  full_group: z.boolean(),
+});
+export type GroupTrip = z.infer<typeof GroupTripSchema>;
+
+export const SharedWindowSchema = z.object({
+  start: DateStringSchema,
+  end: DateStringSchema,
+});
+export type SharedWindow = z.infer<typeof SharedWindowSchema>;
+
+/** GET /api/groups/[id]/trips */
+export const GroupTripsResponseSchema = z.object({
+  trips: z.array(GroupTripSchema),
+  shared_windows: z.array(SharedWindowSchema),
+  known_count: z.number(),
+  unknown_count: z.number(),
+  truncated: z.boolean(),
+});
+export type GroupTripsResponse = z.infer<typeof GroupTripsResponseSchema>;

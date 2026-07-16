@@ -12,6 +12,11 @@ import type {
   CityDetailResponse,
   DateWindow,
   FriendsResponse,
+  GroupDetailResponse,
+  GroupsResponse,
+  GroupTripsResponse,
+  JoinInfoResponse,
+  JoinResult,
   Preferences,
   SavedCitiesResponse,
   TripsResponse,
@@ -199,6 +204,102 @@ export function respondToFriendRequest(
 export function removeFriend(id: string): Promise<FriendsResponse> {
   return request(`/api/friends/${encodeURIComponent(id)}`, {
     method: "DELETE",
+  });
+}
+
+// ─── Session: groups ─────────────────────────────────────────────────────────
+// Every mutation returns the full authoritative state (GroupsResponse or
+// GroupDetailResponse) — replace client state wholesale, no refetch needed.
+
+/** GET /api/groups */
+export function getGroups(): Promise<GroupsResponse> {
+  return request(`/api/groups`);
+}
+
+/** POST /api/groups — create a group */
+export function createGroup(name: string): Promise<GroupsResponse> {
+  return request(`/api/groups`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** GET /api/groups/[id] */
+export function getGroup(id: string): Promise<GroupDetailResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}`);
+}
+
+/** PATCH /api/groups/[id] — rename */
+export function renameGroup(
+  id: string,
+  name: string,
+): Promise<GroupDetailResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** DELETE /api/groups/[id] */
+export function deleteGroup(id: string): Promise<GroupsResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+/** POST /api/groups/[id]/leave */
+export function leaveGroup(id: string): Promise<GroupsResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}/leave`, {
+    method: "POST",
+  });
+}
+
+/** POST /api/groups/[id]/members */
+export function addGroupMember(
+  id: string,
+  userId: string,
+): Promise<GroupDetailResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}/members`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+/** DELETE /api/groups/[id]/members/[userId] */
+export function removeGroupMember(
+  id: string,
+  userId: string,
+): Promise<GroupDetailResponse> {
+  return request(
+    `/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+    { method: "DELETE" },
+  );
+}
+
+/** POST /api/groups/[id]/invite — rotate the invite token */
+export function rotateGroupInvite(id: string): Promise<GroupDetailResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}/invite`, {
+    method: "POST",
+  });
+}
+
+/** GET /api/groups/[id]/trips */
+export function getGroupTrips(
+  id: string,
+  params: { from?: string[] } = {},
+): Promise<GroupTripsResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}/trips${qs(params)}`);
+}
+
+/** GET /api/join/[token] — public, deliberately minimal */
+export function getJoinInfo(token: string): Promise<JoinInfoResponse> {
+  return request(`/api/join/${encodeURIComponent(token)}`);
+}
+
+/** POST /api/join/[token] */
+export function joinGroup(token: string): Promise<JoinResult> {
+  return request(`/api/join/${encodeURIComponent(token)}`, {
+    method: "POST",
   });
 }
 

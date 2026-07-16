@@ -15,6 +15,7 @@ import {
   type CityBest,
   type CitySummary,
   type FlightDoc,
+  type GroupTrip,
   type Trip,
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
@@ -490,7 +491,7 @@ interface AvailWindow {
  * ("2026-08-14T17:35:00", "2026-08-14 17:35" or "17:35"). Null when unknown —
  * unknown hours are never filtered out.
  */
-function hourOf(v: unknown): number | null {
+export function hourOf(v: unknown): number | null {
   if (typeof v !== "string") return null;
   const m = v.match(/(?:[T ])(\d{2}):\d{2}/) ?? v.match(/^(\d{1,2}):\d{2}/);
   if (!m) return null;
@@ -570,7 +571,7 @@ export async function loadUserAvailability(
  * depart at/after startTime, on the last day the return must arrive at/before
  * endTime. Legs with unparseable times are never filtered out.
  */
-function fitsAnyWindow(
+export function fitsAnyWindow(
   outbound: string,
   ret: string,
   windows: AvailWindow[],
@@ -766,4 +767,293 @@ function curateBars(trips: Trip[]): Trip[] {
 
   out.sort(byScore);
   return out;
+}
+
+// ─── /api/groups/[id]/trips — group trip matching ───────────────────────────
+
+export interface GroupTripsData {
+  trips: GroupTrip[];
+  shared_windows: { start: string; end: string }[];
+  known_count: number;
+  unknown_count: number;
+  truncated: boolean;
+}
+
+/** Curation for group trip bars: per destination keep at most this many. */
+const GROUP_TRIPS_PER_DEST = 2;
+/** Curation: global cap across all destinations. */
+const GROUP_TRIPS_GLOBAL_CAP = 60;
+
+/** Rank order for group trips: full-group match first, then most free members,
+ *  then best score, then cheapest. */
+function groupTripRankCompare(a: GroupTrip, b: GroupTrip): number {
+  if (a.full_group !== b.full_group) return a.full_group ? -1 : 1;
+  if (a.free_count !== b.free_count) return b.free_count - a.free_count;
+  if (a.score !== b.score) return b.score - a.score;
+  return a.price - b.price;
+}
+
+/**
+ * Curation (variety guard, no month-bucketing — unlike curateBars):
+ *   1. per destination → keep top GROUP_TRIPS_PER_DEST by rank
+ *   2. then globally → keep top GROUP_TRIPS_GLOBAL_CAP by rank
+ */
+function curateGroupTrips(trips: GroupTrip[]): {
+  curated: GroupTrip[];
+  truncated: boolean;
+} {
+  const perDest = new Map<string, GroupTrip[]>();
+  for (const t of trips) {
+    const arr = perDest.get(t.destination);
+    if (arr) arr.push(t);
+    else perDest.set(t.destination, [t]);
+  }
+
+  const afterDestCap: GroupTrip[] = [];
+  for (const arr of perDest.values()) {
+    arr.sort(groupTripRankCompare);
+    for (const t of arr.slice(0, GROUP_TRIPS_PER_DEST)) afterDestCap.push(t);
+  }
+
+  afterDestCap.sort(groupTripRankCompare);
+  const curated = afterDestCap.slice(0, GROUP_TRIPS_GLOBAL_CAP);
+  const truncated = curated.length < trips.length;
+
+  return { curated, truncated };
+}
+
+/**
+ * A merged, disjoint, sorted-by-start date-string run. startTime/endTime
+ * mirror AvailWindow's edge-hour semantics but only apply when this run's
+ * `start`/`end` is a genuine availability-window boundary — null (from a
+ * merge tie or a clip to the scan window) means "no constraint from this
+ * side" rather than "free all day", so callers must treat null as the more
+ * permissive value on whichever side it appears.
+ */
+interface DateRun {
+  start: string;
+  end: string;
+  startTime: number | null;
+  endTime: number | null;
+}
+
+/**
+ * Merge (possibly overlapping/adjacent) availability windows for ONE member
+ * into disjoint sorted runs. Sort on start, combine when the next window
+ * starts at/before the current run's end. Carries each run's edge hours
+ * through from whichever window currently owns that edge (the earliest
+ * window for `start`, the furthest-reaching one for `end`) so a later
+ * cross-member intersection can still tell whether free HOURS actually
+ * overlap on the boundary days, not just the dates.
+ */
+function mergeWindowsToRuns(windows: AvailWindow[]): DateRun[] {
+  if (windows.length === 0) return [];
+  const sorted = [...windows].sort((a, b) =>
+    a.start < b.start ? -1 : a.start > b.start ? 1 : 0,
+  );
+
+  const merged: DateRun[] = [];
+  for (const w of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && w.start <= last.end) {
+      if (w.end > last.end) {
+        last.end = w.end;
+        last.endTime = w.endTime;
+      }
+    } else {
+      merged.push({
+        start: w.start,
+        end: w.end,
+        startTime: w.startTime,
+        endTime: w.endTime,
+      });
+    }
+  }
+  return merged;
+}
+
+/** null = no constraint from that side (most permissive). AND-combine two
+ * "free from" hour constraints — the group can only start once BOTH sides
+ * are free, so the later of the two applicable hours wins. */
+function intersectStartTime(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return Math.max(a, b);
+}
+
+/** AND-combine two "back by" hour constraints — the group must ALL be back
+ * by the earlier of the two applicable deadlines. */
+function intersectEndTime(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return Math.min(a, b);
+}
+
+/**
+ * Intersect two disjoint sorted run-lists via a two-pointer sweep. Two runs
+ * overlap when a.start <= b.end && b.start <= a.end; their intersection is
+ * [max(a.start,b.start), min(a.end,b.end)]. An edge hour constraint only
+ * carries into the intersection when that side's date is the ACTUAL boundary
+ * of the run it came from — e.g. if the intersection's start is later than
+ * a's own start, a was already free well before that day, so a's startTime
+ * doesn't apply. When the intersection collapses to a single day, both
+ * sides' constraints land on that same day, so a real contradiction (nobody
+ * free before the other's cutoff) means there's no true overlap and the run
+ * is dropped rather than falsely reported as shared.
+ */
+function intersectRuns(a: DateRun[], b: DateRun[]): DateRun[] {
+  const out: DateRun[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const start = a[i].start > b[j].start ? a[i].start : b[j].start;
+    const end = a[i].end < b[j].end ? a[i].end : b[j].end;
+    if (start <= end) {
+      const startTime = intersectStartTime(
+        start === a[i].start ? a[i].startTime : null,
+        start === b[j].start ? b[j].startTime : null,
+      );
+      const endTime = intersectEndTime(
+        end === a[i].end ? a[i].endTime : null,
+        end === b[j].end ? b[j].endTime : null,
+      );
+      const sameDayContradiction =
+        start === end &&
+        startTime !== null &&
+        endTime !== null &&
+        startTime >= endTime;
+      if (!sameDayContradiction) out.push({ start, end, startTime, endTime });
+    }
+    if (a[i].end < b[j].end) i++;
+    else j++;
+  }
+  return out;
+}
+
+/** Clip runs to [lo, hi], dropping any that fall entirely outside it. A
+ * clamped edge is no longer a genuine availability boundary (lo/hi are just
+ * the scan window), so its hour constraint is dropped along with it. */
+function clipRuns(runs: DateRun[], lo: string, hi: string): DateRun[] {
+  const out: DateRun[] = [];
+  for (const r of runs) {
+    const clampedStart = r.start < lo;
+    const clampedEnd = r.end > hi;
+    const start = clampedStart ? lo : r.start;
+    const end = clampedEnd ? hi : r.end;
+    if (start <= end) {
+      out.push({
+        start,
+        end,
+        startTime: clampedStart ? null : r.startTime,
+        endTime: clampedEnd ? null : r.endTime,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Merge each known member's windows into disjoint runs, then intersect those
+ * run-lists pairwise across all members, clipped to [lo, hi].
+ */
+function intersectAllMemberWindows(
+  perMemberWindows: AvailWindow[][],
+  lo: string,
+  hi: string,
+): DateRun[] {
+  if (perMemberWindows.length === 0) return [];
+  let runs = mergeWindowsToRuns(perMemberWindows[0]);
+  for (let i = 1; i < perMemberWindows.length && runs.length > 0; i++) {
+    runs = intersectRuns(runs, mergeWindowsToRuns(perMemberWindows[i]));
+  }
+  return clipRuns(runs, lo, hi);
+}
+
+/**
+ * Group trip matching: fan loadUserAvailability over every member, then rank
+ * upcoming trips by how many KNOWN members (>=1 availability window) fit
+ * them. Members with zero windows are "unknown" — excluded from the
+ * denominator and from shared_windows, and never block a full-group match.
+ * Reuses buildTripFilter/scoreFlights/dedupeTrips verbatim — no changes to
+ * getTripsData/getCitiesData, Explore and Calendar are untouched.
+ *
+ * Cost: one indexed flights.find() bounded exactly like getTripsData's bars
+ * query, plus O(trips * members * windows) in memory — trivially bounded at
+ * <=12 members.
+ */
+export async function getGroupTripsData(
+  memberIds: string[],
+  origins: string[],
+): Promise<GroupTripsData> {
+  const avails = await Promise.all(memberIds.map((id) => loadUserAvailability(id)));
+  const known: { id: string; avail: UserAvailability }[] = [];
+  for (let i = 0; i < memberIds.length; i++) {
+    const a = avails[i];
+    if (a && a.windows.length > 0) known.push({ id: memberIds[i], avail: a });
+  }
+  const unknownCount = memberIds.length - known.length;
+
+  const flights = await flightsCollection();
+  const baselines = await getBaselines();
+  const start = todayStr();
+  const end = monthsAhead(6);
+  const filter = buildTripFilter({ origins, start, end });
+  const docs = await flights.find(filter).toArray();
+  const trips = dedupeTrips(scoreFlights(docs, baselines));
+
+  let scored: GroupTrip[] = trips.map((t) => {
+    const depH = hourOf(t.outbound.dep);
+    const arrH = hourOf(t.ret.arr);
+    const freeIds: string[] = [];
+    for (const m of known) {
+      if (
+        !fitsAnyWindow(t.outbound_date, t.return_date, m.avail.windows, depH, arrH)
+      )
+        continue;
+      if (m.avail.minNights !== null && t.duration_days < m.avail.minNights)
+        continue;
+      if (m.avail.maxNights !== null && t.duration_days > m.avail.maxNights)
+        continue;
+      freeIds.push(m.id);
+    }
+    return {
+      ...t,
+      free_count: freeIds.length,
+      known_count: known.length,
+      unknown_count: unknownCount,
+      free_user_ids: freeIds,
+      full_group: known.length >= 2 && freeIds.length === known.length,
+    };
+  });
+
+  // Nobody known is free on a given trip -> not worth showing. When nobody
+  // in the group has availability at all, keep everything so the page can
+  // render its "add availability" banner over the full trip list.
+  if (known.length > 0) {
+    scored = scored.filter((t) => t.free_count > 0);
+  }
+
+  scored.sort(groupTripRankCompare);
+
+  const { curated, truncated } = curateGroupTrips(scored);
+
+  // Strip the internal hour fields at the boundary — they've already done
+  // their job of excluding days where members' free hours don't actually
+  // overlap (see intersectRuns); the public shape stays date-only.
+  const sharedWindows =
+    known.length >= 2
+      ? intersectAllMemberWindows(
+          known.map((m) => m.avail.windows),
+          start,
+          end,
+        ).map((r) => ({ start: r.start, end: r.end }))
+      : [];
+
+  return {
+    trips: curated,
+    shared_windows: sharedWindows,
+    known_count: known.length,
+    unknown_count: unknownCount,
+    truncated,
+  };
 }

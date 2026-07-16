@@ -39,7 +39,7 @@ export const authConfig = {
       if (pathname.startsWith("/admin")) {
         return token?.role === "admin";
       }
-      if (pathname.startsWith("/settings") || pathname.startsWith("/friends")) {
+      if (pathname.startsWith("/settings") || pathname.startsWith("/friends") || pathname.startsWith("/groups")) {
         return !!token;
       }
       return true;
