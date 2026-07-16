@@ -2,8 +2,9 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Trip } from "@/types/api";
-import { countryFlag, formatPrice, formatRange, nightsLabel } from "@/lib/format";
+import { formatPrice, formatRange, nightsLabel } from "@/lib/format";
 import { getDestination } from "@/data/destinations.gen";
+import CountryFlag from "@/components/ui/CountryFlag";
 
 interface TripTooltipProps {
   trip: Trip;
@@ -37,7 +38,6 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
       : null;
 
   const dest = getDestination(trip.destination);
-  const flag = countryFlag(dest?.country);
 
   return (
     <div
@@ -51,7 +51,7 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
       className="pointer-events-none fixed z-[60] w-max max-w-[15rem] rounded-card border border-line bg-card px-3 py-2 shadow-card"
     >
       <p className="text-sm font-semibold text-ink">
-        {flag && <span className="mr-1">{flag}</span>}
+        <CountryFlag code={dest?.country} className="mr-1" />
         {dest?.name ?? trip.destination}
         <span className="tnum ml-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-muted">
           {trip.origin} → {trip.destination}

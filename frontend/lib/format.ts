@@ -50,14 +50,3 @@ export function formatRange(out: string, ret: string): string {
 export function nightsLabel(n: number): string {
   return n === 1 ? "1 night" : `${n} nights`;
 }
-
-/** ISO-3166 alpha-2 → flag emoji, e.g. "ES" → "🇪🇸". Unknown/empty codes return "". */
-export function countryFlag(code: string | undefined | null): string {
-  if (!code || code.length !== 2) return "";
-  const base = 0x1f1e6;
-  const chars = [...code.toUpperCase()].map(
-    (c) => base + (c.charCodeAt(0) - 65)
-  );
-  if (chars.some((c) => c < base || c > base + 25)) return "";
-  return String.fromCodePoint(...chars);
-}

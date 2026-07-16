@@ -6,7 +6,9 @@ import type { ReactNode } from "react";
 interface SheetProps {
   open: boolean;
   onClose: () => void;
-  title?: string;
+  title?: ReactNode;
+  /** plain-text label for assistive tech when `title` isn't a string */
+  ariaLabel?: string;
   children: ReactNode;
 }
 
@@ -17,7 +19,7 @@ const FOCUSABLE_SELECTOR =
  * Slide-in side panel from the right. Closes on scrim click or Escape,
  * keeps focus inside while open (basic trap), restores focus on close.
  */
-export default function Sheet({ open, onClose, title, children }: SheetProps) {
+export default function Sheet({ open, onClose, title, ariaLabel, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function Sheet({ open, onClose, title, children }: SheetProps) {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title ?? "Panel"}
+        aria-label={ariaLabel ?? (typeof title === "string" ? title : "Panel")}
         tabIndex={-1}
         className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-card shadow-card transition-transform duration-200 ease-out-quart focus:outline-none ${
           open ? "translate-x-0" : "translate-x-full"
