@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "frontend/components/onboarding/OnboardingWizard.tsx": {
-    "mtime": 1784276323.4100494,
-    "ast_hash": "fc3eb40a2819bc011e62c6d16a9b8387",
+    "mtime": 1784276334.2460413,
+    "ast_hash": "dcfe2fdc177baa33a06632644fc9f78b",
     "semantic_hash": ""
   },
   "frontend/components/onboarding/steps/AlertsStep.tsx": {

@@ -1,16 +1,16 @@
 # Graph Report - somewhere  (2026-07-17)
 
 ## Corpus Check
-- 205 files · ~102,080 words
+- 205 files · ~102,140 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1594 nodes · 3222 edges · 94 communities (84 shown, 10 thin omitted)
+- 1594 nodes · 3086 edges · 88 communities (77 shown, 11 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 64 edges (avg confidence: 0.68)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fbc5ef2f`
+- Built from commit: `9dd4d520`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -58,11 +58,9 @@
 - Community 40
 - Community 41
 - Community 42
-- Community 43
 - Community 44
 - Community 45
 - Community 46
-- Community 47
 - Community 48
 - UserMatcher
 - Community 50
@@ -91,17 +89,12 @@
 - .create
 - route.ts
 - main
-- YearPaint
-- layout.tsx
 - FareTag.tsx
 - admin.py
 - admin.py
-- CheckInStep.tsx
-- Providers.tsx
 - UserMatcher
 - TODO
 - .contains_date
-- academic.ts
 - .deactivate
 - setup_logging
 
@@ -112,9 +105,9 @@
 4. `FlightModel` - 31 edges
 5. `request()` - 31 edges
 6. `AvailabilityRepository` - 29 edges
-7. `Trip` - 28 edges
-8. `get_collection()` - 28 edges
-9. `Flight` - 28 edges
+7. `get_collection()` - 28 edges
+8. `Flight` - 28 edges
+9. `Trip` - 26 edges
 10. `RouteStats` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -132,7 +125,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (94 total, 10 thin omitted)
+## Communities (88 total, 11 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
@@ -140,7 +133,7 @@ Nodes (79): GET(), num(), numOrNull(), toIso(), GET(), num(), numOrNull(), toDat
 
 ### Community 1 - "Community 1"
 Cohesion: 0.07
-Nodes (58): GET(), citiesForOrigins(), GET(), GET(), QuerySchema, DateStr, GET(), QuerySchema (+50 more)
+Nodes (61): GET(), citiesForOrigins(), GET(), GET(), QuerySchema, DateStr, GET(), QuerySchema (+53 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.17
@@ -152,7 +145,7 @@ Nodes (25): Create RouteStats from MongoDB document., Convert to dictionary for 
 
 ### Community 4 - "Community 4"
 Cohesion: 0.12
-Nodes (16): BadgeState, buildMonths(), daysInMonth(), DragMode, DragState, Edge, firstWeekdayMonFirst(), fmtHour() (+8 more)
+Nodes (25): addDays(), BadgeState, buildMonths(), buildRoles(), daysInMonth(), DragMode, DragState, Edge (+17 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.09
@@ -204,7 +197,7 @@ Nodes (10): PersonLabel(), InviteCard(), Button(), ButtonProps, addGroupMember()
 
 ### Community 17 - "Community 17"
 Cohesion: 0.14
-Nodes (23): addDays(), addMonths(), clampDayInMonth(), dayStr(), isWeekend(), MONTHS_LONG, MonthSpec, pad() (+15 more)
+Nodes (22): addMonths(), clampDayInMonth(), dayStr(), isWeekend(), MONTHS_LONG, MonthSpec, pad(), spansMonth() (+14 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.17
@@ -215,16 +208,16 @@ Cohesion: 0.06
 Nodes (31): ScrapeTargetModel, Insert a 'running' record. Returns the inserted _id as str., Most recent runs, newest first., ScrapeRunRepository, datetime, Atomically claim the next-due enabled target.          Marks it as 'running' by, Finalize a target after a scrape attempt.          Computes next_due_at from tie, Seed `scrape_targets` from a list of (origin, destination, tier) tuples. (+23 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.28
-Nodes (15): AgendaMonth(), DaySheet(), TripPopover(), formatDelta(), TripTooltip(), BY_CODE, Destination, DESTINATIONS (+7 more)
+Cohesion: 0.25
+Nodes (15): BestPerMonth(), buildSlots(), MONTHS_SHORT, nightsBetween(), nightsBetween(), TripRow(), DaySheet(), DaySheetProps (+7 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.11
 Nodes (10): OnewayFareModel, One-way fare grid for a directed leg.      MongoDB document structure:     {, Unique identifier for this directed leg., Convert to dictionary for MongoDB storage., Create OnewayFareModel from MongoDB document., Wholesale-replace each leg's fare grid.          Returns:             {"new": X,, Get the fare grid for one directed leg., All legs departing from an airport. (+2 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.18
-Nodes (5): LINKS, Navigation(), NavigationProps, NavLink, ShieldIcon()
+Cohesion: 0.09
+Nodes (15): bricolage, instrument, splineMono, metadata, viewport, LINKS, Navigation(), NavigationProps (+7 more)
 
 ### Community 23 - "Community 23"
 Cohesion: 0.06
@@ -235,8 +228,8 @@ Cohesion: 0.08
 Nodes (14): Availability model - user's available date ranges for travel., Destination preference model - user's preferred travel destinations., Price history model - historical price snapshots for flights., Route statistics model - aggregated price data for routes., ScrapeRun model — one document per scraper execution of one route.  Pure observa, ScrapeRunModel, ScrapeTarget model — one document per (origin, destination) route in the pool., User model with embedded airports and notification preferences. (+6 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.07
-Nodes (29): AdminTargetSummarySchema, CityBestSchema, CitySummarySchema, DateStringSchema, DealTierSchema, DirectoryUserSchema, FriendEntrySchema, GroupMemberEntrySchema (+21 more)
+Cohesion: 0.06
+Nodes (30): AdminTargetSummarySchema, CityBestSchema, CitySummarySchema, DateStringSchema, DealTier, DealTierSchema, DirectoryUserSchema, FriendEntrySchema (+22 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.15
@@ -248,7 +241,7 @@ Nodes (15): filter_by_price(), Flight, flights_to_json(), Represents a flight de
 
 ### Community 28 - "Community 28"
 Cohesion: 0.18
-Nodes (7): CalendarPage(), CalendarFiltersProps, CalendarFilterState, EMPTY_FILTERS, TierFilter, TIERS, getAvailability()
+Nodes (10): AdminPage(), DangerZone(), Phase, PoolTiles(), PoolTilesProps, PoolTilesSkeleton(), adminPool(), adminWipe() (+2 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.19
@@ -263,8 +256,8 @@ Cohesion: 0.25
 Nodes (4): Find cheapest matching flights (deal scoring moved to frontend)., Get a summary of a user's matches.          Returns:             Dict with co, Get match summaries for all active users., Find flights matching a user's availability and preferences.          Args:
 
 ### Community 33 - "Community 33"
-Cohesion: 0.13
-Nodes (16): OnboardingWizard(), STEP_LABELS, OriginsStep(), AcademicCard(), OriginChips(), Mode, PreferencesCard(), Chip() (+8 more)
+Cohesion: 0.06
+Nodes (36): LandingPage(), BoardSkeleton(), DepartureBoardProps, DepartureRow, FlapText(), FlapTextProps, SIZE_CLASSES, OnboardingWizard() (+28 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.23
@@ -272,19 +265,19 @@ Nodes (9): FriendsPage(), Mode, Status, getUsers(), removeFriend(), respondToFri
 
 ### Community 35 - "Community 35"
 Cohesion: 0.11
-Nodes (29): GroupDetailPage(), Mode, CitiesParams, deleteGroup(), getCity(), getGroup(), getGroupTrips(), getSavedCities() (+21 more)
+Nodes (31): GroupDetailPage(), Mode, CitiesParams, deleteGroup(), getAvailability(), getCities(), getCity(), getGroup() (+23 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.20
-Nodes (8): ExplorePage(), LandingPage(), BoardSkeleton(), DepartureBoardProps, DepartureRow, DealTier, getCities(), formatDateBoard()
+Cohesion: 0.18
+Nodes (7): formatDelta(), TIER_BADGE, Sheet(), SheetProps, Spark(), SparkPoint, SparkProps
 
 ### Community 37 - "Community 37"
-Cohesion: 0.31
-Nodes (8): NO_PERIODS, UniCalendarContext, UniCalendarValue, TUE_2026_2027, UniPeriod, UniPeriodKind, UNIVERSITY_CALENDARS, UniversityId
+Cohesion: 0.24
+Nodes (11): AgendaMonth(), AgendaMonthProps, NO_PERIODS, UniCalendarContext, UniCalendarValue, periodsInRange(), TUE_2026_2027, UniPeriod (+3 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.15
-Nodes (14): formatDelta(), TIER_BADGE, TripPopoverProps, TripTooltipProps, cache, pickExtensions(), StayExtension, useStayExtensions() (+6 more)
+Nodes (16): addDays(), formatDelta(), TripTooltip(), TripTooltipProps, cache, pickExtensions(), StayExtension, useStayExtensions() (+8 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.15
@@ -295,20 +288,16 @@ Cohesion: 0.22
 Nodes (8): Architectural Decisions, Architecture, Current Status, graphify, How to Run, Key Config, Key Files, Somewhere (flight scraper) — AI Context
 
 ### Community 41 - "Community 41"
-Cohesion: 0.10
-Nodes (20): AdminPage(), LiveBoard(), PoolTiles(), PoolTilesProps, PoolTilesSkeleton(), RunFeed(), Status, STATUS_STYLE (+12 more)
+Cohesion: 0.13
+Nodes (14): LiveBoard(), RunFeed(), Status, STATUS_STYLE, SortDir, SortKey, TargetsTable(), TargetsTableProps (+6 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.15
-Nodes (17): BestPerMonth(), BestPerMonthProps, buildSlots(), MONTHS_SHORT, MonthSlot, nightsBetween(), TripRowProps, AgendaMonthProps (+9 more)
-
-### Community 43 - "Community 43"
-Cohesion: 0.24
-Nodes (9): CityCardProps, CityCardSkeleton(), DestinationsStep(), groupByRegion(), BOX, ICON, StarButton(), StarButtonProps (+1 more)
+Cohesion: 0.18
+Nodes (13): BestPerMonthProps, MonthSlot, TripRowProps, WeekGroup, MonthBlockProps, TIER_BAR, TripBar(), TripBarProps (+5 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.12
-Nodes (15): CityDetail(), CityDetailFallback(), CityDetailProps, ORIGIN_NAME, ExploreControls(), ExploreControlsProps, FavouritesStrip(), FavouritesStripProps (+7 more)
+Cohesion: 0.06
+Nodes (30): CalendarPage(), ExplorePage(), matchesSelection(), CityDetail(), CityDetailFallback(), CityDetailProps, ORIGIN_NAME, CityCard() (+22 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.28
@@ -318,17 +307,13 @@ Nodes (7): _build_google_flights_url(), _fli_to_flight(), _minutes_to_hm(), Fli-
 Cohesion: 0.18
 Nodes (10): Cross-cutting rules (all phases), Multi-City / Open-Jaw — Full Roadmap, Phase 0 — Data foundation ✅ (reference), Phase 1 — Combo engine + API (origin-side, no UI), Phase 2 — Origin-side UI: City page + booking links, Phase 3 — Origin-side UI: Explore + Calendar, Phase 4 — Destination-side pairing data + engine extension, Phase 5 — Destination-side UI: twin-city trips (+2 more)
 
-### Community 47 - "Community 47"
-Cohesion: 0.22
-Nodes (5): FavouritesCard(), EMPTY, SavedCitiesContext, SavedCitiesValue, useSavedCities()
-
 ### Community 48 - "Community 48"
 Cohesion: 0.16
 Nodes (13): deduplicate(), filter_direct_only(), normalize_date(), parse_results(), parse_single_result(), Parse Azair search results HTML., Parse Azair search results HTML and extract flight deals.      Args:, Normalise Azair's raw date string to YYYY-MM-DD.      Azair returns dates in t (+5 more)
 
 ### Community 49 - "UserMatcher"
-Cohesion: 0.31
-Nodes (9): buildDensity(), GroupTripsCalendar(), GroupTripsCalendarProps, monthSpan(), todayStr(), useIsMobile(), GroupTripsData, useUniCalendar() (+1 more)
+Cohesion: 0.33
+Nodes (8): buildDensity(), GroupTripsCalendar(), GroupTripsCalendarProps, monthSpan(), useIsMobile(), GroupTripsData, useUniCalendar(), GroupTrip
 
 ### Community 50 - "Community 50"
 Cohesion: 0.33
@@ -371,8 +356,8 @@ Cohesion: 0.18
 Nodes (10): Code transfer (decide after recon), DormSpot protection (already encoded in flight-scraper.service), Flight Scraper — Linux deploy runbook (StudentSpot box), Install, Pool math (4 origins, tiered, 180-day window), Pre-deploy SSH recon (run first, verifies assumptions), Rollback / pause, Scheduling model (no cron needed) (+2 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.18
-Nodes (9): GroupsPage(), Mode, DangerZone(), Phase, adminWipe(), ApiError, createGroup(), getGroups() (+1 more)
+Cohesion: 0.32
+Nodes (5): GroupsPage(), Mode, createGroup(), getGroups(), GroupsResponse
 
 ### Community 74 - "Somewhere — v1 Design Contract"
 Cohesion: 0.18
@@ -394,21 +379,9 @@ Nodes (7): Architectural Decisions, Architecture, Current Status, How to Run, Ke
 Cohesion: 0.25
 Nodes (5): datetime, Find active availability windows that overlap with a given date range., Update the dates of an availability window., Create a new availability window.          Args:             user_id: User's, Create multiple availability windows at once.          Args:             user
 
-### Community 79 - "route.ts"
-Cohesion: 0.20
-Nodes (10): matchesSelection(), CityCard(), COUNTRY_NAMES, countryName(), KIND_LABEL, SearchableCity, SearchCombobox(), SearchComboboxProps (+2 more)
-
 ### Community 80 - "main"
-Cohesion: 0.18
-Nodes (13): nightsBetween(), TripRow(), TripRowSkeleton(), Spark(), SparkPoint, SparkProps, Origin, ORIGINS (+5 more)
-
-### Community 81 - "YearPaint"
-Cohesion: 0.39
-Nodes (9): addDays(), buildRoles(), keysBetween(), keysToWindows(), prettyDay(), todayKey(), toKey(), windowsToKeys() (+1 more)
-
-### Community 82 - "layout.tsx"
-Cohesion: 0.36
-Nodes (5): bricolage, instrument, splineMono, metadata, viewport
+Cohesion: 0.27
+Nodes (8): Origin, ORIGINS, buildAzairSearchUrl(), buildGoogleFlightsSearchUrl(), getOriginName(), SearchableTrip, ALL_CODES, useOrigins()
 
 ### Community 83 - "FareTag.tsx"
 Cohesion: 0.25
@@ -422,14 +395,6 @@ Nodes (24): get_connection_string(), MongoDB configuration settings.  Uses envir
 Cohesion: 0.29
 Nodes (6): clear_all_data(), get_schedule(), list_users(), GET    /api/admin/users    — list all users GET    /api/admin/schedule — schedu, Returns the latest scheduler state per origin.     Written to MongoDB by the sc, Delete all scraped flight data. User accounts and preferences are untouched.
 
-### Community 86 - "CheckInStep.tsx"
-Cohesion: 0.33
-Nodes (5): FlapText(), FlapTextProps, SIZE_CLASSES, CheckInStep(), PITCH_ROWS
-
-### Community 87 - "Providers.tsx"
-Cohesion: 0.47
-Nodes (4): Providers(), EXEMPT_PREFIXES, OnboardingGate(), UniCalendarProvider()
-
 ### Community 88 - "UserMatcher"
 Cohesion: 0.50
 Nodes (4): get_deals(), GET /api/deals — return flights matching the default user's preferences.  Uses, Service for matching flights to user preferences.      Usage:         matcher, UserMatcher
@@ -442,33 +407,29 @@ Nodes (5): Done (for reference), Long Term — Auth, Notifications & Reach, Medi
 Cohesion: 0.40
 Nodes (3): datetime, Check if a date falls within this availability window., Check if this availability overlaps with a given date range.
 
-### Community 91 - "academic.ts"
-Cohesion: 0.70
-Nodes (4): generateFreeWindows(), isoWeekday(), pad(), toStr()
-
 ### Community 97 - "setup_logging"
 Cohesion: 0.67
 Nodes (3): Logger, Configure logging for the scraper., setup_logging()
 
 ## Knowledge Gaps
-- **274 isolated node(s):** `Current Status`, `Architecture`, `How to Run`, `Key Files`, `Key Config` (+269 more)
+- **281 isolated node(s):** `CityDetailProps`, `CityCardProps`, `FavouritesStripProps`, `Suggestion`, `KIND_LABEL` (+276 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `DestinationRepository` connect `Community 7` to `Community 8`, `admin.py`, `Community 5`, `Community 14`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **Why does `UserRepository` connect `Community 7` to `Community 5`, `Community 8`, `Community 15`, `admin.py`, `admin.py`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `AzairScraper` connect `Community 26` to `Community 10`, `Community 27`, `Community 5`, `Community 7`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `Flight` connect `Community 27` to `Community 10`, `Community 45`, `Community 48`, `Community 18`, `Community 26`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `UserRepository` (e.g. with `LoginRequest` and `DateWindow`) actually correct?**
   _`UserRepository` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 24 inferred relationships involving `ObjectId` (e.g. with `.__post_init__()` and `.__post_init__()`) actually correct?**
   _`ObjectId` has 24 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `DestinationRepository` (e.g. with `DateWindow` and `UserPreferences`) actually correct?**
   _`DestinationRepository` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Current Status`, `Architecture`, `How to Run` to the rest of the system?**
-  _274 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `CityDetailProps`, `CityCardProps`, `FavouritesStripProps` to the rest of the system?**
+  _281 weakly-connected nodes found - possible documentation gaps or missing edges._
