@@ -78,7 +78,10 @@ export default function ExplorePage() {
     let cancelled = false;
     getAvailability()
       .then((res) => {
-        if (!cancelled) setHasWindows(res.windows.length > 0);
+        if (cancelled) return;
+        const has = res.windows.length > 0;
+        setHasWindows(has);
+        if (has) setOnlyFree(true);
       })
       .catch(() => {
         if (!cancelled) setHasWindows(false);
