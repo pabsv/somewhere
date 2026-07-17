@@ -16,7 +16,7 @@ Master plan for open-jaw and multi-city support in Somewhere. Executed **one pha
 | Phase | What | Status |
 |-------|------|--------|
 | 0 | Data foundation — persist one-way fare grids | ✅ Done 2026-07-17 (`98788bb`), live on pablopc |
-| 1 | Combo engine + API (origin-side, no UI) | 🔴 |
+| 1 | Combo engine + API (origin-side, no UI) | ✅ Done 2026-07-17 — `lib/openjaw-core.ts` (pure join, 9 unit tests) + `lib/openjaw.ts` + `GET /api/openjaw`; verified via curl against live grids |
 | 2 | Origin-side UI — City page + booking links | 🔴 |
 | 3 | Origin-side UI — Explore + Calendar integration | 🔴 |
 | 4 | Destination-side pairing data + engine extension | 🔴 |

@@ -146,6 +146,67 @@ export const ExtensionsResponseSchema = z.object({
 });
 export type ExtensionsResponse = z.infer<typeof ExtensionsResponseSchema>;
 
+// ─── OnewayFareDoc — raw `oneway_fares` Mongo document (open-jaw Phase 0) ────
+
+/**
+ * One document per DIRECTED leg, written by the Python pool scheduler.
+ * `prices` maps YYYY-MM-DD → cheapest one-way fare in EUR, replaced wholesale
+ * each scrape. Loose: unknown extra fields (`_id`, diagnostics) pass through.
+ */
+export const OnewayFareDocSchema = z.looseObject({
+  leg_key: z.string().min(1), // "EIN-BCN"
+  origin: z.string().min(1),
+  destination: z.string().min(1),
+  currency: z.string(),
+  prices: z.record(DateStringSchema, z.number()),
+  scraped_at: TimestampSchema,
+});
+export type OnewayFareDoc = z.infer<typeof OnewayFareDocSchema>;
+
+// ─── OpenJawTrip — combined one-way pair (open-jaw Phase 1) ──────────────────
+
+/**
+ * One flight leg of an open-jaw combo. Leg-based on purpose: Phase 4
+ * (destination-side multi-city) extends the same shape by letting
+ * `back.origin`/`out.destination` name a DIFFERENT city — no new type.
+ */
+export const OpenJawLegSchema = z.object({
+  origin: z.string(),
+  destination: z.string(),
+  date: DateStringSchema,
+  /** cheapest one-way fare in EUR as of `scraped_at` on the parent trip */
+  price: z.number(),
+});
+export type OpenJawLeg = z.infer<typeof OpenJawLegSchema>;
+
+export const OpenJawTripSchema = z.object({
+  key: z.string(), // "EIN-BCN-2026-10-03|BCN-AMS-2026-10-08"
+  destination: z.string(),
+  city: z.string(),
+  out: OpenJawLegSchema,
+  back: OpenJawLegSchema,
+  /** sum of the two one-way fares — the real bookable price (two tickets) */
+  total_price: z.number(),
+  nights: z.number(),
+  /** true when out.origin === back.origin (two singles instead of a return) */
+  same_origin: z.boolean(),
+  /**
+   * Best stored ROUND-TRIP price for the same destination + exact dates,
+   * minus total_price. Positive = the open-jaw combo is cheaper (the win
+   * signal). Null when no round trip is stored for those dates.
+   */
+  vs_roundtrip: z.number().nullable(),
+  /** older `scraped_at` of the two source grids — "prices as of" honesty */
+  scraped_at: z.string(),
+});
+export type OpenJawTrip = z.infer<typeof OpenJawTripSchema>;
+
+/** GET /api/openjaw */
+export const OpenJawResponseSchema = z.object({
+  trips: z.array(OpenJawTripSchema),
+});
+export type OpenJawResponse = z.infer<typeof OpenJawResponseSchema>;
+
 // ─── CitySummary — Explore grid cell (spec section D) ────────────────────────
 
 export const CityBestSchema = z.object({
@@ -200,6 +261,8 @@ export const PreferencesSchema = z.object({
   busy_weekdays: z.array(z.number().int().min(1).max(7)).optional(),
   /** Academic calendar to overlay on calendar views (lib/university/tue.ts). */
   university: z.enum(["tue"]).nullable().optional(),
+  /** Opted into deal-alert emails (feature not yet built — captured for later). */
+  notify_optin: z.boolean().optional().default(false),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 
