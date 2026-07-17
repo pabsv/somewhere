@@ -200,6 +200,12 @@ interface DragState {
   /** time mode */
   edge: Edge | null;
   base: number;
+  /** paint mode: painted set as it was on pointerdown — each move rebuilds
+      from this so shrinking/reversing the drag span un-paints cleanly */
+  snapshot: Set<string>;
+  /** paint mode: last day cell the pointer actually hit — reused while the
+      pointer is over row gaps / month gutters where hit-testing finds nothing */
+  lastKey: string | null;
 }
 
 interface BadgeState {
@@ -399,6 +405,8 @@ export default function YearPaint() {
         painting: !painted.has(key),
         edge: null,
         base: 0,
+        snapshot: painted,
+        lastKey: null,
       };
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -448,9 +456,20 @@ export default function YearPaint() {
       }
 
       if (d.mode === "paint") {
-        const cur = keyUnderPointer(e) ?? d.anchor;
-        // repaint the whole anchor→current span so reversing direction is clean
-        applyRange(d.anchor, cur, d.painting);
+        const hit = keyUnderPointer(e);
+        if (hit) d.lastKey = hit;
+        const cur = hit ?? d.lastKey ?? d.anchor;
+        // rebuild from the pointerdown snapshot + the current anchor→cursor
+        // span, so shrinking or reversing the drag un-paints what the drag
+        // itself added (and only that)
+        setPainted(() => {
+          const next = new Set(d.snapshot);
+          for (const k of keysBetween(d.anchor, cur)) {
+            if (d.painting) next.add(k);
+            else next.delete(k);
+          }
+          return next;
+        });
         return;
       }
 
@@ -493,7 +512,7 @@ export default function YearPaint() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [roles, fromT, backT, applyRange, toggleDay, setFrom, setBack]);
+  }, [roles, fromT, backT, toggleDay, setFrom, setBack]);
 
   // ─── Keyboard ────────────────────────────────────────────────────────────────
   // Enter/Space keeps the two-click window flow. Arrow Up/Down adjusts the
