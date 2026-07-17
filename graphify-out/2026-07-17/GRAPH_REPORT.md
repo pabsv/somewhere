@@ -5,12 +5,12 @@
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1456 nodes · 2815 edges · 87 communities (72 shown, 15 thin omitted)
+- 1456 nodes · 2844 edges · 87 communities (73 shown, 14 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 62 edges (avg confidence: 0.68)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `57bce36b`
+- Built from commit: `096bd649`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -125,7 +125,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (87 total, 15 thin omitted)
+## Communities (87 total, 14 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
@@ -136,8 +136,8 @@ Cohesion: 0.08
 Nodes (54): GET(), citiesForOrigins(), GET(), DateStr, GET(), QuerySchema, asNumberOrNull(), fetchBaselines() (+46 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.13
-Nodes (12): BoardSkeleton(), DepartureBoardProps, DepartureRow, FlapText(), FlapTextProps, SIZE_CLASSES, DealTier, FareTagProps (+4 more)
+Cohesion: 0.10
+Nodes (21): ExplorePage(), matchesSelection(), LandingPage(), BoardSkeleton(), DepartureBoardProps, DepartureRow, FlapText(), FlapTextProps (+13 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.06
@@ -192,12 +192,12 @@ Cohesion: 0.15
 Nodes (8): User, Update an existing user.          Args:             user: User object with up, Find an existing user by email or create a new one (no password required)., Authenticate a user by email and password.          Args:             email:, Verify a password against its hash., Create a new user.          Args:             email: User's email address, Find a user by email., Find all users who have a specific destination in their preferences.         No
 
 ### Community 16 - "Community 16"
-Cohesion: 0.12
-Nodes (19): FriendsPage(), Mode, Status, PersonLabel(), InviteCard(), Button(), ButtonProps, addGroupMember() (+11 more)
+Cohesion: 0.22
+Nodes (9): PersonLabel(), InviteCard(), Button(), ButtonProps, addGroupMember(), rotateGroupInvite(), FriendEntry, GroupMemberEntry (+1 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.15
-Nodes (21): AgendaMonthProps, clampDayInMonth(), dayStr(), isWeekend(), MONTHS_LONG, MonthSpec, pad(), toDateStr() (+13 more)
+Nodes (24): CalendarPage(), buildDensity(), GroupTripsCalendar(), addMonths(), clampDayInMonth(), dayStr(), isWeekend(), MONTHS_LONG (+16 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.16
@@ -208,12 +208,12 @@ Cohesion: 0.08
 Nodes (23): ScrapeTargetModel, datetime, Atomically claim the next-due enabled target.          Marks it as 'running' by, Finalize a target after a scrape attempt.          Computes next_due_at from tie, Seed `scrape_targets` from a list of (origin, destination, tier) tuples., ScrapeTargetRepository, expand_routes(), origin_codes() (+15 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.22
-Nodes (7): TIER_BADGE, TripPopoverProps, Sheet(), SheetProps, Spark(), SparkPoint, SparkProps
+Cohesion: 0.18
+Nodes (9): TIER_BADGE, TripPopoverProps, CountryFlag(), CountryFlagProps, Sheet(), SheetProps, Spark(), SparkPoint (+1 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.07
-Nodes (29): CityDetail(), CityDetailFallback(), CityDetailProps, ORIGIN_NAME, TripRowSkeleton(), CityCard(), CityCardProps, COUNTRY_NAMES (+21 more)
+Cohesion: 0.12
+Nodes (21): CityCardProps, ExploreControls(), ExploreControlsProps, KIND_LABEL, SearchComboboxProps, SearchSelection, Suggestion, Origin (+13 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.11
@@ -224,8 +224,8 @@ Cohesion: 0.09
 Nodes (16): login(), LoginRequest, me(), BaseModel, POST /api/auth/login  — sign in or register (no password) GET  /api/auth/me, Find or create a user by email. Returns user_id, name, email.     No password r, Validate a stored user ID. Returns user info or 401.     Called on app load to, Update a user's password. (+8 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.17
-Nodes (13): BestPerMonthProps, MonthSlot, WeekGroup, TIER_BAR, TripBar(), TripBarProps, TripTooltip(), TripTooltipProps (+5 more)
+Cohesion: 0.22
+Nodes (10): FriendsPage(), Mode, Status, getFriends(), getUsers(), removeFriend(), respondToFriendRequest(), sendFriendRequest() (+2 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.07
@@ -240,8 +240,8 @@ Cohesion: 0.12
 Nodes (12): Flight, flights_to_json(), Represents a flight deal., Convert list of flights to JSON string., Save flights to a JSON file., Set scraped_at timestamp if not provided., Check if both legs are direct flights., Unique key for this route (for grouping). (+4 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.12
-Nodes (19): CalendarPage(), buildDensity(), GroupTripsCalendar(), GroupTripsCalendarProps, CalendarFiltersProps, CalendarFilterState, EMPTY_FILTERS, TierFilter (+11 more)
+Cohesion: 0.14
+Nodes (9): GroupTripRow(), GroupTripsCalendarProps, FareTagProps, FareTagSize, SIZE_CLASSES, SKELETON_SIZES, TIER_CLASSES, GroupTripsData (+1 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.13
@@ -260,16 +260,16 @@ Cohesion: 0.25
 Nodes (4): Find cheapest matching flights (deal scoring moved to frontend)., Get a summary of a user's matches.          Returns:             Dict with co, Get match summaries for all active users., Find flights matching a user's availability and preferences.          Args:
 
 ### Community 33 - "Community 33"
-Cohesion: 0.29
-Nodes (8): AgendaMonth(), BY_CODE, Destination, DESTINATIONS, getDestination(), buildAzairSearchUrl(), getOriginName(), SearchableTrip
+Cohesion: 0.14
+Nodes (7): CityDetail(), CityDetailFallback(), CityDetailProps, ORIGIN_NAME, TripRowSkeleton(), ApiError, CityDetailResponse
 
 ### Community 34 - "Community 34"
-Cohesion: 0.18
-Nodes (10): AdminPage(), DangerZone(), Phase, PoolTiles(), PoolTilesProps, PoolTilesSkeleton(), adminPool(), adminWipe() (+2 more)
+Cohesion: 0.21
+Nodes (9): AdminPage(), DangerZone(), Phase, PoolTiles(), PoolTilesProps, PoolTilesSkeleton(), adminPool(), adminWipe() (+1 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.13
-Nodes (25): GroupDetailPage(), Mode, CitiesParams, deleteGroup(), getCities(), getCity(), getGroup(), getGroupTrips() (+17 more)
+Nodes (24): GroupDetailPage(), Mode, CitiesParams, deleteGroup(), getCity(), getGroup(), getGroupTrips(), getTrips() (+16 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.24
@@ -308,8 +308,8 @@ Cohesion: 0.28
 Nodes (7): _build_google_flights_url(), _fli_to_flight(), _minutes_to_hm(), Fli-based flight scraper — queries Google Flights via the fli library.  Two-phas, Convert minutes to '2h 30m' format., Build a Google Flights search URL., Convert a Fli round-trip result tuple into our Flight dataclass.
 
 ### Community 46 - "Community 46"
-Cohesion: 0.19
-Nodes (19): LandingPage(), BestPerMonth(), buildSlots(), MONTHS_SHORT, nightsBetween(), nightsBetween(), TripRow(), TripRowProps (+11 more)
+Cohesion: 0.17
+Nodes (26): BestPerMonth(), BestPerMonthProps, buildSlots(), MONTHS_SHORT, MonthSlot, nightsBetween(), nightsBetween(), TripRow() (+18 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.10
@@ -328,8 +328,8 @@ Cohesion: 0.33
 Nodes (5): User, Find users who might be interested in a specific flight.          Useful for s, Find users who should be notified about a flight.          Args:, Derive the appropriate min/max trip duration for an availability window., _window_trip_range()
 
 ### Community 51 - "Community 51"
-Cohesion: 0.17
-Nodes (10): CityHeader(), CityHeaderProps, COUNTRY_NAMES, countryName(), GroupTripRow(), Badge(), BadgeProps, BadgeVariant (+2 more)
+Cohesion: 0.15
+Nodes (13): CityHeader(), CityHeaderProps, COUNTRY_NAMES, countryName(), TIER_BAR, TripBar(), TripBarProps, Badge() (+5 more)
 
 ### Community 52 - "Where It's Going"
 Cohesion: 0.15
@@ -368,8 +368,8 @@ Cohesion: 0.18
 Nodes (10): A. Information architecture, B. Data layer (Python side — phase 0), C. Scoring (TypeScript, read-time — `frontend/lib/score.ts`), D. API contract (Next.js routes, zod-validated at boundary), E. Auth — NextAuth (Auth.js) v5, F. Visual design system, G. Calendar design (`/calendar`), H. Build phases (+2 more)
 
 ### Community 75 - "User"
-Cohesion: 0.17
-Nodes (12): AcademicCard(), WEEKDAYS, clampNights(), Mode, PreferencesCard(), generateFreeWindows(), isoWeekday(), pad() (+4 more)
+Cohesion: 0.10
+Nodes (20): AcademicCard(), WEEKDAYS, clampNights(), Mode, PreferencesCard(), CalendarFiltersProps, CalendarFilterState, EMPTY_FILTERS (+12 more)
 
 ### Community 76 - "✅ Done"
 Cohesion: 0.22
@@ -382,6 +382,10 @@ Nodes (7): Architectural Decisions, Architecture, Current Status, How to Run, Ke
 ### Community 78 - "parseLocalDate"
 Cohesion: 0.33
 Nodes (3): Create User from MongoDB document., Find all active users., Find all users regardless of active status.
+
+### Community 79 - "route.ts"
+Cohesion: 0.40
+Nodes (5): assignLanes(), Interval, LaneAssignment, LaneTrip, overlaps()
 
 ### Community 86 - "setup_logging"
 Cohesion: 0.67
@@ -398,17 +402,17 @@ Nodes (5): Done (for reference), Long Term — Auth, Notifications & Reach, Medi
 ## Knowledge Gaps
 - **245 isolated node(s):** `WEEKDAYS`, `MONTH_NAMES`, `Role`, `MonthModel`, `Mode` (+240 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `UserRepository` connect `Community 23` to `Community 5`, `Community 7`, `Community 8`, `Community 10`, `parseLocalDate`, `Community 15`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
-- **Why does `DestinationRepository` connect `Community 8` to `Community 10`, `Community 5`, `Community 14`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Why does `AzairScraper` connect `Community 26` to `Community 27`, `Community 10`, `Community 5`, `Community 37`?**
   _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Why does `run_origin_job()` connect `Community 5` to `Community 37`, `Community 8`, `Community 10`, `Community 23`, `Community 26`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `UserRepository` (e.g. with `LoginRequest` and `DateWindow`) actually correct?**
   _`UserRepository` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 24 inferred relationships involving `ObjectId` (e.g. with `.__post_init__()` and `.__post_init__()`) actually correct?**

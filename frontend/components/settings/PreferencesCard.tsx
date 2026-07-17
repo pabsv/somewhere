@@ -7,14 +7,6 @@ import { ORIGINS } from "@/data/airports.gen";
 import { getPreferences, putPreferences, ApiError } from "@/lib/client";
 import type { Preferences } from "@/types/api";
 
-const NIGHT_MIN = 1;
-const NIGHT_MAX = 21;
-
-function clampNights(n: number): number {
-  if (Number.isNaN(n)) return NIGHT_MIN;
-  return Math.min(NIGHT_MAX, Math.max(NIGHT_MIN, Math.round(n)));
-}
-
 type Mode = "loading" | "ready" | "error";
 
 export default function PreferencesCard() {
@@ -71,25 +63,6 @@ export default function PreferencesCard() {
           ? prefs.origins.filter((c) => c !== code)
           : [...prefs.origins, code],
       });
-    },
-    [prefs, patch],
-  );
-
-  const setMin = useCallback(
-    (raw: string) => {
-      if (!prefs) return;
-      const v = clampNights(Number(raw));
-      // keep min <= max
-      patch({ trip_min_nights: v, trip_max_nights: Math.max(v, prefs.trip_max_nights) });
-    },
-    [prefs, patch],
-  );
-
-  const setMax = useCallback(
-    (raw: string) => {
-      if (!prefs) return;
-      const v = clampNights(Number(raw));
-      patch({ trip_max_nights: v, trip_min_nights: Math.min(v, prefs.trip_min_nights) });
     },
     [prefs, patch],
   );
@@ -169,37 +142,6 @@ export default function PreferencesCard() {
         </div>
       </Field>
 
-      {/* trip length */}
-      <Field label="Trip length" hint="How many nights away, roughly.">
-        <div className="flex flex-wrap items-end gap-4">
-          <NightInput
-            id="min-nights"
-            label="Min nights"
-            value={prefs.trip_min_nights}
-            onChange={setMin}
-          />
-          <span className="pb-2 text-ink-muted">–</span>
-          <NightInput
-            id="max-nights"
-            label="Max nights"
-            value={prefs.trip_max_nights}
-            onChange={setMax}
-          />
-        </div>
-      </Field>
-
-      {/* direct only */}
-      <Field label="Stops" hint="Skip connections entirely.">
-        <Chip
-          size="sm"
-          selected={prefs.direct_only}
-          onClick={() => patch({ direct_only: !prefs.direct_only })}
-          aria-label="Toggle direct flights only"
-        >
-          Direct flights only
-        </Chip>
-      </Field>
-
       {/* max price */}
       <Field label="Price ceiling" hint="Leave empty for no cap.">
         <div className="relative w-32">
@@ -266,39 +208,10 @@ function Field({
   );
 }
 
-function NightInput({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: number;
-  onChange: (raw: string) => void;
-}) {
-  return (
-    <label htmlFor={id} className="block">
-      <span className="mb-1 block font-mono text-[11px] uppercase tracking-wide text-ink-muted/80">
-        {label}
-      </span>
-      <input
-        id={id}
-        type="number"
-        min={NIGHT_MIN}
-        max={NIGHT_MAX}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="tnum w-20 rounded-(--radius-tag) border border-line bg-card px-3 py-2 text-center font-mono text-sm text-ink focus:border-ink-muted focus:outline-none"
-      />
-    </label>
-  );
-}
-
 function PreferencesSkeleton() {
   return (
     <div aria-hidden="true" className="space-y-7">
-      {Array.from({ length: 4 }, (_, i) => (
+      {Array.from({ length: 2 }, (_, i) => (
         <div key={i}>
           <div className="mb-2 h-3 w-32 animate-pulse rounded bg-line" />
           <div className="h-8 w-48 animate-pulse rounded-(--radius-tag) bg-line" />

@@ -11,10 +11,12 @@ import { getDb } from "@/lib/mongodb";
 import { PreferencesSchema, type Preferences } from "@/types/api";
 import { ORIGINS } from "@/data/airports.gen";
 
+// Trip length is no longer user-tunable (the availability windows already
+// bound it) — just floor every search at 2 nights, no upper cap.
 const DEFAULTS: Preferences = {
   origins: ORIGINS.map((o) => o.code),
   trip_min_nights: 2,
-  trip_max_nights: 10,
+  trip_max_nights: 365,
   direct_only: false,
   max_price: null,
   busy_weekdays: [],
