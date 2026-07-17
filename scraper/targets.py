@@ -24,7 +24,10 @@ ORIGINS = [
     {"code": "BRU", "name": "Brussels",           "country": "BE"},
     {"code": "CRL", "name": "Brussels-Charleroi", "country": "BE"},
     {"code": "MST", "name": "Maastricht",         "country": "NL"},
-    # {"code": "DUS", "name": "Düsseldorf",         "country": "DE"},
+    # Secondary origins: demote_tier shifts every destination one tier down
+    # (A→B, B→C, C→C) for this origin only — deals still surface, but the
+    # slot budget stays focused on the airports users actually live near.
+    {"code": "DUS", "name": "Düsseldorf",         "country": "DE", "demote_tier": True},
     # {"code": "NRN", "name": "Niederrhein-Weeze",  "country": "DE"},
 ]
 
@@ -291,8 +294,20 @@ DESTINATIONS = [
     {"code": "SSH", "name": "Sharm el-Sheikh",    "country": "EG", "region": "N. Africa",     "tier": "B"},
     {"code": "CAI", "name": "Cairo",              "country": "EG", "region": "N. Africa",     "tier": "C"},
     {"code": "TLV", "name": "Tel Aviv",           "country": "IL", "region": "Levant",        "tier": "A"},
+    {"code": "AMM", "name": "Amman",              "country": "JO", "region": "Levant",        "tier": "C"},
     {"code": "SID", "name": "Sal",                "country": "CV", "region": "Atlantic",      "tier": "C"},
     {"code": "RAI", "name": "Praia",              "country": "CV", "region": "Atlantic",      "tier": "C"},
+
+    # ─── Caucasus ─────────────────────────────────────────────────────────
+    {"code": "TBS", "name": "Tbilisi",            "country": "GE", "region": "Caucasus",      "tier": "C"},
+    {"code": "KUT", "name": "Kutaisi",            "country": "GE", "region": "Caucasus",      "tier": "C"},
+    {"code": "EVN", "name": "Yerevan",            "country": "AM", "region": "Caucasus",      "tier": "C"},
+    {"code": "GYD", "name": "Baku",               "country": "AZ", "region": "Caucasus",      "tier": "C"},
+
+    # ─── Gulf ─────────────────────────────────────────────────────────────
+    {"code": "DXB", "name": "Dubai",              "country": "AE", "region": "Gulf",          "tier": "C"},
+    {"code": "AUH", "name": "Abu Dhabi",          "country": "AE", "region": "Gulf",          "tier": "C"},
+    {"code": "DOH", "name": "Doha",               "country": "QA", "region": "Gulf",          "tier": "C"},
 ]
 
 
@@ -314,12 +329,14 @@ def expand_routes() -> list[tuple[str, str, str]]:
     Skips origin==destination (e.g. AMS->AMS).
     """
     skip = set(origin_codes())
+    demote = {"A": "B", "B": "C", "C": "C"}
     routes = []
     for o in ORIGINS:
         for d in DESTINATIONS:
             if d["code"] in skip:
                 continue  # don't scrape e.g. EIN->AMS (a hub route, not useful as deal)
-            routes.append((o["code"], d["code"], d["tier"]))
+            tier = demote[d["tier"]] if o.get("demote_tier") else d["tier"]
+            routes.append((o["code"], d["code"], tier))
     return routes
 
 

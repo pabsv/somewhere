@@ -251,11 +251,16 @@ def run_forever(direct_only: bool = False):
                 time.sleep(min(sleep_s, 30 * 60))  # wake up at least every 30 min to recheck
                 continue
 
+            slot_started = time.monotonic()
             scraped = run_one_slot(direct_only=direct_only)
             if not scraped:
                 logger.info("No routes currently due — sleeping one slot")
 
-            time.sleep(slot_seconds)
+            # A scrape can take longer than a slot (Phase 2 fetches, retries).
+            # Sleep only the remainder so long runs don't eat extra slots —
+            # burst rate is unchanged (still one route at a time, ≥ slot pace).
+            elapsed = time.monotonic() - slot_started
+            time.sleep(max(0.0, slot_seconds - elapsed))
 
         except KeyboardInterrupt:
             logger.info("Stopped by user")
