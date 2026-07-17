@@ -23,6 +23,7 @@ import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import CityHeader from "./CityHeader";
 import BestPerMonth from "./BestPerMonth";
 import TripRow, { TripRowSkeleton } from "./TripRow";
+import OpenJawSection from "./OpenJawSection";
 
 interface CityDetailProps {
   code: string;
@@ -255,6 +256,14 @@ export default function CityDetail({ code }: CityDetailProps) {
           </section>
         </>
       )}
+
+      {/* Open-jaw combos come from the oneway_fares grids, not the flights
+          collection — they can exist even when the round-trip board is empty. */}
+      <OpenJawSection
+        dest={city.code}
+        origins={origins}
+        directOnly={directOnly}
+      />
     </Shell>
   );
 }

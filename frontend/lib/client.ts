@@ -18,6 +18,7 @@ import type {
   GroupTripsResponse,
   JoinInfoResponse,
   JoinResult,
+  OpenJawResponse,
   Preferences,
   SavedCitiesResponse,
   TripsResponse,
@@ -121,6 +122,23 @@ export type TripsParams = {
 /** GET /api/trips */
 export function getTrips(params: TripsParams = {}): Promise<TripsResponse> {
   return request(`/api/trips${qs(params)}`);
+}
+
+export type OpenJawParams = {
+  /** destination IATA code */
+  dest: string;
+  from?: string[];
+  min_nights?: number;
+  max_nights?: number;
+  max_price?: number;
+  /** restrict to the signed-in user's availability windows (date-level only) */
+  avail?: boolean;
+};
+
+/** GET /api/openjaw — origin-side open-jaw combos for one destination */
+export function getOpenJaw(params: OpenJawParams): Promise<OpenJawResponse> {
+  const { dest, ...rest } = params;
+  return request(`/api/openjaw${qs({ dest, ...rest })}`);
 }
 
 /** GET /api/trips/extensions — "stay longer" variants for one trip */

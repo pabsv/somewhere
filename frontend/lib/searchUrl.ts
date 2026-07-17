@@ -82,6 +82,20 @@ export function buildGoogleFlightsSearchUrl(trip: SearchableTrip): string {
   );
 }
 
+// ─── Google Flights: one-way search URL ──────────────────────────────────────
+// An open-jaw combo is two separate tickets, so it gets TWO of these links —
+// one per leg. Text-query form, same as the round-trip builder above.
+export function buildGoogleFlightsOneWayUrl(
+  origin: string,
+  dest: string,
+  date: string,
+): string {
+  return (
+    `https://www.google.com/travel/flights?q=` +
+    `One+way+flights+to+${dest}+from+${origin}+on+${date}`
+  );
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 /**
  * Best outbound link for a trip: the scraper-provided deep link when present,
