@@ -259,6 +259,40 @@ export default function YearPaint() {
 
   const roles = useMemo(() => buildRoles(windows), [windows]);
 
+  // day key → its containing window's [start, end] (for hover-to-delete)
+  const keyToWin = useMemo(() => {
+    const m = new Map<string, { s: string; e: string }>();
+    for (const w of windows)
+      for (const k of keysBetween(w.start_date, w.end_date))
+        m.set(k, { s: w.start_date, e: w.end_date });
+    return m;
+  }, [windows]);
+
+  // window currently under the mouse — its last day shows a delete ×
+  const [hoverWin, setHoverWin] = useState<{ s: string; e: string } | null>(
+    null,
+  );
+
+  const onHoverCell = useCallback(
+    (key: string | null) => {
+      if (drag.current) return; // no × mid-gesture
+      const w = key ? (keyToWin.get(key) ?? null) : null;
+      setHoverWin((prev) =>
+        prev?.s === w?.s && prev?.e === w?.e ? prev : w,
+      );
+    },
+    [keyToWin],
+  );
+
+  const onDeleteWindow = useCallback((s: string, e: string) => {
+    setPainted((prev) => {
+      const next = new Set(prev);
+      for (const k of keysBetween(s, e)) next.delete(k);
+      return next;
+    });
+    setHoverWin(null);
+  }, []);
+
   // prune edge times whose day stopped being a window edge (repaint/erase).
   // Paused mid-drag: pruning only settles once the gesture ends, so passing
   // over an edge day without ending there doesn't wipe its hours.
@@ -704,9 +738,12 @@ export default function YearPaint() {
             fromT={fromT}
             backT={backT}
             pendingStart={pendingStart}
+            hoverWin={hoverWin}
             onPointerDown={onPointerDown}
             onKeyActivate={onKeyActivate}
             onCellKeyDown={onCellKeyDown}
+            onHoverCell={onHoverCell}
+            onDeleteWindow={onDeleteWindow}
           />
         ))}
       </div>
@@ -735,12 +772,15 @@ interface MonthGridProps {
   fromT: Map<string, number>;
   backT: Map<string, number>;
   pendingStart: string | null;
+  hoverWin: { s: string; e: string } | null;
   onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>, key: string) => void;
   onKeyActivate: (key: string) => void;
   onCellKeyDown: (
     e: ReactKeyboardEvent<HTMLButtonElement>,
     key: string,
   ) => void;
+  onHoverCell: (key: string | null) => void;
+  onDeleteWindow: (s: string, e: string) => void;
 }
 
 /** Corner radii for a run overlay: rounded only at the true window caps. */
@@ -758,14 +798,17 @@ const MonthGrid = memo(function MonthGrid({
   fromT,
   backT,
   pendingStart,
+  hoverWin,
   onPointerDown,
   onKeyActivate,
   onCellKeyDown,
+  onHoverCell,
+  onDeleteWindow,
 }: MonthGridProps) {
   const { year, month, label, lead, days } = model;
 
   return (
-    <div className="select-none">
+    <div className="select-none" onPointerLeave={() => onHoverCell(null)}>
       <h3 className="mb-2 font-display text-sm font-semibold text-ink">
         {label}
       </h3>
@@ -832,6 +875,9 @@ const MonthGrid = memo(function MonthGrid({
           // true window caps (first/last day of the whole range)
           const capLeft = isPainted && !prevPainted;
           const capRight = isPainted && !nextPainted;
+          // hover-to-delete: × on the hovered window's last day
+          const showDelete =
+            !isPast && hoverWin !== null && key === hoverWin.e;
 
           return (
             <button
@@ -844,6 +890,10 @@ const MonthGrid = memo(function MonthGrid({
               onPointerDown={(e) => {
                 if (isPast) return;
                 onPointerDown(e, key);
+              }}
+              onPointerEnter={(e) => {
+                if (e.pointerType !== "mouse") return;
+                onHoverCell(isPainted ? key : null);
               }}
               onClick={(e) => {
                 if (isPast) return;
@@ -905,6 +955,22 @@ const MonthGrid = memo(function MonthGrid({
                   className="pointer-events-none absolute right-0 top-1/2 z-[1] -translate-y-1/2 text-[8px] leading-none text-brand-ink/70"
                 >
                   ▸
+                </span>
+              )}
+              {showDelete && hoverWin && (
+                <span
+                  role="button"
+                  aria-label="Remove this date range"
+                  title="Remove this range"
+                  onPointerDown={(e) => {
+                    // swallow the gesture so the cell doesn't start a paint drag
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onDeleteWindow(hoverWin.s, hoverWin.e);
+                  }}
+                  className="absolute -right-1.5 -top-1.5 z-[2] flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-ink text-[10px] font-bold leading-none text-paper shadow-sm transition-colors hover:bg-alert"
+                >
+                  ×
                 </span>
               )}
               <span className="relative z-[1]">{day}</span>
