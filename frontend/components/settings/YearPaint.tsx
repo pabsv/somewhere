@@ -206,6 +206,9 @@ interface DragState {
   /** paint mode: last day cell the pointer actually hit — reused while the
       pointer is over row gaps / month gutters where hit-testing finds nothing */
   lastKey: string | null;
+  /** anchor's window role at pointerdown — frozen so mid-drag repaints don't
+      flip the pull-from-edge paint/erase decision */
+  anchorRole: Role | undefined;
 }
 
 interface BadgeState {
@@ -234,6 +237,9 @@ export default function YearPaint() {
 
   // pointer-drag state (paint ranges OR scrub an edge time)
   const drag = useRef<DragState | null>(null);
+  // true while a pointer gesture is in flight — pauses edge-time pruning so a
+  // window edge dragged away and back keeps its "free from"/"back by" hour
+  const [dragActive, setDragActive] = useState(false);
   // keyboard fallback (Enter/Space): a pending start day for the two-click flow
   const [pendingStart, setPendingStart] = useState<string | null>(null);
 
@@ -253,8 +259,11 @@ export default function YearPaint() {
 
   const roles = useMemo(() => buildRoles(windows), [windows]);
 
-  // prune edge times whose day stopped being a window edge (repaint/erase)
+  // prune edge times whose day stopped being a window edge (repaint/erase).
+  // Paused mid-drag: pruning only settles once the gesture ends, so passing
+  // over an edge day without ending there doesn't wipe its hours.
   useEffect(() => {
+    if (dragActive) return;
     const firsts = new Set<string>();
     const lasts = new Set<string>();
     for (const [k, r] of roles) {
@@ -273,7 +282,7 @@ export default function YearPaint() {
       for (const k of prev.keys()) if (!lasts.has(k)) next.delete(k);
       return next;
     });
-  }, [roles]);
+  }, [roles, dragActive]);
 
   // ─── Load existing windows on mount ────────────────────────────────────────
   const seedFromWindows = useCallback((ws: DateWindow[]) => {
@@ -407,14 +416,16 @@ export default function YearPaint() {
         base: 0,
         snapshot: painted,
         lastKey: null,
+        anchorRole: roles.get(key),
       };
+      setDragActive(true);
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
         // capture is best-effort; harmless if unsupported
       }
     },
-    [painted],
+    [painted, roles],
   );
 
   useEffect(() => {
@@ -459,13 +470,36 @@ export default function YearPaint() {
         const hit = keyUnderPointer(e);
         if (hit) d.lastKey = hit;
         const cur = hit ?? d.lastKey ?? d.anchor;
-        // rebuild from the pointerdown snapshot + the current anchor→cursor
-        // span, so shrinking or reversing the drag un-paints what the drag
-        // itself added (and only that)
+        // Anchoring on a window edge means "pull": dragging outward extends
+        // the window (paint), dragging inward shrinks it (erase). Decided per
+        // move — the snapshot rebuild below makes direction flips clean.
+        let painting = d.painting;
+        const role = d.anchorRole;
+        const isEdgePull =
+          !d.painting &&
+          (role === "first" || role === "last" || role === "single");
+        if (isEdgePull) {
+          painting =
+            role === "single" ||
+            (role === "last" ? cur >= d.anchor : cur <= d.anchor);
+        }
+        // Inward edge pull: the day under the finger becomes the new window
+        // edge, so erase strictly beyond it (not the anchor→cursor span
+        // inclusive — that would make e.g. day 19 unreachable when pulling
+        // back from day 20).
+        let spanA = d.anchor;
+        let spanB = cur;
+        if (isEdgePull && !painting) {
+          if (role === "last") spanB = addDays(cur, 1);
+          else spanB = addDays(cur, -1);
+        }
+        // rebuild from the pointerdown snapshot + the current span, so
+        // shrinking or reversing the drag un-paints what the drag itself
+        // added (and only that)
         setPainted(() => {
           const next = new Set(d.snapshot);
-          for (const k of keysBetween(d.anchor, cur)) {
-            if (d.painting) next.add(k);
+          for (const k of keysBetween(spanA, spanB)) {
+            if (painting) next.add(k);
             else next.delete(k);
           }
           return next;
@@ -497,11 +531,13 @@ export default function YearPaint() {
       if (d.mode === "pending") toggleDay(d.anchor);
       drag.current = null;
       setBadge(null);
+      setDragActive(false);
     }
 
     function onCancel() {
       drag.current = null;
       setBadge(null);
+      setDragActive(false);
     }
 
     window.addEventListener("pointermove", onMove);
