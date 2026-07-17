@@ -13,12 +13,15 @@ declare module "next-auth" {
       id: string;
       /** "admin" | "user" — gate /admin and /api/admin/* on "admin". */
       role: string;
+      /** True until the user finishes or skips the /welcome onboarding wizard. */
+      onboarding_pending?: boolean;
     } & DefaultSession["user"];
   }
 
   interface User {
     /** Returned by the Credentials authorize() callback. */
     role?: string;
+    onboarding_pending?: boolean;
   }
 }
 
@@ -26,5 +29,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    onboarding_pending?: boolean;
   }
 }

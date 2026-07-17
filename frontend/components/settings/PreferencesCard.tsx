@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
-import { ORIGINS } from "@/data/airports.gen";
+import OriginChips from "@/components/settings/OriginChips";
 import { getPreferences, putPreferences, ApiError } from "@/lib/client";
 import { useUniCalendar } from "@/lib/university/context";
 import type { Preferences } from "@/types/api";
@@ -129,21 +129,7 @@ export default function PreferencesCard() {
         label="Departure airports"
         hint="Where you'd fly out from."
       >
-        <div className="flex flex-wrap gap-2">
-          {ORIGINS.map((o) => (
-            <Chip
-              key={o.code}
-              size="sm"
-              selected={prefs.origins.includes(o.code)}
-              onClick={() => toggleOrigin(o.code)}
-              title={o.name}
-            >
-              <span className="tnum font-mono uppercase tracking-wide">
-                {o.code}
-              </span>
-            </Chip>
-          ))}
-        </div>
+        <OriginChips selected={prefs.origins} onToggle={toggleOrigin} />
       </Field>
 
       {/* university calendar */}

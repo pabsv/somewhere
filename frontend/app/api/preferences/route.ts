@@ -21,6 +21,7 @@ const DEFAULTS: Preferences = {
   max_price: null,
   busy_weekdays: [],
   university: null,
+  notify_optin: false,
 };
 
 // GET /api/preferences

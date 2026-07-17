@@ -53,8 +53,8 @@ function ShieldIcon({ className }: { className?: string }) {
 }
 
 const LINKS: NavLink[] = [
-  { href: "/explore", label: "Explore", icon: CompassIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
+  { href: "/explore", label: "Explore", icon: CompassIcon },
 ];
 
 function UsersIcon({ className }: { className?: string }) {

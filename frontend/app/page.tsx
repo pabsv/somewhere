@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import DepartureBoard, {
   BoardSkeleton,
   type DepartureRow,
@@ -15,6 +16,8 @@ import { formatDateBoard } from "@/lib/format";
  * board mirrors Explore's hero (5 cheapest steals across all origins).
  */
 export default function LandingPage() {
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   const [rows, setRows] = useState<DepartureRow[] | null>(null);
 
   useEffect(() => {
@@ -59,10 +62,23 @@ export default function LandingPage() {
           We&rsquo;ll find you cheap flights — wherever&rsquo;s cheapest,
           whenever you&rsquo;re free.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {!signedIn && (
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+            >
+              Get started
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
           <Link
             href="/explore"
-            className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+            className={
+              signedIn
+                ? "inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+                : "inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink-muted"
+            }
           >
             Explore deals
             <span aria-hidden="true">→</span>

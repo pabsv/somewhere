@@ -65,7 +65,7 @@ function RegisterForm() {
       setLoading(false);
       return;
     }
-    window.location.href = callbackUrl;
+    window.location.href = `/welcome?next=${encodeURIComponent(callbackUrl)}`;
   }
 
   return (
@@ -151,7 +151,10 @@ function RegisterForm() {
       </div>
 
       <div className="mt-4">
-        <GoogleButton label="Sign up with Google" callbackUrl={callbackUrl} />
+        <GoogleButton
+          label="Sign up with Google"
+          callbackUrl={`/welcome?next=${encodeURIComponent(callbackUrl)}`}
+        />
       </div>
 
       <p className="mt-6 font-mono text-xs leading-relaxed text-ink-muted">

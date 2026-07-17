@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
 import { SavedCitiesProvider } from "@/lib/saved-cities";
 import { UniCalendarProvider } from "@/lib/university/context";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 
 export default function Providers({
   children,
@@ -14,6 +15,7 @@ export default function Providers({
 }) {
   return (
     <SessionProvider session={session}>
+      <OnboardingGate />
       <SavedCitiesProvider>
         <UniCalendarProvider>{children}</UniCalendarProvider>
       </SavedCitiesProvider>

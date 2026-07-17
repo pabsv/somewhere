@@ -3,39 +3,21 @@
 // Quick setup: tick recurring weekly busy days, hit "Apply to calendar" —
 // the free gaps for the next 12 months are painted into the availability
 // calendar below. The calendar is the single source of truth; this is just
-// a fast way to fill it.
+// a fast way to fill it. Apply sequence lives in lib/useQuickSetup.ts,
+// shared with the /welcome onboarding wizard.
 
 import { useEffect, useState } from "react";
 import Chip from "@/components/ui/Chip";
-import {
-  getPreferences,
-  putPreferences,
-  putAvailability,
-} from "@/lib/client";
-import { generateFreeWindows } from "@/lib/academic";
-import { todayStr } from "@/components/tripcal/calendarMath";
+import { getPreferences } from "@/lib/client";
+import { useQuickSetup, WEEKDAYS, AVAILABILITY_UPDATED_EVENT } from "@/lib/useQuickSetup";
 import type { Preferences } from "@/types/api";
 
-/** Matches MONTHS_AHEAD in YearPaint — the painted calendar's horizon. */
-const MONTHS_AHEAD = 12;
-
-/** YearPaint listens for this to re-fetch after we rewrite the windows. */
-export const AVAILABILITY_UPDATED_EVENT = "somewhere:availability-updated";
-
-const WEEKDAYS: { iso: number; label: string }[] = [
-  { iso: 1, label: "Mon" },
-  { iso: 2, label: "Tue" },
-  { iso: 3, label: "Wed" },
-  { iso: 4, label: "Thu" },
-  { iso: 5, label: "Fri" },
-  { iso: 6, label: "Sat" },
-  { iso: 7, label: "Sun" },
-];
+// Re-exported: YearPaint listens for this event name.
+export { AVAILABILITY_UPDATED_EVENT };
 
 export default function AcademicCard() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
-  const [busy, setBusy] = useState<number[]>([]);
-  const [applying, setApplying] = useState(false);
+  const { busy, setBusy, toggle, applying, apply } = useQuickSetup();
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,30 +27,20 @@ export default function AcademicCard() {
         setBusy(p.busy_weekdays ?? []);
       })
       .catch(() => setMessage("Couldn’t load preferences."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggle = (iso: number) =>
-    setBusy((prev) =>
-      prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso].sort(),
-    );
-
-  const apply = async () => {
+  const onApply = async () => {
     if (!prefs) return;
-    setApplying(true);
     setMessage(null);
     try {
-      const windows = generateFreeWindows(busy, todayStr(), MONTHS_AHEAD);
-      await putAvailability(windows);
-      // remember the chip selection for next time
-      setPrefs(await putPreferences({ ...prefs, busy_weekdays: busy }));
-      window.dispatchEvent(new Event(AVAILABILITY_UPDATED_EVENT));
+      const { windows, prefs: updated } = await apply(prefs);
+      setPrefs(updated);
       setMessage(
         `Painted ${windows.length} free window(s) into your calendar below — fine-tune there.`,
       );
     } catch {
       setMessage("Couldn’t apply — try again.");
-    } finally {
-      setApplying(false);
     }
   };
 
@@ -91,7 +63,7 @@ export default function AcademicCard() {
           </Chip>
         ))}
         <Chip
-          onClick={apply}
+          onClick={onApply}
           disabled={applying || busy.length === 0 || busy.length === 7}
           className="ml-2"
         >

@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       password_hash,
       role: "user",
       created_at: new Date(),
+      onboarding_pending: true,
     });
   } catch (err: unknown) {
     // Unique index race: two simultaneous registrations with the same email.

@@ -8,6 +8,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
 import { authConfig } from "@/auth.config";
 import { getDb } from "@/lib/mongodb";
 
@@ -48,6 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email,
           name: user.name as string,
           role: (user.role as string) ?? "user",
+          onboarding_pending: !!user.onboarding_pending,
         };
       },
     }),
@@ -70,7 +72,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // create) the users doc by email HERE — this is also what links a Google
     // login to an existing email/password account with the same address.
     // Runs only on the initial sign-in (when `user` is present), not per request.
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile, trigger }) {
+      // Onboarding-completion refresh: OnboardingWizard calls the session
+      // update() trigger after POST /api/onboarding clears the DB flag, so the
+      // token (minted at sign-in, otherwise never re-checked) doesn't keep
+      // reporting onboarding_pending=true for the rest of the session.
+      if (trigger === "update" && typeof token.id === "string") {
+        const db = await getDb();
+        const fresh = await db
+          .collection("users")
+          .findOne(
+            { _id: new ObjectId(token.id as string) },
+            { projection: { onboarding_pending: 1 } },
+          );
+        token.onboarding_pending = !!fresh?.onboarding_pending;
+        return token;
+      }
+
       if (!user) return token;
 
       if (account?.provider === "google") {
@@ -84,6 +102,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (existing) {
           token.id = existing._id.toString();
           token.role = (existing.role as string) ?? "user";
+          token.onboarding_pending = !!existing.onboarding_pending;
           // Backfill google_id the first time an existing account uses Google.
           if (!existing.google_id) {
             await users.updateOne(
@@ -102,14 +121,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: "user",
             created_at: new Date(),
             google_id: account.providerAccountId,
+            onboarding_pending: true,
           });
           token.id = res.insertedId.toString();
           token.role = "user";
+          token.onboarding_pending = true;
         }
       } else {
         // Credentials: authorize() already returned the Mongo id + role.
         token.id = user.id;
         token.role = user.role ?? "user";
+        token.onboarding_pending = !!user.onboarding_pending;
       }
       return token;
     },
