@@ -4,6 +4,7 @@ from .user import User, UserAirports, UserNotifications, UserSearchPreferences
 from .availability import Availability
 from .destination import DestinationPreference
 from .flight import FlightModel
+from .oneway_fare import OnewayFareModel
 from .price_history import PriceHistory
 from .route_stats import RouteStats
 from .scrape_target import ScrapeTargetModel
@@ -17,6 +18,7 @@ __all__ = [
     "Availability",
     "DestinationPreference",
     "FlightModel",
+    "OnewayFareModel",
     "PriceHistory",
     "RouteStats",
     "ScrapeTargetModel",

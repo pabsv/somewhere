@@ -9,11 +9,14 @@ v2: Python computes NO deal scores — scoring lives in frontend/lib/score.ts
 """
 
 import logging
+from datetime import date
 from typing import Any
 
 from ..config import PRICE_SANITY_MIN, PRICE_SANITY_MAX
 from ..models.flight import FlightModel
+from ..models.oneway_fare import OnewayFareModel
 from ..repositories.flight_repo import FlightRepository
+from ..repositories.oneway_fare_repo import OnewayFareRepository
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,7 @@ class FlightService:
 
     def __init__(self):
         self.flight_repo = FlightRepository()
+        self.oneway_fare_repo = OnewayFareRepository()
 
     def save_scraped_flights(self, flights: list[Any]) -> dict:
         """
@@ -98,4 +102,63 @@ class FlightService:
             f"{dropped} dropped"
         )
 
+        return result
+
+    def save_oneway_grids(self, grids: list[dict]) -> dict:
+        """
+        Persist one-way leg fare grids (open-jaw foundation).
+
+        Args:
+            grids: [{"origin": "EIN", "destination": "BCN",
+                     "prices": {"2026-07-20": 45.0, ...}}, ...]
+                   — the `oneway_grids` entry from FliScraper stats.
+
+        Steps per grid:
+          1. Drop past dates.
+          2. Price sanity guard: keep only PRICE_SANITY_MIN < p <= PRICE_SANITY_MAX.
+             This doubles as the currency mitigation — SearchDates returns bare
+             floats (no per-response currency field exists at that layer, unlike
+             SearchFlights), but the grids come from the same curr=EUR-pinned
+             endpoint, and wrong-currency grids (HKD/ISK/...) mostly trip the cap.
+          3. If nothing survives, skip the leg entirely — the previous good grid
+             stays until TTL, which beats wiping it with an empty doc.
+
+        Returns:
+            {"legs_saved": X, "legs_skipped": Y, "prices_dropped": Z}
+        """
+        if not grids:
+            return {"legs_saved": 0, "legs_skipped": 0, "prices_dropped": 0}
+
+        today = date.today().isoformat()  # ISO string compare is date-safe
+        fares = []
+        legs_skipped = 0
+        prices_dropped = 0
+        for grid in grids:
+            clean = {}
+            for d, p in grid.get("prices", {}).items():
+                if d < today or not (PRICE_SANITY_MIN < p <= PRICE_SANITY_MAX):
+                    prices_dropped += 1
+                    continue
+                clean[d] = p
+            if not clean:
+                legs_skipped += 1
+                continue
+            fares.append(OnewayFareModel(
+                origin=grid["origin"],
+                destination=grid["destination"],
+                prices=clean,
+            ))
+
+        if fares:
+            self.oneway_fare_repo.bulk_upsert_grids(fares)
+
+        result = {
+            "legs_saved": len(fares),
+            "legs_skipped": legs_skipped,
+            "prices_dropped": prices_dropped,
+        }
+        logger.info(
+            f"One-way grids: {result['legs_saved']} legs saved, "
+            f"{result['legs_skipped']} skipped, {result['prices_dropped']} prices dropped"
+        )
         return result

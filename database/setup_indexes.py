@@ -29,8 +29,10 @@ from .config import (
     COLLECTION_SCRAPE_RUNS,
     COLLECTION_FRIENDSHIPS,
     COLLECTION_GROUPS,
+    COLLECTION_ONEWAY_FARES,
     FLIGHTS_TTL_DAYS,
     SCRAPE_RUNS_TTL_DAYS,
+    ONEWAY_FARES_TTL_DAYS,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -205,6 +207,27 @@ def setup_scrape_run_indexes(db):
     logger.info(f"  TTL: scrape_runs expire {SCRAPE_RUNS_TTL_DAYS}d after started_at")
 
 
+def setup_oneway_fare_indexes(db):
+    """Create indexes for oneway_fares collection (open-jaw foundation)."""
+    collection = db[COLLECTION_ONEWAY_FARES]
+
+    indexes = [
+        IndexModel([("leg_key", ASCENDING)], unique=True, name="leg_key_unique"),
+        # Future open-jaw read path: enumerate legs out of / back to an airport.
+        IndexModel([("origin", ASCENDING)], name="origin"),
+        IndexModel([("destination", ASCENDING)], name="destination"),
+        # TTL: grids not refreshed (route disabled/removed) age out.
+        IndexModel(
+            [("scraped_at", ASCENDING)],
+            expireAfterSeconds=ONEWAY_FARES_TTL_DAYS * 24 * 60 * 60,
+            name="ttl_scraped_at"
+        ),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_ONEWAY_FARES}")
+    logger.info(f"  TTL: oneway_fares expire {ONEWAY_FARES_TTL_DAYS}d after scraped_at")
+
+
 def setup_all_indexes():
     """Create all indexes for all collections."""
     logger.info("=" * 60)
@@ -222,6 +245,7 @@ def setup_all_indexes():
         ("flights",        setup_flight_indexes),
         ("scrape_targets", setup_scrape_target_indexes),
         ("scrape_runs",    setup_scrape_run_indexes),
+        ("oneway_fares",   setup_oneway_fare_indexes),
     ]
     failures = []
     for name, fn in steps:
@@ -259,6 +283,7 @@ def list_all_indexes():
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
+        COLLECTION_ONEWAY_FARES,
     ]
 
     for coll_name in collections:
@@ -279,6 +304,7 @@ def drop_all_indexes():
         COLLECTION_FLIGHTS,
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
+        COLLECTION_ONEWAY_FARES,
     ]
 
     for coll_name in collections:

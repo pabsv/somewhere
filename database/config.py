@@ -43,10 +43,12 @@ COLLECTION_SCRAPE_TARGETS = "scrape_targets"   # pool-based scraping config
 COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observability
 COLLECTION_FRIENDSHIPS = "friendships"         # friend requests + accepted pairs (written by frontend)
 COLLECTION_GROUPS = "groups"          # travel groups + embedded invite tokens (written by frontend)
+COLLECTION_ONEWAY_FARES = "oneway_fares"       # one-way leg fare grids (open-jaw foundation)
 
 # TTL settings
 FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days
 SCRAPE_RUNS_TTL_DAYS = 30      # Auto-delete scrape run logs after 30 days
+ONEWAY_FARES_TTL_DAYS = 21     # > tier-C cadence (168h) x3 — grids for disabled routes age out
 
 # Price sanity guard — flights outside (MIN, MAX] are dropped before save.
 # Deal scoring itself lives in the frontend (frontend/lib/score.ts).

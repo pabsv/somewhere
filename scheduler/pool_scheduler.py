@@ -169,6 +169,18 @@ def scrape_one_route(
                 f"api={stats['api_calls']} dur={time.time()-t0:.1f}s"
             )
 
+        # Open-jaw foundation: persist one-way leg grids (best-effort, never
+        # fatal). Skipped on --direct-only runs so direct-only prices can't
+        # overwrite the normal grids.
+        if not direct_only:
+            try:
+                grids = stats.get("oneway_grids") or []
+                if grids:
+                    grid_result = FlightService().save_oneway_grids(grids)
+                    logger.info(f"[{route_key}] one-way grids saved: {grid_result}")
+            except Exception as exc:
+                logger.warning(f"[{route_key}] one-way grid save failed (non-fatal): {exc}")
+
         runs.finish(
             run_id,
             status=status,

@@ -164,7 +164,10 @@ class FliScraper:
                  day can't eat every slot. Real round-trip prices stored.
 
         Returns (flights, stats) where stats has {date_searches, flight_searches,
-        flights_found, errors, api_calls, cheapest_price}.
+        flights_found, errors, api_calls, cheapest_price, oneway_grids}.
+        oneway_grids carries the raw Phase-1 one-way fare grids (both
+        directions) so the caller can persist them for open-jaw combos —
+        [] when Phase 1 fell back to round-trip grids.
         """
         from datetime import date
 
@@ -183,6 +186,13 @@ class FliScraper:
 
         out_prices = self._search_dates_oneway(origin, destination, out_from, out_to, direct_only)
         ret_prices = self._search_dates_oneway(destination, origin, ret_from, ret_to, direct_only)
+
+        # Expose the raw one-way grids for persistence (open-jaw foundation).
+        oneway_grids = []
+        if out_prices:
+            oneway_grids.append({"origin": origin, "destination": destination, "prices": out_prices})
+        if ret_prices:
+            oneway_grids.append({"origin": destination, "destination": origin, "prices": ret_prices})
 
         # Combine every (out, ret) pair within the nights range.
         pairs: list[dict] = []
@@ -251,6 +261,7 @@ class FliScraper:
             "errors": errors,
             "api_calls": date_searches + flight_searches,
             "cheapest_price": unique[0].price if unique else None,
+            "oneway_grids": oneway_grids,
         }
 
     def search_all(
