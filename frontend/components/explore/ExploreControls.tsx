@@ -17,7 +17,7 @@ interface ExploreControlsProps {
   showFree: boolean;
   onlyFree: boolean;
   onToggleFree: () => void;
-  /** "★ Saved" filter — shown only when signed in with ≥1 starred city. */
+  /** "★ Favourites" filter — shown only when signed in with ≥1 starred city. */
   showSaved: boolean;
   savedOnly: boolean;
   savedCount: number;
@@ -61,7 +61,7 @@ export default function ExploreControls({
             onClick={onToggleSaved}
             className="shrink-0 self-start sm:self-auto"
           >
-            ★ Saved{savedCount > 0 ? ` (${savedCount})` : ""}
+            ★ Favourites{savedCount > 0 ? ` (${savedCount})` : ""}
           </Chip>
         )}
         {showFree && (

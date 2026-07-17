@@ -1,13 +1,14 @@
 "use client";
 
-// ─── StarButton — toggle a city as a saved "interest" ────────────────────────
-// Filled brand star = saved, hairline outline = not. Calls onToggle and stops
-// event propagation so it can live inside a card-wide <Link> without navigating.
+// ─── StarButton — toggle a city as a favourite ───────────────────────────────
+// Filled brand star = favourited, hairline outline = not. Calls onToggle and
+// stops event propagation so it can live inside a card-wide <Link> without
+// navigating.
 
 interface StarButtonProps {
   active: boolean;
   onToggle: () => void;
-  /** City name, for the a11y label ("Save Lisbon" / "Saved Lisbon"). */
+  /** City name, for the a11y label ("Add Lisbon to favourites"). */
   label: string;
   size?: "sm" | "md";
   className?: string;
@@ -27,8 +28,12 @@ export default function StarButton({
     <button
       type="button"
       aria-pressed={active}
-      aria-label={`${active ? "Saved" : "Save"} ${label}`}
-      title={active ? "Saved — click to remove" : "Save this city"}
+      aria-label={
+        active ? `${label} — favourited` : `Add ${label} to favourites`
+      }
+      title={
+        active ? "Favourited — click to remove" : "Add to favourites"
+      }
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

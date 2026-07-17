@@ -7,6 +7,7 @@ import type { Trip, DateWindow } from "@/types/api";
 import { getTrips, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useSavedCities } from "@/lib/saved-cities";
+import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
@@ -138,11 +139,22 @@ export default function CalendarPage() {
   const hasWindows = signedIn && windows.length > 0;
 
   // Saved-only narrows the loaded trips to starred destinations (client-side;
-  // the density underlay still reflects the full set).
+  // the density underlay still reflects the full set). Favourite bars also get
+  // relaxed tier coloring (a "deal" reads as a "steal", etc.).
+  // Limitation: the tier filter runs server-side (params.tier) before promotion,
+  // so a favourite that's only promoted-to-steal won't appear under a "steal"
+  // filter. Cosmetic-only here; a `fav=` param on /api/trips is the follow-up.
   const savedKey = [...saved].sort().join(",");
   const shownTrips = useMemo(() => {
     const all = trips ?? [];
-    return savedOnly ? all.filter((t) => saved.has(t.destination)) : all;
+    const scoped = savedOnly
+      ? all.filter((t) => saved.has(t.destination))
+      : all;
+    return scoped.map((t) =>
+      saved.has(t.destination)
+        ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price) }
+        : t,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trips, savedOnly, savedKey]);
 
@@ -213,7 +225,7 @@ export default function CalendarPage() {
                   selected={savedOnly}
                   onClick={() => setSavedOnly((v) => !v)}
                 >
-                  ★ Saved ({saved.size})
+                  ★ Favourites ({saved.size})
                 </Chip>
               )}
               {hasWindows && (

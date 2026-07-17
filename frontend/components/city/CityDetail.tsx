@@ -14,6 +14,7 @@ import type { CityDetailResponse, Trip } from "@/types/api";
 import { getCity, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useSavedCities } from "@/lib/saved-cities";
+import { promoteFavouriteTier } from "@/lib/score";
 import { getDestination } from "@/data/destinations.gen";
 import { ORIGINS } from "@/data/airports.gen";
 import Chip from "@/components/ui/Chip";
@@ -83,12 +84,25 @@ export default function CityDetail({ code }: CityDetailProps) {
 
   useEffect(() => load(), [load]);
 
+  // When this city is a favourite, promote every trip's tier coloring (a "deal"
+  // reads as a "steal", etc.) — the user wants this place, so a merely-good fare
+  // still counts. Display-only; score/delta are untouched.
+  const favourited =
+    savedSignedIn && data ? isSaved(data.city.code) : false;
+  const displayTrips = useMemo(() => {
+    const trips = data?.trips ?? [];
+    if (!favourited) return trips;
+    return trips.map((t) => ({
+      ...t,
+      deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price),
+    }));
+  }, [data, favourited]);
+
   // Trips come pre-sorted by score desc from the API; direct-only is a pure
   // client-side filter that preserves that order.
   const visibleTrips = useMemo(() => {
-    const trips = data?.trips ?? [];
-    return directOnly ? trips.filter((t) => t.is_direct) : trips;
-  }, [data, directOnly]);
+    return directOnly ? displayTrips.filter((t) => t.is_direct) : displayTrips;
+  }, [displayTrips, directOnly]);
 
   // Group by origin only when more than one origin is selected; keep the
   // score order within each group. Origins ordered as in the selection.
@@ -192,7 +206,7 @@ export default function CityDetail({ code }: CityDetailProps) {
       ) : (
         <>
           <div className="mt-8">
-            <BestPerMonth trips={data.trips} />
+            <BestPerMonth trips={displayTrips} />
           </div>
 
           <section className="mt-10">

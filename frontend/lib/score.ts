@@ -53,6 +53,42 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
 
+// ─── Favourite (starred city) relaxed tiers ──────────────────────────────────
+// A favourited destination is one the user *wants* — a place they'd take on a
+// merely-good fare, or a "home" they'll fly to whenever it's cheap and they're
+// free. So we relax the tier gates for favourites: a "deal" reads as a "steal",
+// a "fair" reads as a "deal". Purely a display-time promotion — the underlying
+// score/delta are unchanged and this never runs server-side (favourites are
+// per-user). The MAX_DEAL_PRICE sanity gate still applies: an expensive ticket
+// is never promoted, however far below its (possibly absurd) baseline it sits.
+
+/** favourite: score >= this → promote to "steal" */
+export const FAV_STEAL_SCORE_THRESHOLD = 75;
+/** favourite: price <= this (EUR) → promote to "steal" regardless of score */
+export const FAV_STEAL_PRICE_THRESHOLD = 50;
+/** favourite: score >= this → promote to "deal" */
+export const FAV_DEAL_SCORE_THRESHOLD = 55;
+
+/**
+ * Promote a trip's tier for a favourited city. Never demotes, never promotes an
+ * over-MAX_DEAL_PRICE fare. Pass the trip's own score/price alongside its
+ * already-computed tier.
+ */
+export function promoteFavouriteTier(
+  tier: DealTier,
+  score: number,
+  price: number,
+): DealTier {
+  if (price > MAX_DEAL_PRICE) return tier;
+  if (tier === "steal") return tier;
+  if (score >= FAV_STEAL_SCORE_THRESHOLD || price <= FAV_STEAL_PRICE_THRESHOLD) {
+    return "steal";
+  }
+  if (tier === "deal") return tier;
+  if (score >= FAV_DEAL_SCORE_THRESHOLD) return "deal";
+  return tier;
+}
+
 /**
  * Score a trip price against its route baseline (price_p50_ewma).
  * `baseline` is null (or non-positive — treated as null to avoid division

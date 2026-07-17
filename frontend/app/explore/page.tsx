@@ -9,6 +9,7 @@ import DepartureBoard, {
 } from "@/components/board/DepartureBoard";
 import CityCard, { CityCardSkeleton } from "@/components/explore/CityCard";
 import ExploreControls from "@/components/explore/ExploreControls";
+import FavouritesStrip from "@/components/explore/FavouritesStrip";
 import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import { type SearchSelection } from "@/components/explore/SearchCombobox";
 import { countryName } from "@/components/explore/countries";
@@ -188,6 +189,9 @@ export default function ExplorePage() {
           <DepartureBoard rows={boardRows} />
         )}
       </div>
+
+      {/* ─── Favourites strip ────────────────────────────────────────────────── */}
+      <FavouritesStrip query={cityQuery} />
 
       {/* ─── Controls ────────────────────────────────────────────────────────── */}
       <div className="mb-6">

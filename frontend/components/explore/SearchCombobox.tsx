@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { REGIONS } from "@/data/destinations.gen";
 import { countryName } from "./countries";
-import type { CitySummary } from "@/types/api";
 
 // ─── Selection model ─────────────────────────────────────────────────────────
 // The combobox lets you narrow the grid by one of four things. `text` is the
@@ -29,11 +28,25 @@ const KIND_LABEL: Record<Suggestion["kind"], string> = {
   region: "Region",
 };
 
+/**
+ * Minimal shape the combobox needs off each option. `CitySummary` is a superset,
+ * so Explore passes its loaded cities unchanged; Settings passes the static
+ * DESTINATIONS catalog (cities with no current fares included).
+ */
+export interface SearchableCity {
+  code: string;
+  name: string;
+  country: string;
+  region: string;
+}
+
 interface SearchComboboxProps {
-  /** Loaded cities — the suggestion source, so we only offer real deals. */
-  cities: CitySummary[];
+  /** Suggestion source. Explore: loaded deals. Settings: full catalog. */
+  cities: SearchableCity[];
   selection: SearchSelection | null;
   onSelect: (selection: SearchSelection | null) => void;
+  /** Placeholder override (default: "Search a city, country or region…"). */
+  placeholder?: string;
 }
 
 /**
@@ -49,6 +62,7 @@ export default function SearchCombobox({
   cities,
   selection,
   onSelect,
+  placeholder = "Search a city, country or region…",
 }: SearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -185,7 +199,7 @@ export default function SearchCombobox({
             setOpen(true);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Search a city, country or region…"
+          placeholder={placeholder}
           aria-label="Search destinations"
           className="w-full rounded-tag border border-line bg-card py-2 pl-9 pr-9 text-sm text-ink placeholder:text-ink-muted/60 focus:border-ink-muted focus:outline-none"
         />

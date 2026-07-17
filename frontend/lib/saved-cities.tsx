@@ -1,11 +1,14 @@
 "use client";
 
-// ─── Saved cities — shared client state ──────────────────────────────────────
-// "Interest cities": destinations the user stars as focus points, surfaced
-// (pinned + filterable) across Explore / City / Calendar. One fetch per signed-
-// in session, held in context so every CityCard / header / filter shares the
-// same Set. Toggling is optimistic: flip locally, PUT replace-all, revert on
-// failure. Server contract: GET/PUT /api/saved-cities (see types/api.ts).
+// ─── Favourite cities — shared client state ──────────────────────────────────
+// "Favourites": destinations the user stars as places they *want* — somewhere
+// they'd take on a merely-good fare, or a "home" to fly to whenever cheap + free.
+// Surfaced (pinned + filterable + relaxed deal tiers) across Explore / City /
+// Calendar, plus a dedicated Explore strip. One fetch per signed-in session,
+// held in context so every CityCard / header / filter shares the same Set.
+// Toggling is optimistic: flip locally, PUT replace-all, revert on failure.
+// Storage stays `users.saved_cities` (no migration); server contract:
+// GET/PUT /api/saved-cities (see types/api.ts).
 
 import {
   createContext,

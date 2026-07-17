@@ -4,6 +4,7 @@ import Link from "next/link";
 import FareTag from "@/components/ui/FareTag";
 import StarButton from "@/components/ui/StarButton";
 import { useSavedCities } from "@/lib/saved-cities";
+import { promoteFavouriteTier } from "@/lib/score";
 import type { CitySummary } from "@/types/api";
 import { countryName } from "./countries";
 
@@ -22,6 +23,11 @@ interface CityCardProps {
 export default function CityCard({ city, query }: CityCardProps) {
   const { best } = city;
   const { signedIn, isSaved, toggle } = useSavedCities();
+  const favourited = isSaved(city.code);
+  // Favourites get relaxed tier coloring (a "deal" reads as a "steal", etc.).
+  const displayTier = favourited
+    ? promoteFavouriteTier(best.deal_tier, best.score, best.price)
+    : best.deal_tier;
   const belowPct =
     best.delta_pct != null && best.delta_pct < 0
       ? Math.round(-best.delta_pct)
@@ -51,14 +57,14 @@ export default function CityCard({ city, query }: CityCardProps) {
         <div className="flex shrink-0 items-start gap-1">
           {signedIn && (
             <StarButton
-              active={isSaved(city.code)}
+              active={favourited}
               onToggle={() => toggle(city.code)}
               label={city.name}
               size="sm"
               className="-mt-1 -mr-1"
             />
           )}
-          <FareTag price={best.price} tier={best.deal_tier} size="md" />
+          <FareTag price={best.price} tier={displayTier} size="md" />
         </div>
       </div>
 
