@@ -71,8 +71,10 @@ TIER_C_HOURS = 168   # weekly
 
 # Per-route scrape parameters (used by pool scheduler).
 SCRAPE_WINDOW_DAYS = 180             # how far ahead to look (~6 months — MVP target)
-SCRAPE_DURATION_BUCKETS = [3, 7, 10] # trip lengths (weekend, week, long)
-SCRAPE_TOP_N_CHEAP_DATES = 6         # Phase-2 detail fetches per route per cycle
+SCRAPE_MIN_NIGHTS = 2                # shortest trip to consider
+SCRAPE_MAX_NIGHTS = 10               # longest trip (WINDOW_DAYS + MAX_NIGHTS must stay < ~300 — fli limit)
+SCRAPE_MAX_PER_OUT_DATE = 2          # Phase-2 diversity: max detailed pairs sharing one departure date
+SCRAPE_TOP_N_CHEAP_DATES = 10        # Phase-2 detail fetches per route per cycle
 
 # Auto-disable a route after this many consecutive empty/error runs.
 ROUTE_MAX_CONSECUTIVE_FAILURES = 5

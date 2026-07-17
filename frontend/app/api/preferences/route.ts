@@ -20,6 +20,7 @@ const DEFAULTS: Preferences = {
   direct_only: false,
   max_price: null,
   busy_weekdays: [],
+  university: null,
 };
 
 // GET /api/preferences

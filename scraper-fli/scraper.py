@@ -2,7 +2,9 @@
 Fli-based flight scraper — queries Google Flights via the fli library.
 
 Two-phase search:
-  1. SearchDates — find cheapest round-trip dates per route (1 call = up to 61 days)
+  1. SearchDates — price grids per route (pool mode: two one-way sweeps,
+     combined into any-duration (out, ret) pairs; legacy mode: round-trip
+     grids per duration). fli chunks ranges >61 days internally.
   2. SearchFlights — get full flight details only for the cheapest dates
 
 Same interface as AzairScraper so the scheduler can swap between them.
@@ -139,18 +141,27 @@ class FliScraper:
         self,
         origin: str,
         destination: str,
-        durations: list[int] = (3, 7, 10),
+        min_nights: int = 2,
+        max_nights: int = 10,
         window_days: int = 90,
         top_n: int = 6,
         direct_only: bool = False,
+        max_per_out_date: int = 2,
     ) -> tuple[list[Flight], dict]:
         """
         Pool-mode scrape of a single (origin, destination) route.
 
-        Phase 1: SearchDates over the next `window_days` days, for each
-                 trip duration in `durations`. Window split into ≤61-day
-                 sub-windows because that's the SearchDates limit.
-        Phase 2: SearchFlights on the top `top_n` cheapest (out, ret) pairs.
+        Phase 1: two ONE-WAY SearchDates sweeps — O→D over the next
+                 `window_days` days and D→O shifted by [min_nights, max_nights].
+                 Every (out, ret) pair with min_nights..max_nights nights is
+                 combined in memory (estimated price = sum of one-way fares),
+                 so all durations compete, not a fixed bucket list. If both
+                 grids come back empty (route lacks one-way calendar fares),
+                 falls back to round-trip grids so the route doesn't rack up
+                 empty runs toward auto-disable.
+        Phase 2: SearchFlights on the `top_n` cheapest pairs, capped at
+                 `max_per_out_date` pairs per departure date so one cheap
+                 day can't eat every slot. Real round-trip prices stored.
 
         Returns (flights, stats) where stats has {date_searches, flight_searches,
         flights_found, errors, api_calls, cheapest_price}.
@@ -165,38 +176,55 @@ class FliScraper:
         snap_found = self.stats["flights_found"]
 
         # ── Phase 1 ────────────────────────────────────────────────────
-        # Split window_days into ≤61d chunks (SearchDates limit).
-        sub_windows: list[tuple[str, str]] = []
-        start = today
-        remaining = window_days
-        while remaining > 0:
-            span = min(60, remaining)  # 60 days from start = 61-day span inclusive
-            end = start + timedelta(days=span)
-            sub_windows.append((start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")))
-            start = end + timedelta(days=1)
-            remaining -= (span + 1)
+        out_from = today.strftime("%Y-%m-%d")
+        out_to = (today + timedelta(days=window_days)).strftime("%Y-%m-%d")
+        ret_from = (today + timedelta(days=min_nights)).strftime("%Y-%m-%d")
+        ret_to = (today + timedelta(days=window_days + max_nights)).strftime("%Y-%m-%d")
 
-        all_prices: list[dict] = []
-        for duration in durations:
-            for from_d, to_d in sub_windows:
-                prices = self._search_dates_safe(
-                    origin, destination, from_d, to_d, duration, direct_only
+        out_prices = self._search_dates_oneway(origin, destination, out_from, out_to, direct_only)
+        ret_prices = self._search_dates_oneway(destination, origin, ret_from, ret_to, direct_only)
+
+        # Combine every (out, ret) pair within the nights range.
+        pairs: list[dict] = []
+        for out_d, out_p in out_prices.items():
+            out_dt = date.fromisoformat(out_d)
+            for nights in range(min_nights, max_nights + 1):
+                ret_d = (out_dt + timedelta(days=nights)).strftime("%Y-%m-%d")
+                ret_p = ret_prices.get(ret_d)
+                if ret_p is not None:
+                    pairs.append({"out_date": out_d, "ret_date": ret_d, "price": out_p + ret_p})
+
+        if not pairs:
+            logger.info(
+                f"[Fli] {origin}->{destination}: one-way grids empty — round-trip fallback"
+            )
+            for duration in (min_nights, (min_nights + max_nights) // 2, max_nights):
+                pairs.extend(
+                    self._search_dates_safe(
+                        origin, destination, out_from, out_to, duration, direct_only
+                    )
                 )
-                all_prices.extend(prices)
 
-        # Dedup by out_date, keep cheapest.
-        best_by_out: dict[str, dict] = {}
-        for p in all_prices:
-            d = p["out_date"]
-            if d not in best_by_out or p["price"] < best_by_out[d]["price"]:
-                best_by_out[d] = p
+        pairs.sort(key=lambda p: p["price"])
 
-        sorted_prices = sorted(best_by_out.values(), key=lambda x: x["price"])
-        cheap_combos = sorted_prices[:top_n]
+        # Select top_n, at most max_per_out_date pairs per departure date.
+        cheap_combos: list[dict] = []
+        per_out: dict[str, int] = {}
+        for p in pairs:
+            if per_out.get(p["out_date"], 0) >= max_per_out_date:
+                continue
+            cheap_combos.append(p)
+            per_out[p["out_date"]] = per_out.get(p["out_date"], 0) + 1
+            if len(cheap_combos) >= top_n:
+                break
 
         # ── Phase 2 ────────────────────────────────────────────────────
         flights: list[Flight] = []
         for combo in cheap_combos:
+            logger.info(
+                f"[Fli] {origin}->{destination} {combo['out_date']} ret {combo['ret_date']} "
+                f"est=EUR {combo['price']:.0f}"
+            )
             details = self._search_flights_safe(
                 origin, destination, combo["out_date"], combo["ret_date"], direct_only
             )
@@ -402,6 +430,57 @@ class FliScraper:
             logger.warning(f"[Fli] SearchDates failed for {origin}->{dest} ({duration}d): {e}")
             self.stats["errors"] += 1
             return []
+
+    def _search_dates_oneway(
+        self, origin: str, dest: str, from_date: str, to_date: str, direct_only: bool
+    ) -> dict[str, float]:
+        """One-way SearchDates grid. Returns {date_str: cheapest one-way price}."""
+        try:
+            origin_airport = _resolve_airport(origin)
+            dest_airport = _resolve_airport(dest)
+        except ValueError as e:
+            logger.warning(f"[Fli] {e}")
+            return {}
+
+        try:
+            filters = DateSearchFilters(
+                trip_type=TripType.ONE_WAY,
+                passenger_info=PassengerInfo(adults=1),
+                flight_segments=[
+                    FlightSegment(
+                        departure_airport=[[origin_airport, 0]],
+                        arrival_airport=[[dest_airport, 0]],
+                        travel_date=from_date,
+                    ),
+                ],
+                seat_type=SeatType.ECONOMY,
+                stops=MaxStops.NON_STOP if direct_only else MaxStops.ANY,
+                from_date=from_date,
+                to_date=to_date,
+            )
+
+            # fli chunks ranges >61 days into multiple HTTP calls internally —
+            # count the real calls so api_calls stays honest.
+            span_days = (
+                datetime.strptime(to_date, "%Y-%m-%d") - datetime.strptime(from_date, "%Y-%m-%d")
+            ).days + 1
+            results = self._search_dates.search(filters)
+            self.stats["date_searches"] += max(1, -(-span_days // 61))
+
+            if not results:
+                return {}
+
+            prices: dict[str, float] = {}
+            for dp in results:
+                d = dp.date[0].strftime("%Y-%m-%d")
+                if d not in prices or dp.price < prices[d]:
+                    prices[d] = dp.price
+            return prices
+
+        except Exception as e:
+            logger.warning(f"[Fli] One-way SearchDates failed for {origin}->{dest}: {e}")
+            self.stats["errors"] += 1
+            return {}
 
     def _phase2_get_details(self, cheap_dates: list[dict], direct_only: bool) -> list[Flight]:
         """Phase 2: Get full flight details for each cheap date combo."""

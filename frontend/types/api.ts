@@ -129,6 +129,23 @@ export const TripSchema = z.object({
 });
 export type Trip = z.infer<typeof TripSchema>;
 
+// ─── TripVariant — "stay longer" alternative return dates (calendar hover) ───
+
+export const TripVariantSchema = z.object({
+  return_date: DateStringSchema,
+  duration_days: z.number(),
+  price: z.number(),
+  deal_tier: DealTierSchema,
+  delta_pct: z.number().nullable(),
+  search_link: z.string().nullable(),
+});
+export type TripVariant = z.infer<typeof TripVariantSchema>;
+
+export const ExtensionsResponseSchema = z.object({
+  variants: z.array(TripVariantSchema),
+});
+export type ExtensionsResponse = z.infer<typeof ExtensionsResponseSchema>;
+
 // ─── CitySummary — Explore grid cell (spec section D) ────────────────────────
 
 export const CityBestSchema = z.object({
@@ -181,6 +198,8 @@ export const PreferencesSchema = z.object({
   max_price: z.number().nullable(),
   /** Recurring weekly busy days, ISO 1=Mon…7=Sun (Settings → Quick setup). */
   busy_weekdays: z.array(z.number().int().min(1).max(7)).optional(),
+  /** Academic calendar to overlay on calendar views (lib/university/tue.ts). */
+  university: z.enum(["tue"]).nullable().optional(),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 

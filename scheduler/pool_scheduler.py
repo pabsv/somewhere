@@ -36,7 +36,9 @@ from database.config import (
     ACTIVE_WINDOW_END_HOUR,
     SLOT_MINUTES,
     SCRAPE_WINDOW_DAYS,
-    SCRAPE_DURATION_BUCKETS,
+    SCRAPE_MIN_NIGHTS,
+    SCRAPE_MAX_NIGHTS,
+    SCRAPE_MAX_PER_OUT_DATE,
     SCRAPE_TOP_N_CHEAP_DATES,
 )
 from database.repositories.scrape_target_repo import ScrapeTargetRepository
@@ -129,10 +131,12 @@ def scrape_one_route(
         flights, stats = scraper.search_one_route(
             origin=origin,
             destination=destination,
-            durations=SCRAPE_DURATION_BUCKETS,
+            min_nights=SCRAPE_MIN_NIGHTS,
+            max_nights=SCRAPE_MAX_NIGHTS,
             window_days=SCRAPE_WINDOW_DAYS,
             top_n=SCRAPE_TOP_N_CHEAP_DATES,
             direct_only=direct_only,
+            max_per_out_date=SCRAPE_MAX_PER_OUT_DATE,
         )
 
         # Determine status.
@@ -239,7 +243,7 @@ def run_forever(direct_only: bool = False):
     logger.info(f"Active window  : {ACTIVE_WINDOW_START_HOUR:02d}:00–{ACTIVE_WINDOW_END_HOUR:02d}:00 local")
     logger.info(f"Slot interval  : {SLOT_MINUTES} min")
     logger.info(f"Target pool    : {stats}")
-    logger.info(f"Window/dur/topN: {SCRAPE_WINDOW_DAYS}d / {SCRAPE_DURATION_BUCKETS} / top {SCRAPE_TOP_N_CHEAP_DATES}")
+    logger.info(f"Window/nights/topN: {SCRAPE_WINDOW_DAYS}d / {SCRAPE_MIN_NIGHTS}-{SCRAPE_MAX_NIGHTS}n / top {SCRAPE_TOP_N_CHEAP_DATES}")
     logger.info("=" * 60)
 
     while True:

@@ -2,15 +2,18 @@
 
 import { useMemo } from "react";
 import type { Trip } from "@/types/api";
+import { periodsInRange, type UniPeriod } from "@/lib/university/tue";
 import FareTag from "@/components/ui/FareTag";
 import { getDestination } from "@/data/destinations.gen";
-import { formatRange, nightsLabel } from "@/lib/format";
+import { formatDateShort, formatRange, nightsLabel } from "@/lib/format";
 import { type MonthSpec, dayStr } from "./calendarMath";
 
 interface AgendaMonthProps {
   spec: MonthSpec;
   /** trips intersecting this month, already sliced by the page */
   trips: Trip[];
+  /** academic periods (exams/breaks) noted under the month heading */
+  uniPeriods?: UniPeriod[];
   onPick: (trip: Trip) => void;
 }
 
@@ -24,7 +27,31 @@ interface WeekGroup {
  * their outbound day-of-month, each a stacked tappable FareTag row. No gantt —
  * just a scannable list. Click opens the same TripPopover as the desktop bars.
  */
-export default function AgendaMonth({ spec, trips, onPick }: AgendaMonthProps) {
+export default function AgendaMonth({
+  spec,
+  trips,
+  uniPeriods,
+  onPick,
+}: AgendaMonthProps) {
+  // "Exams Q1 26 Oct – 7 Nov · Christmas recess 21 Dec – 1 Jan"
+  const uniNote = useMemo(() => {
+    const overlapping = periodsInRange(
+      uniPeriods ?? [],
+      spec.startStr,
+      spec.endStr,
+    );
+    return overlapping
+      .map(
+        (p) =>
+          `${p.label} ${
+            p.start === p.end
+              ? formatDateShort(p.start)
+              : formatRange(p.start, p.end)
+          }`,
+      )
+      .join(" · ");
+  }, [uniPeriods, spec]);
+
   const weeks = useMemo<WeekGroup[]>(() => {
     // bucket by week-of-month based on outbound day (clamped to this month)
     const buckets = new Map<number, Trip[]>();
@@ -62,6 +89,12 @@ export default function AgendaMonth({ spec, trips, onPick }: AgendaMonthProps) {
           {trips.length} {trips.length === 1 ? "trip" : "trips"}
         </span>
       </div>
+
+      {uniNote && (
+        <p className="tnum -mt-2 mb-3 font-mono text-[11px] text-ink-muted/80">
+          TU/e: {uniNote}
+        </p>
+      )}
 
       {weeks.length === 0 ? (
         <p className="py-6 text-center text-sm text-ink-muted">

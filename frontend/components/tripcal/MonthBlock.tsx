@@ -2,11 +2,14 @@
 
 import { useMemo } from "react";
 import type { Trip, DateWindow } from "@/types/api";
+import type { UniPeriod } from "@/lib/university/tue";
 import { assignLanes } from "@/lib/lanes";
 import TripBar from "./TripBar";
+import GhostExtension from "./GhostExtension";
 import DensityStrip from "./DensityStrip";
 import {
   type MonthSpec,
+  addDays,
   clampDayInMonth,
   dayStr,
   isWeekend,
@@ -22,7 +25,11 @@ interface MonthBlockProps {
   density: Record<string, number>;
   /** availability windows to underlay (already day-clipped is not required) */
   windows: DateWindow[];
+  /** academic periods (exams/breaks) to wash under the bars; [] = no overlay */
+  uniPeriods?: UniPeriod[];
   today: string;
+  /** hovered trip's "stay longer" tail: dashed ghost from return+1 → endDate */
+  ghost?: { trip: Trip; endDate: string } | null;
   onBarHover: (trip: Trip | null, el: HTMLElement | null) => void;
   onBarClick: (trip: Trip) => void;
   onDayClick: (day: string) => void;
@@ -42,7 +49,9 @@ export default function MonthBlock({
   trips,
   density,
   windows,
+  uniPeriods,
   today,
+  ghost = null,
   onBarHover,
   onBarClick,
   onDayClick,
@@ -88,7 +97,44 @@ export default function MonthBlock({
     [windows, spec],
   );
 
+  // ─── Academic-calendar wash segments (clipped to this month) ──────────────
+  const uniSegments = useMemo(
+    () =>
+      (uniPeriods ?? [])
+        .filter((p) => spansMonth(p.start, p.end, spec))
+        .map((p) => ({
+          start: clampDayInMonth(p.start, spec),
+          end: clampDayInMonth(p.end, spec),
+          kind: p.kind,
+          label: p.label,
+        })),
+    [uniPeriods, spec],
+  );
+
   const dayNumbers = Array.from({ length: cols }, (_, i) => i + 1);
+
+  // ─── "Stay longer" ghost tail (hovered bar only) ───────────────────────────
+  // Rendered in the month that contains the trip's return date; a tail that
+  // would spill into the next month is clipped at the edge (square right end).
+  const ghostPlacement = useMemo(() => {
+    if (!ghost) return null;
+    const lane = lanes.get(ghost.trip.key);
+    if (lane == null) return null;
+    const ghostStart = addDays(ghost.trip.return_date, 1);
+    if (
+      ghost.trip.return_date < spec.startStr || // return isn't in this month
+      ghostStart > spec.endStr || // trip ends on the month's last day
+      ghost.endDate < ghostStart // nothing to extend into
+    ) {
+      return null;
+    }
+    return {
+      startCol: clampDayInMonth(ghostStart, spec),
+      endCol: clampDayInMonth(ghost.endDate, spec),
+      lane,
+      clippedEnd: ghost.endDate > spec.endStr,
+    };
+  }, [ghost, lanes, spec]);
 
   return (
     <section className="rounded-card border border-line bg-card p-4 shadow-card">
@@ -150,6 +196,34 @@ export default function MonthBlock({
           ))}
         </div>
 
+        {/* academic-calendar wash (exam hatch / break tint), below avail + bars */}
+        {uniSegments.length > 0 && (
+          <div
+            className="pointer-events-none absolute inset-0 grid gap-px"
+            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            aria-hidden="true"
+          >
+            {uniSegments.map((seg, i) => (
+              <div
+                key={i}
+                className="rounded-[2px]"
+                style={{
+                  gridColumn: `${seg.start} / span ${Math.max(1, seg.end - seg.start + 1)}`,
+                  ...(seg.kind === "exam"
+                    ? {
+                        backgroundImage:
+                          "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 22%, transparent) 0 2px, transparent 2px 6px)",
+                      }
+                    : {
+                        backgroundColor:
+                          "color-mix(in srgb, var(--color-uni-break) 14%, transparent)",
+                      }),
+                }}
+              />
+            ))}
+          </div>
+        )}
+
         {/* availability underlay (steal-green soft fill) */}
         {availSegments.length > 0 && (
           <div
@@ -207,6 +281,15 @@ export default function MonthBlock({
               />
             );
           })}
+
+          {ghostPlacement && (
+            <GhostExtension
+              startCol={ghostPlacement.startCol}
+              endCol={ghostPlacement.endCol}
+              lane={ghostPlacement.lane}
+              clippedEnd={ghostPlacement.clippedEnd}
+            />
+          )}
         </div>
       </div>
 

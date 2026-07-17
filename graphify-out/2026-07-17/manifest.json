@@ -245,9 +245,9 @@
     "semantic_hash": "479965f9220744a163ae280da5eb7c25"
   },
   "frontend/app/api/preferences/route.ts": {
-    "mtime": 1781287776.872338,
-    "ast_hash": "29b59b3b06370cda29dfc15d8de1f0f8",
-    "semantic_hash": "29b59b3b06370cda29dfc15d8de1f0f8"
+    "mtime": 1784253475.8390067,
+    "ast_hash": "a996d1b77185007a254973bd0cac3847",
+    "semantic_hash": ""
   },
   "frontend/app/api/saved-cities/route.ts": {
     "mtime": 1781349686.852175,
@@ -315,9 +315,9 @@
     "semantic_hash": ""
   },
   "frontend/app/settings/page.tsx": {
-    "mtime": 1783009398.598682,
-    "ast_hash": "6ceef26bf18edc4186d554f26a5e6b6b",
-    "semantic_hash": "6ceef26bf18edc4186d554f26a5e6b6b"
+    "mtime": 1784253338.7353632,
+    "ast_hash": "0a19f97cdcc45e96e592c66e6153baf2",
+    "semantic_hash": ""
   },
   "frontend/auth.config.ts": {
     "mtime": 1784189340.5206926,
@@ -450,9 +450,9 @@
     "semantic_hash": "fc83e1d4a757fa034f83124a8c320d13"
   },
   "frontend/components/settings/PreferencesCard.tsx": {
-    "mtime": 1783009398.6006796,
-    "ast_hash": "9b0ccd0e4a37695c7ece1a690ca71ef7",
-    "semantic_hash": "9b0ccd0e4a37695c7ece1a690ca71ef7"
+    "mtime": 1784253442.1964602,
+    "ast_hash": "0f33566536d043c736af656d5451240c",
+    "semantic_hash": ""
   },
   "frontend/components/settings/YearPaint.tsx": {
     "mtime": 1784252298.5992675,
@@ -932,6 +932,11 @@
   "frontend/components/ui/CountryFlag.tsx": {
     "mtime": 1784209731.5631723,
     "ast_hash": "23a3916fd9dcaacedf7e063aa9488057",
+    "semantic_hash": ""
+  },
+  "frontend/components/settings/CollapsibleSection.tsx": {
+    "mtime": 1784253318.6821835,
+    "ast_hash": "cb7a197d7f93e3b57ee5d2677b42aeb6",
     "semantic_hash": ""
   }
 }

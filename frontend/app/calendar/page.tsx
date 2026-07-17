@@ -7,12 +7,14 @@ import type { Trip, DateWindow } from "@/types/api";
 import { getTrips, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useSavedCities } from "@/lib/saved-cities";
+import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
 import DaySheet from "@/components/tripcal/DaySheet";
+import { useStayExtensions } from "@/components/tripcal/useStayExtensions";
 import CalendarFilters, {
   type CalendarFilterState,
   EMPTY_FILTERS,
@@ -41,6 +43,7 @@ export default function CalendarPage() {
   const months = useMemo(() => monthSpan(today, MONTHS), [today]);
 
   const { saved, signedIn: savedSignedIn } = useSavedCities();
+  const { periods: uniPeriods, university } = useUniCalendar();
 
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
   const [onlyFree, setOnlyFree] = useState(true);
@@ -166,6 +169,24 @@ export default function CalendarPage() {
     setPopoverTrip(t);
   }, []);
 
+  // ─── "Stay longer" suggestions for the hovered bar ─────────────────────────
+  const clampToWindows = signedIn && onlyFree;
+  const { extensions } = useStayExtensions(
+    hovered?.trip ?? null,
+    windows,
+    clampToWindows,
+  );
+  const ghost = useMemo(
+    () =>
+      hovered && extensions.length > 0
+        ? {
+            trip: hovered.trip,
+            endDate: extensions[extensions.length - 1].return_date,
+          }
+        : null,
+    [hovered, extensions],
+  );
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       {/* ─── Title ─────────────────────────────────────────────────────────── */}
@@ -207,6 +228,32 @@ export default function CalendarPage() {
             </>
           }
         />
+        {university && uniPeriods.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 45%, transparent) 0 2px, transparent 2px 4px)",
+                }}
+              />
+              TU/e exams
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-uni-break) 35%, transparent)",
+                }}
+              />
+              TU/e holidays
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ─── Body ──────────────────────────────────────────────────────────── */}
@@ -224,6 +271,7 @@ export default function CalendarPage() {
                 key={spec.label}
                 spec={spec}
                 trips={tripsByMonth[i]}
+                uniPeriods={uniPeriods}
                 onPick={openPopover}
               />
             ) : (
@@ -233,7 +281,9 @@ export default function CalendarPage() {
                 trips={tripsByMonth[i]}
                 density={density}
                 windows={hasWindows && !onlyFree ? windows : []}
+                uniPeriods={uniPeriods}
                 today={today}
+                ghost={ghost}
                 onBarHover={(trip, el) =>
                   setHovered(trip && el ? { trip, el } : null)
                 }
@@ -247,12 +297,18 @@ export default function CalendarPage() {
 
       {/* ─── Overlays ──────────────────────────────────────────────────────── */}
       {hovered && !popoverTrip && (
-        <TripTooltip trip={hovered.trip} anchor={hovered.el} />
+        <TripTooltip
+          trip={hovered.trip}
+          anchor={hovered.el}
+          extensions={extensions}
+        />
       )}
 
       <TripPopover
         trip={popoverTrip}
         fromQuery={fromQuery}
+        windows={windows}
+        clampToWindows={clampToWindows}
         onClose={() => setPopoverTrip(null)}
       />
 

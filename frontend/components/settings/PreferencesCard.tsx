@@ -5,11 +5,13 @@ import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
 import { ORIGINS } from "@/data/airports.gen";
 import { getPreferences, putPreferences, ApiError } from "@/lib/client";
+import { useUniCalendar } from "@/lib/university/context";
 import type { Preferences } from "@/types/api";
 
 type Mode = "loading" | "ready" | "error";
 
 export default function PreferencesCard() {
+  const { setUniversity } = useUniCalendar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -85,6 +87,8 @@ export default function PreferencesCard() {
       .then((p) => {
         setPrefs(p);
         setMaxPriceText(p.max_price != null ? String(p.max_price) : "");
+        // sync the shared overlay state (YearPaint on this page, calendars)
+        setUniversity(p.university ?? null);
         setSaveMsg({ kind: "ok", text: "Saved ✓" });
       })
       .catch((e) => {
@@ -98,7 +102,7 @@ export default function PreferencesCard() {
         }
       })
       .finally(() => setSaving(false));
-  }, [prefs, maxPriceText]);
+  }, [prefs, maxPriceText, setUniversity]);
 
   useEffect(() => {
     if (saveMsg?.kind !== "ok") return;
@@ -140,6 +144,22 @@ export default function PreferencesCard() {
             </Chip>
           ))}
         </div>
+      </Field>
+
+      {/* university calendar */}
+      <Field
+        label="University calendar"
+        hint="Show TU/e exam periods and holidays on your calendars."
+      >
+        <Chip
+          size="sm"
+          selected={prefs.university === "tue"}
+          onClick={() =>
+            patch({ university: prefs.university === "tue" ? null : "tue" })
+          }
+        >
+          I&rsquo;m a TU/e student
+        </Chip>
       </Field>
 
       {/* max price */}

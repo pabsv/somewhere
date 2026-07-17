@@ -6,6 +6,9 @@
    Solari board hero, wayfinding yellow as the single loud accent.
    Yellow ONLY as: IATA code tags, deal-tier badges/bars, availability hatch,
    board header strip. Steal-green is the only other chromatic.
+   Exception: uni-exam/uni-break are deliberately desaturated (rust/slate) and
+   appear ONLY as the low-opacity academic-calendar overlay (TU/e exams and
+   holidays) so yellow/green keep visual priority.
    ───────────────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -30,6 +33,10 @@
 
   /* alert (admin/error only) */
   --color-alert: #d6453d;
+
+  /* academic-calendar overlay (muted, low-opacity use only) */
+  --color-uni-exam: #b45437;
+  --color-uni-break: #64789b;
 
   /* shape */
   --radius-card: 0.75rem;

@@ -13,6 +13,8 @@ import {
 import Button from "@/components/ui/Button";
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
 import { AVAILABILITY_UPDATED_EVENT } from "@/components/settings/AcademicCard";
+import { useUniCalendar } from "@/lib/university/context";
+import type { UniPeriodKind } from "@/lib/university/tue";
 import { parseLocalDate } from "@/lib/format";
 import type { DateWindow } from "@/types/api";
 
@@ -220,6 +222,29 @@ interface BadgeState {
 export default function YearPaint() {
   const months = useMemo(() => buildMonths(MONTHS_AHEAD), []);
   const today = useMemo(() => todayKey(), []);
+
+  // academic overlay: day key → exam/break, for the visible 12-month span.
+  // Exams win where periods would ever overlap. Stable identity while the
+  // user's university pref is unchanged, so the memoized MonthGrids don't
+  // re-render.
+  const { periods: uniPeriods } = useUniCalendar();
+  const uniDays = useMemo(() => {
+    const map = new Map<string, UniPeriodKind>();
+    if (uniPeriods.length === 0 || months.length === 0) return map;
+    const first = months[0];
+    const last = months[months.length - 1];
+    const start = toKey(first.year, first.month, 1);
+    const end = toKey(last.year, last.month, last.days);
+    for (const p of uniPeriods) {
+      if (p.end < start || p.start > end) continue;
+      const lo = p.start < start ? start : p.start;
+      const hi = p.end > end ? end : p.end;
+      for (const k of keysBetween(lo, hi)) {
+        if (p.kind === "exam" || !map.has(k)) map.set(k, p.kind);
+      }
+    }
+    return map;
+  }, [uniPeriods, months]);
 
   const [painted, setPainted] = useState<Set<string>>(new Set());
   // edge times: keyed by day key; only meaningful while that key is a window
@@ -707,6 +732,26 @@ export default function YearPaint() {
           Drag across days to paint free days. Drag a trip&apos;s first or last
           day up/down to set when you get free / must be back.
         </span>
+        {uniDays.size > 0 && (
+          <span className="flex items-center gap-3 text-xs text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-[3px] w-4 rounded-full"
+                style={{ backgroundColor: "var(--color-uni-exam)" }}
+              />
+              TU/e exams
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-[3px] w-4 rounded-full"
+                style={{ backgroundColor: "var(--color-uni-break)" }}
+              />
+              TU/e holidays
+            </span>
+          </span>
+        )}
         {pendingStart && (
           <span className="font-mono text-xs text-ink">
             Pick an end day for {prettyDay(pendingStart)} — or{" "}
@@ -734,6 +779,7 @@ export default function YearPaint() {
             model={m}
             today={today}
             painted={painted}
+            uniDays={uniDays}
             roles={roles}
             fromT={fromT}
             backT={backT}
@@ -768,6 +814,8 @@ interface MonthGridProps {
   model: MonthModel;
   today: string;
   painted: Set<string>;
+  /** day key → academic period kind (bottom-stripe overlay) */
+  uniDays: Map<string, UniPeriodKind>;
   roles: Map<string, Role>;
   fromT: Map<string, number>;
   backT: Map<string, number>;
@@ -794,6 +842,7 @@ const MonthGrid = memo(function MonthGrid({
   model,
   today,
   painted,
+  uniDays,
   roles,
   fromT,
   backT,
@@ -878,6 +927,8 @@ const MonthGrid = memo(function MonthGrid({
           // hover-to-delete: × on the hovered window's last day
           const showDelete =
             !isPast && hoverWin !== null && key === hoverWin.e;
+          // academic overlay stripe (skip past days — they're inert anyway)
+          const uniKind = isPast ? undefined : uniDays.get(key);
 
           return (
             <button
@@ -939,6 +990,23 @@ const MonthGrid = memo(function MonthGrid({
                           backgroundColor: MID_BG,
                         }
                   }
+                />
+              )}
+              {uniKind && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1]"
+                  style={{
+                    left: 2,
+                    right: 2,
+                    bottom: 2,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor:
+                      uniKind === "exam"
+                        ? "var(--color-uni-exam)"
+                        : "var(--color-uni-break)",
+                  }}
                 />
               )}
               {contPrev && (

@@ -2,14 +2,30 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Trip } from "@/types/api";
-import { formatPrice, formatRange, nightsLabel } from "@/lib/format";
+import {
+  formatDateShort,
+  formatPrice,
+  formatRange,
+  nightsLabel,
+} from "@/lib/format";
 import { getDestination } from "@/data/destinations.gen";
 import CountryFlag from "@/components/ui/CountryFlag";
+import type { StayExtension } from "./useStayExtensions";
 
 interface TripTooltipProps {
   trip: Trip;
   /** the bar element the tooltip points at */
   anchor: HTMLElement;
+  /** "stay longer" suggestions — omitted/empty = section hidden */
+  extensions?: StayExtension[];
+}
+
+/** "+€8" / "−€4" / "±€0" — signed whole-euro delta vs the main fare. */
+function formatDelta(delta: number): string {
+  const r = Math.round(delta);
+  if (r > 0) return `+€${r}`;
+  if (r < 0) return `−€${-r}`;
+  return "±€0";
 }
 
 /**
@@ -17,7 +33,11 @@ interface TripTooltipProps {
  * when the fare beats the route baseline (delta_pct < 0). Positioned just above
  * the hovered bar via fixed coordinates from the anchor's bounding box.
  */
-export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
+export default function TripTooltip({
+  trip,
+  anchor,
+  extensions = [],
+}: TripTooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
@@ -30,7 +50,8 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
     left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
     const top = a.top - h - 8;
     setPos({ left, top: top < 8 ? a.bottom + 8 : top });
-  }, [anchor]);
+    // reposition when the "stay longer" rows pop in (tooltip height changes)
+  }, [anchor, extensions.length]);
 
   const belowPct =
     trip.delta_pct != null && trip.delta_pct < 0
@@ -69,6 +90,41 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
           </span>
         )}
       </p>
+
+      {/* ─── "Stay longer" suggestions (sparse data → often absent) ───────── */}
+      {extensions.length > 0 && (
+        <div className="mt-2 border-t border-line pt-1.5">
+          <p className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">
+            Stay longer
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {extensions.map((ext) => (
+              <li
+                key={ext.return_date}
+                className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink"
+              >
+                <span>
+                  +{ext.extraNights} night{ext.extraNights === 1 ? "" : "s"}
+                  <span className="text-ink-muted">
+                    {" "}
+                    · → {formatDateShort(ext.return_date)}
+                  </span>{" "}
+                  · {formatPrice(ext.price)}
+                </span>
+                <span
+                  className={
+                    Math.round(ext.deltaPrice) > 0
+                      ? "text-ink-muted"
+                      : "font-medium text-steal"
+                  }
+                >
+                  {formatDelta(ext.deltaPrice)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

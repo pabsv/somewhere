@@ -17,6 +17,7 @@ import {
   type FlightDoc,
   type GroupTrip,
   type Trip,
+  type TripVariant,
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
 import { HARD_PRICE_CEILING } from "@/lib/score";
@@ -447,6 +448,48 @@ export async function getCityData(
   }
 
   return { city, baseline, trips };
+}
+
+// ─── /api/trips/extensions ───────────────────────────────────────────────────
+
+/**
+ * "Stay longer" variants for one hovered trip: every stored itinerary with the
+ * SAME origin + destination + outbound_date, as slim scored variants sorted by
+ * return_date asc. Returns ALL return dates (shorter/equal/longer) — the
+ * client filters to the window it wants. Rides the {origin, outbound_date,
+ * price} index (destination filtered residually — tiny result set).
+ */
+export async function getTripExtensionsData(
+  origin: string,
+  destination: string,
+  outbound: string,
+): Promise<{ variants: TripVariant[] }> {
+  const flights = await flightsCollection();
+
+  const docs = await flights
+    .find({
+      origin,
+      destination,
+      outbound_date: outbound,
+      price: { $lte: HARD_PRICE_CEILING },
+    })
+    .toArray();
+
+  const baselines = await getBaselines();
+  const trips = dedupeTrips(scoreFlights(docs, baselines)).sort((a, b) =>
+    a.return_date < b.return_date ? -1 : a.return_date > b.return_date ? 1 : 0,
+  );
+
+  return {
+    variants: trips.map((t) => ({
+      return_date: t.return_date,
+      duration_days: t.duration_days,
+      price: t.price,
+      deal_tier: t.deal_tier,
+      delta_pct: t.delta_pct,
+      search_link: t.search_link,
+    })),
+  };
 }
 
 // ─── /api/trips ──────────────────────────────────────────────────────────────

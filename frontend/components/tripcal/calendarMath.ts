@@ -78,6 +78,13 @@ export function monthSpan(from: string, count: number): MonthSpec[] {
   return specs;
 }
 
+/** Add `n` days to a YYYY-MM-DD, return YYYY-MM-DD (local-safe). */
+export function addDays(from: string, n: number): string {
+  const d = parseLocalDate(from);
+  d.setDate(d.getDate() + n);
+  return toDateStr(d);
+}
+
 /** Add `n` calendar months to a YYYY-MM-DD, return YYYY-MM-DD (clamped day). */
 export function addMonths(from: string, n: number): string {
   const d = parseLocalDate(from);

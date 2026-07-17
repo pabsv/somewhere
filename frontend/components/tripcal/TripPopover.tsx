@@ -6,16 +6,26 @@ import FareTag from "@/components/ui/FareTag";
 import Badge from "@/components/ui/Badge";
 import Spark from "@/components/ui/Spark";
 import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
-import type { Trip } from "@/types/api";
+import type { DateWindow, Trip } from "@/types/api";
 import { getDestination } from "@/data/destinations.gen";
 import { getSearchUrl } from "@/lib/searchUrl";
-import { formatRange, nightsLabel, formatPrice } from "@/lib/format";
+import {
+  formatDateShort,
+  formatRange,
+  nightsLabel,
+  formatPrice,
+} from "@/lib/format";
 import CountryFlag from "@/components/ui/CountryFlag";
+import { useStayExtensions } from "./useStayExtensions";
 
 interface TripPopoverProps {
   trip: Trip | null;
   /** current ?from= query string (no leading ?), forwarded to the city link */
   fromQuery: string;
+  /** availability windows for "stay longer" clamping; omit to skip clamping */
+  windows?: DateWindow[];
+  /** true → clamp suggestions to the window containing the trip */
+  clampToWindows?: boolean;
   onClose: () => void;
 }
 
@@ -24,6 +34,14 @@ const TIER_BADGE: Record<Trip["deal_tier"], "steal" | "deal" | "neutral"> = {
   deal: "deal",
   fair: "neutral",
 };
+
+/** "+€8" / "−€4" / "±€0" — signed whole-euro delta vs the main fare. */
+function formatDelta(delta: number): string {
+  const r = Math.round(delta);
+  if (r > 0) return `+€${r}`;
+  if (r < 0) return `−€${-r}`;
+  return "±€0";
+}
 
 function LegRow({
   label,
@@ -62,9 +80,16 @@ function LegRow({
 export default function TripPopover({
   trip,
   fromQuery,
+  windows = [],
+  clampToWindows = false,
   onClose,
 }: TripPopoverProps) {
   const open = trip != null;
+  const { extensions, loading: extensionsLoading } = useStayExtensions(
+    trip,
+    windows,
+    clampToWindows,
+  );
   const dest = trip ? getDestination(trip.destination) : undefined;
   const city = dest?.name ?? trip?.city ?? "";
   const title = trip ? (
@@ -151,6 +176,56 @@ export default function TripPopover({
               stops={trip.ret.stops}
             />
           </div>
+
+          {/* ─── Stay longer ──────────────────────────────────────────── */}
+          {!extensionsLoading && (
+            <div className="rounded-card border border-line bg-card px-3">
+              <p className="border-b border-line py-2 font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+                Stay longer
+              </p>
+              {extensions.length > 0 ? (
+                extensions.map((ext) => (
+                  <a
+                    key={ext.return_date}
+                    href={getSearchUrl({
+                      origin: trip.origin,
+                      destination: trip.destination,
+                      outbound_date: trip.outbound_date,
+                      return_date: ext.return_date,
+                      duration_days: ext.duration_days,
+                      search_link: ext.search_link,
+                    })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
+                  >
+                    <span className="tnum font-mono text-xs text-ink">
+                      → {formatDateShort(ext.return_date)}
+                      <span className="ml-2 text-ink-muted">
+                        {nightsLabel(ext.duration_days)}
+                      </span>
+                    </span>
+                    <span className="tnum font-mono text-xs text-ink">
+                      {formatPrice(ext.price)}
+                      <span
+                        className={`ml-2 ${
+                          Math.round(ext.deltaPrice) > 0
+                            ? "text-ink-muted"
+                            : "font-medium text-steal"
+                        }`}
+                      >
+                        {formatDelta(ext.deltaPrice)}
+                      </span>
+                    </span>
+                  </a>
+                ))
+              ) : (
+                <p className="py-2 font-mono text-xs text-ink-muted">
+                  No longer stays seen yet for these dates.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* ─── Actions ──────────────────────────────────────────────── */}
           <div className="space-y-2">

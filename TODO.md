@@ -33,7 +33,7 @@
   - 6 origins (EIN, AMS, BRU, DUS, NRN, CRL) × 230 destinations = 1380 routes
   - Tier A (28 dests, 168 routes, daily) / B (84 dests, 504 routes, 3-day) / C (118 dests, 708 routes, weekly)
   - 2-min slots, 07-23 local window, ~437 routes/day average load
-  - Per route: 3 trip-duration buckets × 2 sub-windows = 6 SearchDates + top 6 Phase-2 = ~12 fli HTTP calls / ~43s
+  - Per route: 2 one-way SearchDates sweeps (~7 HTTP calls) → all 2–10-night pairs combined in memory → top 10 Phase-2 (max 2/out_date) = ~17 fli HTTP calls
   - State in `scrape_targets` + `scrape_runs`; flights TTL'd 14d after `last_seen_at`
   - First end-to-end test (EIN-BCN): 22 flights, 21 deals, €103 cheapest, 12 API calls, 43s
   - Shortcuts: `indexes`, `seed`, `pool`
@@ -41,7 +41,7 @@
 - [ ] **Burn-in on Windows (24-48h)** — verify pool scheduler steady-state
   - Watch `scheduler-pool.log` for rate-limit / parser breakage signals
   - Check `seed --stats` daily — `success_runs` should grow, `disabled` should stay 0
-  - Decide on duration buckets if too many empty routes (`empty_runs` >> `success_runs`)
+  - Tune `SCRAPE_MIN_NIGHTS`/`SCRAPE_MAX_NIGHTS` if too many empty routes (`empty_runs` >> `success_runs`)
 
 - [ ] **Port pool scheduler to Linux box (`pablo@100.101.234.37`)**
   - Clone repo into `~/flight-scraper`

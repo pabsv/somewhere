@@ -11,6 +11,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { DateWindow, GroupTrip, Trip } from "@/types/api";
+import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
@@ -50,6 +51,8 @@ export default function GroupTripsCalendar({
   sharedWindows,
 }: GroupTripsCalendarProps) {
   const isMobile = useIsMobile();
+  // the viewer's own academic overlay (exams/breaks), same as /calendar
+  const { periods: uniPeriods } = useUniCalendar();
 
   const today = useMemo(() => todayStr(), []);
   const months = useMemo(() => monthSpan(today, MONTHS), [today]);
@@ -111,6 +114,7 @@ export default function GroupTripsCalendar({
               key={spec.label}
               spec={spec}
               trips={tripsByMonth[i]}
+              uniPeriods={uniPeriods}
               onPick={openPopover}
             />
           ) : (
@@ -120,6 +124,7 @@ export default function GroupTripsCalendar({
               trips={tripsByMonth[i]}
               density={density}
               windows={windows}
+              uniPeriods={uniPeriods}
               today={today}
               onBarHover={(trip, el) =>
                 setHovered(trip && el ? { trip, el } : null)

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 4173",
+    "dev:alt": "set NEXT_DIST_DIR=.next-alt&& next dev --port 4174",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

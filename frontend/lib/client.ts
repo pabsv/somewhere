@@ -11,6 +11,7 @@ import type {
   CitiesResponse,
   CityDetailResponse,
   DateWindow,
+  ExtensionsResponse,
   FriendsResponse,
   GroupDetailResponse,
   GroupsResponse,
@@ -120,6 +121,15 @@ export type TripsParams = {
 /** GET /api/trips */
 export function getTrips(params: TripsParams = {}): Promise<TripsResponse> {
   return request(`/api/trips${qs(params)}`);
+}
+
+/** GET /api/trips/extensions — "stay longer" variants for one trip */
+export function getTripExtensions(params: {
+  from: string;
+  to: string;
+  outbound: string;
+}): Promise<ExtensionsResponse> {
+  return request(`/api/trips/extensions${qs(params)}`);
 }
 
 // ─── Session: availability + preferences ─────────────────────────────────────

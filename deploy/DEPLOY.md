@@ -72,4 +72,4 @@ sudo systemctl disable --now flight-scraper.service flight-scraper-restart.timer
 - 920 routes total (4 × 230). Daily scrape load ≈ 290/day (A daily, B every 3d, C weekly)
   vs 480 slots/day at 2-min cadence — comfortable headroom. Initial backlog of ~920
   never-scraped routes clears in ~2 days.
-- ~15 fli HTTP calls per route per cycle (180d = 3 sub-windows × 3 durations + top-6 details).
+- ~17 fli HTTP calls per route per cycle (2 one-way SearchDates sweeps ≈ 7 calls + top-10 details, max 2 per departure date).
