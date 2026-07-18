@@ -265,8 +265,8 @@
     "semantic_hash": "c24b6c2c1280e14ecac430b062b48892"
   },
   "frontend/app/calendar/page.tsx": {
-    "mtime": 1784358276.1300642,
-    "ast_hash": "03d59c884be7723ef8675a9595135b35",
+    "mtime": 1784376136.2209377,
+    "ast_hash": "bc17df01e00fb7d6f7ad5257f3e8266a",
     "semantic_hash": ""
   },
   "frontend/app/city/[code]/page.tsx": {
@@ -480,13 +480,13 @@
     "semantic_hash": "144e92defd089cff6c3d1588301063e6"
   },
   "frontend/components/tripcal/MonthBlock.tsx": {
-    "mtime": 1784358232.1567938,
-    "ast_hash": "c5a3536de88cf0ff716c328d6e246667",
+    "mtime": 1784375842.0930455,
+    "ast_hash": "97d3fdb965aca1088286107381f224f2",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripBar.tsx": {
-    "mtime": 1784358407.464455,
-    "ast_hash": "3c3d6af2b98dcf625f30e993101593c4",
+    "mtime": 1784375885.6312616,
+    "ast_hash": "2f63e996db029e184adc5a04040cda17",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripPopover.tsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripTooltip.tsx": {
-    "mtime": 1784358322.404675,
-    "ast_hash": "2804e44c5f3090022f49aeb0c5091be0",
+    "mtime": 1784376288.8760242,
+    "ast_hash": "8046d1948ec6ccdf5e5d035055b45340",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/calendarMath.ts": {
@@ -944,11 +944,6 @@
     "ast_hash": "e281c79defe5edef06c1cd2fb5c5a160",
     "semantic_hash": ""
   },
-  "frontend/components/tripcal/GhostExtension.tsx": {
-    "mtime": 1784358202.8477156,
-    "ast_hash": "d8f68700e17995ebb532caf4ddef0801",
-    "semantic_hash": ""
-  },
   "frontend/components/tripcal/useStayExtensions.ts": {
     "mtime": 1784358188.9301133,
     "ast_hash": "bda20e4a41f6c3f98ad83396eaac908e",
@@ -1162,6 +1157,11 @@
   "frontend/lib/stretch-core.ts": {
     "mtime": 1784358081.6071205,
     "ast_hash": "28b5858c9b6550febb01382738c8be33",
+    "semantic_hash": ""
+  },
+  "frontend/components/tripcal/StretchOverlay.tsx": {
+    "mtime": 1784376324.1894855,
+    "ast_hash": "fa091fab22e8a1f04baeac8c954afbe2",
     "semantic_hash": ""
   }
 }

@@ -11,7 +11,10 @@ import { useSavedCities } from "@/lib/saved-cities";
 import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
-import MonthBlock from "@/components/tripcal/MonthBlock";
+import MonthBlock, {
+  type StretchContext,
+  type StretchSelection,
+} from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
@@ -23,7 +26,7 @@ import {
   type StayStretch,
   type StretchSet,
 } from "@/components/tripcal/useStayExtensions";
-import { formatDelta } from "@/lib/format";
+import { formatDelta, formatPrice } from "@/lib/format";
 import CalendarFilters, {
   type CalendarFilterState,
   EMPTY_FILTERS,
@@ -113,6 +116,11 @@ export default function CalendarPage() {
   } | null>(null);
   const [popoverTrip, setPopoverTrip] = useState<CalTrip | null>(null);
   const [daySheet, setDaySheet] = useState<string | null>(null);
+
+  // Committed trip-stretch swaps, keyed by trip.key — persist for the session
+  // so a swap survives un-hover (design option 2c). A swapped-but-unhovered bar
+  // renders at its new dates; re-hovering it re-opens the bubble around it.
+  const [selections, setSelections] = useState<Record<string, StayStretch>>({});
 
   const originsKey = origins.join(",");
 
@@ -282,6 +290,23 @@ export default function CalendarPage() {
     setPopoverTrip(t);
   }, []);
 
+  // Swap a trip's stored dates/price for its committed stretch selection, so
+  // the tooltip, popover, and booking links all reflect what the user picked.
+  const applySelection = useCallback(
+    (t: CalTrip): CalTrip => {
+      const s = selections[t.key];
+      if (!s) return t;
+      return {
+        ...t,
+        outbound_date: s.out_date,
+        return_date: s.return_date,
+        price: s.price,
+        duration_days: s.nights,
+      };
+    },
+    [selections],
+  );
+
   // ─── Trip-stretch suggestions for the hovered bar ──────────────────────────
   const clampToWindows = signedIn && onlyFree;
   const { stretches: rtStretches } = useStayExtensions(
@@ -302,51 +327,128 @@ export default function CalendarPage() {
         : rtStretches,
     [hovered, rtStretches, windows, clampToWindows],
   );
-  // Ghost extents: furthest earlier/later candidate defines each segment (the
-  // full-window candidate counts toward both sides). Chip = that candidate's
-  // shift + delta, ~ when the price is a two-singles estimate.
-  const ghost = useMemo(() => {
-    if (!hovered) return null;
-    const chip = (arrow: string, days: number, s: StayStretch) =>
-      `${arrow}${days}d ${s.estimated ? "~" : ""}${formatDelta(s.deltaPrice)}`;
+  // The availability window the hovered trip sits in — the bubble spans it.
+  // Resolved only in clamp mode (matching how the variants are clamped); with
+  // no window we fall back to the ±3-day stretch envelope below.
+  const hoveredWindow = useMemo(() => {
+    if (!hovered || hovered.trip.openjaw || !clampToWindows) return undefined;
+    const t = hovered.trip;
+    return windows.find(
+      (w) => w.start_date <= t.outbound_date && t.return_date <= w.end_date,
+    );
+  }, [hovered, windows, clampToWindows]);
 
-    const earlierCands = [
-      ...stretches.earlier,
-      ...(stretches.fullWindow && stretches.fullWindow.daysEarlier > 0
-        ? [stretches.fullWindow]
-        : []),
+  // ─── Full-length bubble (design option 2c) for the hovered bar ─────────────
+  // One dashed pill over the whole window with a fare on each free day; click a
+  // day to swap the trip live. Open-jaw bars are excluded (their extensions are
+  // inline and one-sided). Cells come from single-side variants only so each
+  // click maps unambiguously to one variant; the full-window variant lives in
+  // the popover.
+  const stretch = useMemo<StretchContext | null>(() => {
+    if (!hovered || hovered.trip.openjaw) return null;
+    const base = hovered.trip;
+    const sel = selections[base.key] ?? null;
+
+    const cells = [
+      ...stretches.earlier.map((s) => ({
+        date: s.out_date,
+        side: "earlier" as const,
+        label: `${s.estimated ? "~" : ""}${formatDelta(s.deltaPrice)}`,
+        active: sel != null && sel.out_date <= s.out_date,
+      })),
+      ...stretches.later.map((s) => ({
+        date: s.return_date,
+        side: "later" as const,
+        label: `${s.estimated ? "~" : ""}${formatDelta(s.deltaPrice)}`,
+        active: sel != null && sel.return_date >= s.return_date,
+      })),
     ];
-    const laterCands = [
-      ...stretches.later,
-      ...(stretches.fullWindow && stretches.fullWindow.daysLater > 0
-        ? [stretches.fullWindow]
-        : []),
-    ];
-    const earliest = earlierCands.reduce<StayStretch | null>(
-      (a, s) => (a == null || s.out_date < a.out_date ? s : a),
-      null,
-    );
-    const latest = laterCands.reduce<StayStretch | null>(
-      (a, s) => (a == null || s.return_date > a.return_date ? s : a),
-      null,
-    );
-    if (!earliest && !latest) return null;
+    if (cells.length === 0 && !sel) return null;
+
+    // bubble span: the free window when clamping, else the stretch envelope
+    const outs = [base.outbound_date, ...stretches.earlier.map((s) => s.out_date)];
+    const rets = [base.return_date, ...stretches.later.map((s) => s.return_date)];
+    if (sel) {
+      outs.push(sel.out_date);
+      rets.push(sel.return_date);
+    }
+    const winStart =
+      hoveredWindow?.start_date ?? outs.reduce((a, b) => (b < a ? b : a));
+    const winEnd =
+      hoveredWindow?.end_date ?? rets.reduce((a, b) => (b > a ? b : a));
+
+    const dayVariant = new Map<string, StayStretch>();
+    for (const s of stretches.earlier) dayVariant.set(s.out_date, s);
+    for (const s of stretches.later) dayVariant.set(s.return_date, s);
+
+    const price = sel?.price ?? base.price;
     return {
-      trip: hovered.trip,
-      earlier: earliest
-        ? {
-            startDate: earliest.out_date,
-            label: chip("←", earliest.daysEarlier, earliest),
+      key: base.key,
+      winStart,
+      winEnd,
+      selOut: sel?.out_date ?? base.outbound_date,
+      selRet: sel?.return_date ?? base.return_date,
+      barLabel: `${base.destination} ${formatPrice(price)}`,
+      deltaLabel: sel ? formatDelta(price - base.price) : null,
+      modified: sel != null,
+      cells,
+      onPickDay: (date: string) => {
+        const v = dayVariant.get(date);
+        if (!v) return;
+        setSelections((prev) => {
+          const cur = prev[base.key];
+          // clicking the exact current selection toggles back to base
+          if (
+            cur &&
+            cur.out_date === v.out_date &&
+            cur.return_date === v.return_date
+          ) {
+            const rest = { ...prev };
+            delete rest[base.key];
+            return rest;
           }
-        : null,
-      later: latest
-        ? {
-            endDate: latest.return_date,
-            label: chip("+", latest.daysLater, latest),
-          }
-        : null,
+          return { ...prev, [base.key]: v };
+        });
+      },
+      onBar: () => {
+        if (selections[base.key]) {
+          setSelections((prev) => {
+            const rest = { ...prev };
+            delete rest[base.key];
+            return rest;
+          });
+        } else {
+          openPopover(applySelection(base));
+        }
+      },
     };
-  }, [hovered, stretches]);
+  }, [
+    hovered,
+    stretches,
+    hoveredWindow,
+    selections,
+    openPopover,
+    applySelection,
+  ]);
+
+  // Committed swaps for MonthBlock — modified bars that aren't hovered render
+  // at these dates with a "·+€21" tail.
+  const selectionsMap = useMemo(() => {
+    const m = new Map<string, StretchSelection>();
+    for (const [key, s] of Object.entries(selections)) {
+      m.set(key, {
+        out_date: s.out_date,
+        return_date: s.return_date,
+        price: s.price,
+        nights: s.nights,
+        deltaPrice: s.deltaPrice,
+      });
+    }
+    return m;
+  }, [selections]);
+
+  // Tooltip reflects the swapped variant when one is committed.
+  const hoveredDisplay = hovered ? applySelection(hovered.trip) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -476,11 +578,12 @@ export default function CalendarPage() {
                 windows={hasWindows && !onlyFree ? windows : []}
                 uniPeriods={uniPeriods}
                 today={today}
-                ghost={ghost}
+                selections={selectionsMap}
+                stretch={stretch}
                 onBarHover={(trip, el) =>
                   setHovered(trip && el ? { trip, el } : null)
                 }
-                onBarClick={openPopover}
+                onBarClick={(t) => openPopover(applySelection(t))}
                 onDayClick={setDaySheet}
               />
             ),
@@ -489,12 +592,8 @@ export default function CalendarPage() {
       )}
 
       {/* ─── Overlays ──────────────────────────────────────────────────────── */}
-      {hovered && !popoverTrip && (
-        <TripTooltip
-          trip={hovered.trip}
-          anchor={hovered.el}
-          stretches={stretches}
-        />
+      {hovered && hoveredDisplay && !popoverTrip && (
+        <TripTooltip trip={hoveredDisplay} anchor={hovered.el} />
       )}
 
       <TripPopover

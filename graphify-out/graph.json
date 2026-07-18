@@ -21,8 +21,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_dependencies",
-      "community": 7,
-      "community_name": "Community 7",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "dependencies.py"
     },
     {
@@ -32,8 +32,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "api_dependencies_get_current_user_id",
-      "community": 7,
-      "community_name": "Community 7",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get_current_user_id()"
     },
     {
@@ -43,8 +43,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_dependencies_rationale_1",
-      "community": 7,
-      "community_name": "Community 7",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "shared dependencies for the api.  multi-user mode: identity is established via"
     },
     {
@@ -54,8 +54,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "api_dependencies_rationale_13",
-      "community": 7,
-      "community_name": "Community 7",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "fastapi dependency: reads user id from the x-user-id request header.     return"
     },
     {
@@ -208,8 +208,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_auth",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "auth.py"
     },
     {
@@ -219,8 +219,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "api_routes_auth_loginrequest",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "loginrequest"
     },
     {
@@ -230,8 +230,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "api_routes_auth_py_basemodel",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "basemodel"
     },
     {
@@ -241,8 +241,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "api_routes_auth_login",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "login()"
     },
     {
@@ -252,8 +252,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "api_routes_auth_me",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "me()"
     },
     {
@@ -263,8 +263,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_auth_rationale_1",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "post /api/auth/login  \u2014 sign in or register (no password) get  /api/auth/me"
     },
     {
@@ -274,8 +274,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "api_routes_auth_rationale_21",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "find or create a user by email. returns user_id, name, email.     no password r"
     },
     {
@@ -285,8 +285,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "api_routes_auth_rationale_39",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "validate a stored user id. returns user info or 401.     called on app load to"
     },
     {
@@ -329,8 +329,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_preferences",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "preferences.py"
     },
     {
@@ -340,8 +340,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "api_routes_preferences_datewindow",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "datewindow"
     },
     {
@@ -351,8 +351,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "api_routes_preferences_py_basemodel",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "basemodel"
     },
     {
@@ -362,8 +362,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "api_routes_preferences_userpreferences",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "userpreferences"
     },
     {
@@ -373,8 +373,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "api_routes_preferences_get_preferences",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get_preferences()"
     },
     {
@@ -384,8 +384,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "api_routes_preferences_save_preferences",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "save_preferences()"
     },
     {
@@ -395,8 +395,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_preferences_rationale_1",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get  /api/preferences \u2014 read the full userpreferences object put  /api/preferen"
     },
     {
@@ -406,8 +406,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_scrape",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "scrape.py"
     },
     {
@@ -417,8 +417,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "api_routes_scrape_run_scrape",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "_run_scrape()"
     },
     {
@@ -428,8 +428,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "api_routes_scrape_start_scrape",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "start_scrape()"
     },
     {
@@ -439,8 +439,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "api_routes_scrape_get_scrape_status",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get_scrape_status()"
     },
     {
@@ -450,8 +450,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_routes_scrape_rationale_1",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "post /api/scrape        \u2014 trigger a scrape using the user's saved preferences g"
     },
     {
@@ -461,8 +461,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "api_routes_scrape_rationale_47",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "background thread: scrape azair using the user's saved preferences."
     },
     {
@@ -472,8 +472,8 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "api_routes_scrape_rationale_125",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "start a background scrape. returns immediately."
     },
     {
@@ -483,8 +483,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "api_routes_scrape_rationale_136",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "return current scrape state for polling."
     },
     {
@@ -516,8 +516,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_config",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "config.py"
     },
     {
@@ -527,8 +527,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "database_config_get_connection_string",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "get_connection_string()"
     },
     {
@@ -538,8 +538,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_config_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "mongodb configuration settings.  uses environment variables with sensible defa"
     },
     {
@@ -549,8 +549,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "database_config_rationale_24",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "build mongodb connection string."
     },
     {
@@ -560,8 +560,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_connection",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "connection.py"
     },
     {
@@ -571,8 +571,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "database_connection_databaseconnection",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "databaseconnection"
     },
     {
@@ -582,8 +582,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "database_connection_databaseconnection_new",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": ".__new__()"
     },
     {
@@ -593,8 +593,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "database_connection_databaseconnection_get_client",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": ".get_client()"
     },
     {
@@ -604,8 +604,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "mongoclient",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "mongoclient"
     },
     {
@@ -637,8 +637,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "database_connection_databaseconnection_close",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": ".close()"
     },
     {
@@ -648,8 +648,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "database_connection_databaseconnection_is_connected",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": ".is_connected()"
     },
     {
@@ -692,8 +692,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_connection_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "mongodb connection manager.  singleton pattern to ensure a single database con"
     },
     {
@@ -703,8 +703,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "database_connection_rationale_19",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "singleton mongodb connection manager.      usage:         db = databaseconnec"
     },
     {
@@ -714,8 +714,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "database_connection_rationale_38",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "get the mongodb client, creating it if necessary."
     },
     {
@@ -736,8 +736,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "database_connection_rationale_64",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "close the database connection."
     },
     {
@@ -747,8 +747,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "database_connection_rationale_73",
-      "community": 23,
-      "community_name": "Community 23",
+      "community": 79,
+      "community_name": "DatabaseConnection",
       "norm_label": "check if connected to mongodb."
     },
     {
@@ -802,8 +802,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_availability",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 24,
+      "community_name": "Community 24",
       "norm_label": "availability.py"
     },
     {
@@ -857,8 +857,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "database_models_availability_availability_contains_date",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 83,
+      "community_name": ".contains_date",
       "norm_label": ".contains_date()"
     },
     {
@@ -868,8 +868,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "database_models_availability_py_datetime",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 83,
+      "community_name": ".contains_date",
       "norm_label": "datetime"
     },
     {
@@ -879,8 +879,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "database_models_availability_availability_overlaps_with",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 83,
+      "community_name": ".contains_date",
       "norm_label": ".overlaps_with()"
     },
     {
@@ -934,8 +934,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_availability_rationale_1",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 24,
+      "community_name": "Community 24",
       "norm_label": "availability model - user's available date ranges for travel."
     },
     {
@@ -967,8 +967,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "database_models_availability_rationale_58",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 83,
+      "community_name": ".contains_date",
       "norm_label": "check if a date falls within this availability window."
     },
     {
@@ -978,8 +978,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "database_models_availability_rationale_62",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 83,
+      "community_name": ".contains_date",
       "norm_label": "check if this availability overlaps with a given date range."
     },
     {
@@ -1429,8 +1429,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_oneway_fare",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "oneway_fare.py"
     },
     {
@@ -1517,8 +1517,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_oneway_fare_rationale_1",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "one-way fare grid model \u2014 open-jaw foundation.  one document per directed leg (o"
     },
     {
@@ -1572,8 +1572,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_price_history",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "price_history.py"
     },
     {
@@ -1583,8 +1583,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "database_models_price_history_pricehistory",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "pricehistory"
     },
     {
@@ -1594,8 +1594,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "database_models_price_history_pricehistory_post_init",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": ".__post_init__()"
     },
     {
@@ -1605,8 +1605,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "database_models_price_history_pricehistory_id",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": ".id()"
     },
     {
@@ -1616,8 +1616,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "database_models_price_history_pricehistory_to_dict",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": ".to_dict()"
     },
     {
@@ -1638,8 +1638,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "database_models_price_history_pricehistory_from_flight",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": ".from_flight()"
     },
     {
@@ -1649,8 +1649,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_models_price_history_rationale_1",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "price history model - historical price snapshots for flights."
     },
     {
@@ -1660,8 +1660,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "database_models_price_history_rationale_13",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "price snapshot for a flight.      mongodb document structure:     {"
     },
     {
@@ -1671,8 +1671,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "database_models_price_history_rationale_43",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "convert to dictionary for mongodb storage."
     },
     {
@@ -1693,8 +1693,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "database_models_price_history_rationale_67",
-      "community": 9,
-      "community_name": "Community 9",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "create pricehistory from flight data."
     },
     {
@@ -2122,8 +2122,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "database_models_user_usersearchpreferences",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 15,
+      "community_name": "Community 15",
       "norm_label": "usersearchpreferences"
     },
     {
@@ -2133,8 +2133,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "database_models_user_usersearchpreferences_to_dict",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 15,
+      "community_name": "Community 15",
       "norm_label": ".to_dict()"
     },
     {
@@ -2144,8 +2144,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "database_models_user_usersearchpreferences_from_dict",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 15,
+      "community_name": "Community 15",
       "norm_label": ".from_dict()"
     },
     {
@@ -2265,8 +2265,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "database_models_user_rationale_53",
-      "community": 24,
-      "community_name": "Community 24",
+      "community": 15,
+      "community_name": "Community 15",
       "norm_label": "user's search preferences."
     },
     {
@@ -2331,8 +2331,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_init",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "__init__.py"
     },
     {
@@ -2342,8 +2342,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_init_rationale_1",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "database repositories."
     },
     {
@@ -2353,8 +2353,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_availability_repo",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "availability_repo.py"
     },
     {
@@ -2364,8 +2364,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "availabilityrepository"
     },
     {
@@ -2386,8 +2386,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository_create",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": ".create()"
     },
     {
@@ -2397,8 +2397,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_py_datetime",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": "datetime"
     },
     {
@@ -2408,8 +2408,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository_create_many",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": ".create_many()"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository_find_active_in_range",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": ".find_active_in_range()"
     },
     {
@@ -2485,8 +2485,8 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository_update_dates",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": ".update_dates()"
     },
     {
@@ -2496,8 +2496,8 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_availabilityrepository_deactivate",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 87,
+      "community_name": ".deactivate",
       "norm_label": ".deactivate()"
     },
     {
@@ -2551,8 +2551,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_1",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "availability repository with crud and date range queries."
     },
     {
@@ -2562,8 +2562,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_15",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "repository for availability crud operations."
     },
     {
@@ -2573,8 +2573,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_28",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": "create a new availability window.          args:             user_id: user's"
     },
     {
@@ -2584,8 +2584,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_57",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": "create multiple availability windows at once.          args:             user"
     },
     {
@@ -2617,8 +2617,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_106",
-      "community": 11,
-      "community_name": "Community 11",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": "find active availability windows that overlap with a given date range."
     },
     {
@@ -2661,8 +2661,8 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_173",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 80,
+      "community_name": ".create",
       "norm_label": "update the dates of an availability window."
     },
     {
@@ -2672,8 +2672,8 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "database_repositories_availability_repo_rationale_187",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 87,
+      "community_name": ".deactivate",
       "norm_label": "deactivate an availability window."
     },
     {
@@ -2727,8 +2727,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_destination_repo",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "destination_repo.py"
     },
     {
@@ -2738,8 +2738,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_destinationrepository",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "destinationrepository"
     },
     {
@@ -2859,8 +2859,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_destinationrepository_get_all_active_destination_codes",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": ".get_all_active_destination_codes()"
     },
     {
@@ -2958,8 +2958,8 @@
       "source_location": "L260",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_destinationrepository_get_popular_destinations",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": ".get_popular_destinations()"
     },
     {
@@ -2969,8 +2969,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_rationale_1",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "destination preference repository with user and reverse lookups."
     },
     {
@@ -2980,8 +2980,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_rationale_15",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "repository for destinationpreference crud operations."
     },
     {
@@ -3079,8 +3079,8 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_rationale_167",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get all unique destination codes across all users."
     },
     {
@@ -3178,8 +3178,8 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "database_repositories_destination_repo_rationale_261",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "get most popular destinations across all users.          returns:"
     },
     {
@@ -3189,8 +3189,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_flight_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "flight_repo.py"
     },
     {
@@ -3398,8 +3398,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_flight_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "flight repository \u2014 upsert and query logic for the flights collection.  v2: flig"
     },
     {
@@ -3563,8 +3563,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_oneway_fare_repo",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "oneway_fare_repo.py"
     },
     {
@@ -3585,8 +3585,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "database_repositories_oneway_fare_repo_onewayfarerepository_init",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 21,
+      "community_name": "Community 21",
       "norm_label": ".__init__()"
     },
     {
@@ -3651,8 +3651,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_oneway_fare_repo_rationale_1",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "onewayfarerepository \u2014 one-way leg fare grids (open-jaw foundation).  one doc pe"
     },
     {
@@ -3717,8 +3717,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_price_history_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "price_history_repo.py"
     },
     {
@@ -3882,8 +3882,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_price_history_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 53,
+      "community_name": "Providers.tsx",
       "norm_label": "price history repository with aggregation queries."
     },
     {
@@ -4036,8 +4036,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_route_stats_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "route_stats_repo.py"
     },
     {
@@ -4234,8 +4234,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_route_stats_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "route statistics repository with aggregation and update logic."
     },
     {
@@ -4542,8 +4542,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_scrape_run_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 24,
+      "community_name": "Community 24",
       "norm_label": "scrape_run_repo.py"
     },
     {
@@ -4619,8 +4619,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_scrape_run_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 24,
+      "community_name": "Community 24",
       "norm_label": "scraperunrepository \u2014 append-only log of scrape executions.  one document per ro"
     },
     {
@@ -4652,8 +4652,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_scrape_target_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "scrape_target_repo.py"
     },
     {
@@ -4795,8 +4795,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_scrape_target_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "scrapetargetrepository \u2014 manages the route pool.  core operations:   bulk_upsert"
     },
     {
@@ -4839,8 +4839,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_user_repo",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "user_repo.py"
     },
     {
@@ -4850,8 +4850,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "database_repositories_user_repo_userrepository",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "userrepository"
     },
     {
@@ -5070,8 +5070,8 @@
       "source_location": "L240",
       "_origin": "ast",
       "id": "database_repositories_user_repo_userrepository_count_active",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": ".count_active()"
     },
     {
@@ -5081,8 +5081,8 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "database_repositories_user_repo_userrepository_count_total",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": ".count_total()"
     },
     {
@@ -5092,8 +5092,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_repositories_user_repo_rationale_1",
-      "community": 62,
-      "community_name": "get_collection",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "user repository with crud operations and password hashing."
     },
     {
@@ -5103,8 +5103,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "database_repositories_user_repo_rationale_16",
-      "community": 15,
-      "community_name": "Community 15",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": "repository for user crud operations."
     },
     {
@@ -5301,8 +5301,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_services_flight_service",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "flight_service.py"
     },
     {
@@ -5312,8 +5312,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "database_services_flight_service_flightservice",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "flightservice"
     },
     {
@@ -5367,8 +5367,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "database_services_flight_service_rationale_1",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "flight service \u2014 main integration point for saving scraped flights.  v2: python"
     },
     {
@@ -5378,8 +5378,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "database_services_flight_service_rationale_25",
-      "community": 21,
-      "community_name": "Community 21",
+      "community": 7,
+      "community_name": "Community 7",
       "norm_label": "main service for flight operations.      usage:         from database.services i"
     },
     {
@@ -5444,8 +5444,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "database_services_user_matcher_usermatcher_init",
-      "community": 8,
-      "community_name": "Community 8",
+      "community": 2,
+      "community_name": "Community 2",
       "norm_label": ".__init__()"
     },
     {
@@ -6332,8 +6332,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_app_api_cities_code_route",
-      "community": 84,
-      "community_name": "admin.py",
+      "community": 86,
+      "community_name": "parseOrigins",
       "norm_label": "route.ts"
     },
     {
@@ -6343,8 +6343,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "frontend_app_api_cities_code_route_get",
-      "community": 84,
-      "community_name": "admin.py",
+      "community": 86,
+      "community_name": "parseOrigins",
       "norm_label": "get()"
     },
     {
@@ -7066,7 +7066,7 @@
       "label": "toCalTrip()",
       "file_type": "code",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L49",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "frontend_app_calendar_page_tocaltrip",
       "community": 17,
@@ -7077,7 +7077,7 @@
       "label": "CalendarPage()",
       "file_type": "code",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L75",
+      "source_location": "L78",
       "_origin": "ast",
       "id": "frontend_app_calendar_page_calendarpage",
       "community": 17,
@@ -7088,7 +7088,7 @@
       "label": "SkeletonMonths()",
       "file_type": "code",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L520",
+      "source_location": "L619",
       "_origin": "ast",
       "id": "frontend_app_calendar_page_skeletonmonths",
       "community": 17,
@@ -7099,7 +7099,7 @@
       "label": "ColdState()",
       "file_type": "code",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L546",
+      "source_location": "L645",
       "_origin": "ast",
       "id": "frontend_app_calendar_page_coldstate",
       "community": 17,
@@ -7110,7 +7110,7 @@
       "label": "ErrorState()",
       "file_type": "code",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L560",
+      "source_location": "L659",
       "_origin": "ast",
       "id": "frontend_app_calendar_page_errorstate",
       "community": 17,
@@ -7223,8 +7223,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_app_fonts",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "fonts.ts"
     },
     {
@@ -7234,8 +7234,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "frontend_app_fonts_bricolage",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "bricolage"
     },
     {
@@ -7245,8 +7245,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "frontend_app_fonts_instrument",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "instrument"
     },
     {
@@ -7256,8 +7256,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "frontend_app_fonts_splinemono",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "splinemono"
     },
     {
@@ -7509,8 +7509,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_app_layout",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "layout.tsx"
     },
     {
@@ -7520,8 +7520,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "frontend_app_layout_metadata",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "metadata"
     },
     {
@@ -7531,8 +7531,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "frontend_app_layout_viewport",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "viewport"
     },
     {
@@ -7542,8 +7542,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "frontend_app_layout_rootlayout",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "rootlayout()"
     },
     {
@@ -7663,8 +7663,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_app_settings_page",
-      "community": 49,
-      "community_name": "UserMatcher",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "page.tsx"
     },
     {
@@ -7674,8 +7674,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "frontend_app_settings_page_settingspage",
-      "community": 49,
-      "community_name": "UserMatcher",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "settingspage()"
     },
     {
@@ -8158,8 +8158,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "userdetailsheet.tsx"
     },
     {
@@ -8169,8 +8169,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_weekdays",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "weekdays"
     },
     {
@@ -8180,8 +8180,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_signuplabel",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "signuplabel()"
     },
     {
@@ -8191,8 +8191,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_windowlabel",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "windowlabel()"
     },
     {
@@ -8202,8 +8202,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_userdetailsheet",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "userdetailsheet()"
     },
     {
@@ -8213,8 +8213,8 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_section",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "section()"
     },
     {
@@ -8224,8 +8224,8 @@
       "source_location": "L220",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_row",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "row()"
     },
     {
@@ -8235,8 +8235,8 @@
       "source_location": "L229",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_chiprow",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "chiprow()"
     },
     {
@@ -8246,8 +8246,8 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "frontend_components_admin_userdetailsheet_muted",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "muted()"
     },
     {
@@ -8499,8 +8499,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_board_flaptext",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "flaptext.tsx"
     },
     {
@@ -8510,8 +8510,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "frontend_components_board_flaptext_flaptextprops",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "flaptextprops"
     },
     {
@@ -8521,8 +8521,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_board_flaptext_size_classes",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "size_classes"
     },
     {
@@ -8532,8 +8532,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "frontend_components_board_flaptext_flaptext",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "flaptext()"
     },
     {
@@ -8972,8 +8972,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_explore_citycard",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "citycard.tsx"
     },
     {
@@ -8983,8 +8983,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_explore_citycard_citycardprops",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "citycardprops"
     },
     {
@@ -8994,8 +8994,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "frontend_components_explore_citycard_citycard",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "citycard()"
     },
     {
@@ -9005,8 +9005,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "frontend_components_explore_citycard_citycardskeleton",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "citycardskeleton()"
     },
     {
@@ -9016,8 +9016,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_explore_explorecontrols",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "explorecontrols.tsx"
     },
     {
@@ -9027,8 +9027,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_explore_explorecontrols_explorecontrolsprops",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "explorecontrolsprops"
     },
     {
@@ -9038,8 +9038,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "frontend_components_explore_explorecontrols_explorecontrols",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "explorecontrols()"
     },
     {
@@ -9049,8 +9049,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_explore_favouritesstrip",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "favouritesstrip.tsx"
     },
     {
@@ -9060,8 +9060,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "frontend_components_explore_favouritesstrip_favouritesstripprops",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "favouritesstripprops"
     },
     {
@@ -9071,8 +9071,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "frontend_components_explore_favouritesstrip_favouritesstrip",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "favouritesstrip()"
     },
     {
@@ -9093,8 +9093,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_explore_searchcombobox_searchselection",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "searchselection"
     },
     {
@@ -9280,8 +9280,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_groups_grouptripsboard",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 41,
+      "community_name": "Community 41",
       "norm_label": "grouptripsboard.tsx"
     },
     {
@@ -9291,8 +9291,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "frontend_components_groups_grouptripsboard_grouptripsboard",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 41,
+      "community_name": "Community 41",
       "norm_label": "grouptripsboard()"
     },
     {
@@ -9302,8 +9302,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "frontend_components_groups_grouptripsboard_grouptriprow",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 41,
+      "community_name": "Community 41",
       "norm_label": "grouptriprow()"
     },
     {
@@ -9357,8 +9357,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_groups_invitecard",
-      "community": 16,
-      "community_name": "Community 16",
+      "community": 34,
+      "community_name": "Community 34",
       "norm_label": "invitecard.tsx"
     },
     {
@@ -9533,8 +9533,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_layout_providers",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "providers.tsx"
     },
     {
@@ -9544,8 +9544,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "frontend_components_layout_providers_providers",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "providers()"
     },
     {
@@ -9555,8 +9555,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_onboarding_onboardinggate",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "onboardinggate.tsx"
     },
     {
@@ -9566,8 +9566,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "frontend_components_onboarding_onboardinggate_exempt_prefixes",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "exempt_prefixes"
     },
     {
@@ -9577,8 +9577,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "frontend_components_onboarding_onboardinggate_onboardinggate",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "onboardinggate()"
     },
     {
@@ -9643,8 +9643,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_calendarstep",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarstep.tsx"
     },
     {
@@ -9654,8 +9654,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_calendarstep_calendarstep",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarstep()"
     },
     {
@@ -9665,8 +9665,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_checkinstep",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "checkinstep.tsx"
     },
     {
@@ -9676,8 +9676,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_checkinstep_pitch_rows",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "pitch_rows"
     },
     {
@@ -9687,8 +9687,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_checkinstep_checkinstep",
-      "community": 2,
-      "community_name": "Community 2",
+      "community": 33,
+      "community_name": "Community 33",
       "norm_label": "checkinstep()"
     },
     {
@@ -9731,8 +9731,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_originsstep",
-      "community": 33,
-      "community_name": "Community 33",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "originsstep.tsx"
     },
     {
@@ -9742,8 +9742,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "frontend_components_onboarding_steps_originsstep_originsstep",
-      "community": 33,
-      "community_name": "Community 33",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "originsstep()"
     },
     {
@@ -9797,8 +9797,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_settings_collapsiblesection",
-      "community": 49,
-      "community_name": "UserMatcher",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "collapsiblesection.tsx"
     },
     {
@@ -9808,8 +9808,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "frontend_components_settings_collapsiblesection_collapsiblesection",
-      "community": 49,
-      "community_name": "UserMatcher",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "collapsiblesection()"
     },
     {
@@ -9841,8 +9841,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_settings_originchips",
-      "community": 33,
-      "community_name": "Community 33",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "originchips.tsx"
     },
     {
@@ -9852,8 +9852,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "frontend_components_settings_originchips_originchips",
-      "community": 33,
-      "community_name": "Community 33",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "originchips()"
     },
     {
@@ -10226,8 +10226,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_tripcal_agendamonth",
-      "community": 94,
-      "community_name": "UserAirports",
+      "community": 42,
+      "community_name": "Community 42",
       "norm_label": "agendamonth.tsx"
     },
     {
@@ -10237,8 +10237,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_components_tripcal_agendamonth_agendamonthprops",
-      "community": 94,
-      "community_name": "UserAirports",
+      "community": 42,
+      "community_name": "Community 42",
       "norm_label": "agendamonthprops"
     },
     {
@@ -10259,8 +10259,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "frontend_components_tripcal_agendamonth_agendamonth",
-      "community": 94,
-      "community_name": "UserAirports",
+      "community": 42,
+      "community_name": "Community 42",
       "norm_label": "agendamonth()"
     },
     {
@@ -10270,8 +10270,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarfilters.tsx"
     },
     {
@@ -10281,8 +10281,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_calendarfilterstate",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarfilterstate"
     },
     {
@@ -10292,8 +10292,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_empty_filters",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "empty_filters"
     },
     {
@@ -10303,8 +10303,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_calendarfiltersprops",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarfiltersprops"
     },
     {
@@ -10314,8 +10314,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_priceslider",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "priceslider()"
     },
     {
@@ -10325,8 +10325,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_nightsslider",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "nightsslider()"
     },
     {
@@ -10336,8 +10336,8 @@
       "source_location": "L149",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarfilters_calendarfilters",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "calendarfilters()"
     },
     {
@@ -10347,8 +10347,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_tripcal_daysheet",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "daysheet.tsx"
     },
     {
@@ -10358,8 +10358,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "frontend_components_tripcal_daysheet_daysheetprops",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "daysheetprops"
     },
     {
@@ -10369,8 +10369,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "frontend_components_tripcal_daysheet_daysheet",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 17,
+      "community_name": "Community 17",
       "norm_label": "daysheet()"
     },
     {
@@ -10407,39 +10407,6 @@
       "norm_label": "densitystrip()"
     },
     {
-      "label": "GhostExtension.tsx",
-      "file_type": "code",
-      "source_file": "frontend/components/tripcal/GhostExtension.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "frontend_components_tripcal_ghostextension",
-      "community": 94,
-      "community_name": "UserAirports",
-      "norm_label": "ghostextension.tsx"
-    },
-    {
-      "label": "GhostExtensionProps",
-      "file_type": "code",
-      "source_file": "frontend/components/tripcal/GhostExtension.tsx",
-      "source_location": "L5",
-      "_origin": "ast",
-      "id": "frontend_components_tripcal_ghostextension_ghostextensionprops",
-      "community": 94,
-      "community_name": "UserAirports",
-      "norm_label": "ghostextensionprops"
-    },
-    {
-      "label": "GhostExtension()",
-      "file_type": "code",
-      "source_file": "frontend/components/tripcal/GhostExtension.tsx",
-      "source_location": "L27",
-      "_origin": "ast",
-      "id": "frontend_components_tripcal_ghostextension_ghostextension",
-      "community": 94,
-      "community_name": "UserAirports",
-      "norm_label": "ghostextension()"
-    },
-    {
       "label": "MonthBlock.tsx",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
@@ -10451,26 +10418,103 @@
       "norm_label": "monthblock.tsx"
     },
     {
-      "label": "MonthBlockProps",
+      "label": "StretchSelection",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
       "source_location": "L20",
       "_origin": "ast",
+      "id": "frontend_components_tripcal_monthblock_stretchselection",
+      "community": 17,
+      "community_name": "Community 17",
+      "norm_label": "stretchselection"
+    },
+    {
+      "label": "StretchContext",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_monthblock_stretchcontext",
+      "community": 17,
+      "community_name": "Community 17",
+      "norm_label": "stretchcontext"
+    },
+    {
+      "label": "MonthBlockProps",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L50",
+      "_origin": "ast",
       "id": "frontend_components_tripcal_monthblock_monthblockprops",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 94,
+      "community_name": "UserAirports",
       "norm_label": "monthblockprops"
     },
     {
       "label": "MonthBlock()",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L55",
+      "source_location": "L86",
       "_origin": "ast",
       "id": "frontend_components_tripcal_monthblock_monthblock",
       "community": 94,
       "community_name": "UserAirports",
       "norm_label": "monthblock()"
+    },
+    {
+      "label": "StretchOverlay.tsx",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_stretchoverlay",
+      "community": 94,
+      "community_name": "UserAirports",
+      "norm_label": "stretchoverlay.tsx"
+    },
+    {
+      "label": "StretchCell",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_stretchoverlay_stretchcell",
+      "community": 94,
+      "community_name": "UserAirports",
+      "norm_label": "stretchcell"
+    },
+    {
+      "label": "StretchOverlayProps",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_stretchoverlay_stretchoverlayprops",
+      "community": 94,
+      "community_name": "UserAirports",
+      "norm_label": "stretchoverlayprops"
+    },
+    {
+      "label": "TIER_BAR",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_stretchoverlay_tier_bar",
+      "community": 94,
+      "community_name": "UserAirports",
+      "norm_label": "tier_bar"
+    },
+    {
+      "label": "StretchOverlay()",
+      "file_type": "code",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L65",
+      "_origin": "ast",
+      "id": "frontend_components_tripcal_stretchoverlay_stretchoverlay",
+      "community": 94,
+      "community_name": "UserAirports",
+      "norm_label": "stretchoverlay()"
     },
     {
       "label": "TripBar.tsx",
@@ -10479,8 +10523,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_tripcal_tripbar",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "tripbar.tsx"
     },
     {
@@ -10498,22 +10542,22 @@
       "label": "TIER_BAR",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/TripBar.tsx",
-      "source_location": "L23",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "frontend_components_tripcal_tripbar_tier_bar",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "tier_bar"
     },
     {
       "label": "TripBar()",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/TripBar.tsx",
-      "source_location": "L34",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "frontend_components_tripcal_tripbar_tripbar",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "tripbar()"
     },
     {
@@ -10578,8 +10622,8 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "frontend_components_tripcal_trippopover_trippopover",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "trippopover()"
     },
     {
@@ -10589,15 +10633,15 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_tripcal_triptooltip",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "triptooltip.tsx"
     },
     {
       "label": "TripTooltipProps",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L21",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "frontend_components_tripcal_triptooltip_triptooltipprops",
       "community": 103,
@@ -10608,23 +10652,12 @@
       "label": "TripTooltip()",
       "file_type": "code",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L37",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "frontend_components_tripcal_triptooltip_triptooltip",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "triptooltip()"
-    },
-    {
-      "label": "StretchRow()",
-      "file_type": "code",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L197",
-      "_origin": "ast",
-      "id": "frontend_components_tripcal_triptooltip_stretchrow",
-      "community": 41,
-      "community_name": "Community 41",
-      "norm_label": "stretchrow()"
     },
     {
       "label": "calendarMath.ts",
@@ -10787,8 +10820,8 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "frontend_components_tripcal_calendarmath_spansmonth",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 94,
+      "community_name": "UserAirports",
       "norm_label": "spansmonth()"
     },
     {
@@ -11051,8 +11084,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_chip",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "chip.tsx"
     },
     {
@@ -11062,8 +11095,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "frontend_components_ui_chip_chipprops",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "chipprops"
     },
     {
@@ -11073,8 +11106,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "frontend_components_ui_chip_size_classes",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "size_classes"
     },
     {
@@ -11084,8 +11117,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "frontend_components_ui_chip_chip",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 51,
+      "community_name": "academic.ts",
       "norm_label": "chip()"
     },
     {
@@ -11128,8 +11161,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "faretag.tsx"
     },
     {
@@ -11150,8 +11183,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_faretagsize",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "faretagsize"
     },
     {
@@ -11161,8 +11194,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_faretagprops",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "faretagprops"
     },
     {
@@ -11172,8 +11205,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_tier_classes",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "tier_classes"
     },
     {
@@ -11183,8 +11216,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_size_classes",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "size_classes"
     },
     {
@@ -11194,8 +11227,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_faretag",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "faretag()"
     },
     {
@@ -11205,8 +11238,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_skeleton_sizes",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "skeleton_sizes"
     },
     {
@@ -11216,8 +11249,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "frontend_components_ui_faretag_faretagskeleton",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 82,
+      "community_name": "FareTag.tsx",
       "norm_label": "faretagskeleton()"
     },
     {
@@ -11326,8 +11359,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_sheet",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "sheet.tsx"
     },
     {
@@ -11337,8 +11370,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "frontend_components_ui_sheet_sheetprops",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "sheetprops"
     },
     {
@@ -11348,8 +11381,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "frontend_components_ui_sheet_sheet",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 44,
+      "community_name": "Community 44",
       "norm_label": "sheet()"
     },
     {
@@ -11359,8 +11392,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_spark",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 20,
+      "community_name": "Community 20",
       "norm_label": "spark.tsx"
     },
     {
@@ -11370,8 +11403,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_spark_sparkpoint",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 20,
+      "community_name": "Community 20",
       "norm_label": "sparkpoint"
     },
     {
@@ -11381,8 +11414,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "frontend_components_ui_spark_sparkprops",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 20,
+      "community_name": "Community 20",
       "norm_label": "sparkprops"
     },
     {
@@ -11392,8 +11425,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "frontend_components_ui_spark_spark",
-      "community": 103,
-      "community_name": "useStayExtensions.ts",
+      "community": 20,
+      "community_name": "Community 20",
       "norm_label": "spark()"
     },
     {
@@ -11403,8 +11436,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_components_ui_starbutton",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 81,
+      "community_name": "CityDetail.tsx",
       "norm_label": "starbutton.tsx"
     },
     {
@@ -11414,8 +11447,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "frontend_components_ui_starbutton_starbuttonprops",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 81,
+      "community_name": "CityDetail.tsx",
       "norm_label": "starbuttonprops"
     },
     {
@@ -11425,8 +11458,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "frontend_components_ui_starbutton_box",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 81,
+      "community_name": "CityDetail.tsx",
       "norm_label": "box"
     },
     {
@@ -11436,8 +11469,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "frontend_components_ui_starbutton_icon",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 81,
+      "community_name": "CityDetail.tsx",
       "norm_label": "icon"
     },
     {
@@ -11447,8 +11480,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "frontend_components_ui_starbutton_starbutton",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 81,
+      "community_name": "CityDetail.tsx",
       "norm_label": "starbutton()"
     },
     {
@@ -11458,8 +11491,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_data_airports_gen",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "airports.gen.ts"
     },
     {
@@ -11469,8 +11502,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "frontend_data_airports_gen_origin",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "origin"
     },
     {
@@ -11480,8 +11513,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_data_airports_gen_origins",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "origins"
     },
     {
@@ -11557,8 +11590,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_data_destinations_gen",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "destinations.gen.ts"
     },
     {
@@ -11568,8 +11601,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "frontend_data_destinations_gen_destination",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "destination"
     },
     {
@@ -11590,8 +11623,8 @@
       "source_location": "L252",
       "_origin": "ast",
       "id": "frontend_data_destinations_gen_regions",
-      "community": 38,
-      "community_name": "Community 38",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "regions"
     },
     {
@@ -11601,8 +11634,8 @@
       "source_location": "L271",
       "_origin": "ast",
       "id": "frontend_data_destinations_gen_by_code",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 36,
+      "community_name": "Community 36",
       "norm_label": "by_code"
     },
     {
@@ -11612,8 +11645,8 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "frontend_data_destinations_gen_getdestination",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 29,
+      "community_name": "Community 29",
       "norm_label": "getdestination()"
     },
     {
@@ -11678,8 +11711,8 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "frontend_data_groundpairs_gen_getgroundlinks",
-      "community": 29,
-      "community_name": "Community 29",
+      "community": 47,
+      "community_name": "Community 47",
       "norm_label": "getgroundlinks()"
     },
     {
@@ -11711,8 +11744,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_tests_groundpairs_test",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 47,
+      "community_name": "Community 47",
       "norm_label": "groundpairs.test.ts"
     },
     {
@@ -11810,8 +11843,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "frontend_lib_tests_trips_autoextend_test_trip",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 17,
+      "community_name": "Community 17",
       "norm_label": "trip()"
     },
     {
@@ -11876,8 +11909,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_baselines",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "baselines.ts"
     },
     {
@@ -11887,8 +11920,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "frontend_lib_baselines_routebaseline",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "routebaseline"
     },
     {
@@ -11898,8 +11931,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "frontend_lib_baselines_asnumberornull",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "asnumberornull()"
     },
     {
@@ -11909,8 +11942,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "frontend_lib_baselines_fetchbaselines",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "fetchbaselines()"
     },
     {
@@ -11920,8 +11953,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "frontend_lib_baselines_getbaselines",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "getbaselines"
     },
     {
@@ -12041,8 +12074,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "frontend_lib_client_gettrips",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 17,
+      "community_name": "Community 17",
       "norm_label": "gettrips()"
     },
     {
@@ -12382,8 +12415,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_format",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "format.ts"
     },
     {
@@ -12393,8 +12426,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "frontend_lib_format_months_short",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "months_short"
     },
     {
@@ -12415,8 +12448,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "frontend_lib_format_formatprice",
-      "community": 41,
-      "community_name": "Community 41",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "formatprice()"
     },
     {
@@ -12426,8 +12459,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "frontend_lib_format_formatdateshort",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "formatdateshort()"
     },
     {
@@ -12459,8 +12492,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "frontend_lib_format_nightslabel",
-      "community": 20,
-      "community_name": "Community 20",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "nightslabel()"
     },
     {
@@ -12470,8 +12503,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "frontend_lib_format_formatdelta",
-      "community": 17,
-      "community_name": "Community 17",
+      "community": 37,
+      "community_name": "Community 37",
       "norm_label": "formatdelta()"
     },
     {
@@ -13009,8 +13042,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "frontend_lib_queries_flightscollection",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "flightscollection()"
     },
     {
@@ -13042,8 +13075,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "frontend_lib_queries_parseorigins",
-      "community": 84,
-      "community_name": "admin.py",
+      "community": 86,
+      "community_name": "parseOrigins",
       "norm_label": "parseorigins()"
     },
     {
@@ -13075,8 +13108,8 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "frontend_lib_queries_scoreflights",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 93,
+      "community_name": ".create",
       "norm_label": "scoreflights()"
     },
     {
@@ -13108,8 +13141,8 @@
       "source_location": "L343",
       "_origin": "ast",
       "id": "frontend_lib_queries_citydata",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 20,
+      "community_name": "Community 20",
       "norm_label": "citydata"
     },
     {
@@ -13119,8 +13152,8 @@
       "source_location": "L356",
       "_origin": "ast",
       "id": "frontend_lib_queries_getcitydata",
-      "community": 84,
-      "community_name": "admin.py",
+      "community": 86,
+      "community_name": "parseOrigins",
       "norm_label": "getcitydata()"
     },
     {
@@ -13185,8 +13218,8 @@
       "source_location": "L572",
       "_origin": "ast",
       "id": "frontend_lib_queries_hourof",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "hourof()"
     },
     {
@@ -13240,8 +13273,8 @@
       "source_location": "L695",
       "_origin": "ast",
       "id": "frontend_lib_queries_gettripsdata",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "gettripsdata()"
     },
     {
@@ -13273,8 +13306,8 @@
       "source_location": "L870",
       "_origin": "ast",
       "id": "frontend_lib_queries_grouptriprankcompare",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "grouptriprankcompare()"
     },
     {
@@ -13284,8 +13317,8 @@
       "source_location": "L882",
       "_origin": "ast",
       "id": "frontend_lib_queries_curategrouptrips",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "curategrouptrips()"
     },
     {
@@ -13372,8 +13405,8 @@
       "source_location": "L1065",
       "_origin": "ast",
       "id": "frontend_lib_queries_getgrouptripsdata",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 84,
+      "community_name": "admin.py",
       "norm_label": "getgrouptripsdata()"
     },
     {
@@ -13493,8 +13526,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "frontend_lib_score_promotefavouritetier",
-      "community": 107,
-      "community_name": "StarButton.tsx",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "promotefavouritetier()"
     },
     {
@@ -13515,8 +13548,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_searchurl",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "searchurl.ts"
     },
     {
@@ -13526,8 +13559,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "frontend_lib_searchurl_searchabletrip",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "searchabletrip"
     },
     {
@@ -13537,8 +13570,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "frontend_lib_searchurl_getoriginname",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "getoriginname()"
     },
     {
@@ -13548,8 +13581,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "frontend_lib_searchurl_buildazairsearchurl",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "buildazairsearchurl()"
     },
     {
@@ -13559,8 +13592,8 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "frontend_lib_searchurl_buildgoogleflightssearchurl",
-      "community": 37,
-      "community_name": "Community 37",
+      "community": 78,
+      "community_name": "searchUrl.ts",
       "norm_label": "buildgoogleflightssearchurl()"
     },
     {
@@ -13680,8 +13713,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_trips",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "trips.ts"
     },
     {
@@ -13691,8 +13724,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "frontend_lib_trips_totrip",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 93,
+      "community_name": ".create",
       "norm_label": "totrip()"
     },
     {
@@ -13724,8 +13757,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "frontend_lib_trips_pad2",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "pad2()"
     },
     {
@@ -13735,8 +13768,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "frontend_lib_trips_builddensity",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "builddensity()"
     },
     {
@@ -13790,8 +13823,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "frontend_lib_university_context_unicalendarprovider",
-      "community": 95,
-      "community_name": "Providers.tsx",
+      "community": 22,
+      "community_name": "Community 22",
       "norm_label": "unicalendarprovider()"
     },
     {
@@ -13878,8 +13911,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "frontend_lib_university_tue_periodsinrange",
-      "community": 94,
-      "community_name": "UserAirports",
+      "community": 42,
+      "community_name": "Community 42",
       "norm_label": "periodsinrange()"
     },
     {
@@ -13911,8 +13944,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "frontend_lib_useorigins",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "useorigins.ts"
     },
     {
@@ -13922,8 +13955,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "frontend_lib_useorigins_all_codes",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "all_codes"
     },
     {
@@ -13933,8 +13966,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "frontend_lib_useorigins_useorigins",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "useorigins()"
     },
     {
@@ -15033,8 +15066,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "frontend_types_api_flightdocschema",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 93,
+      "community_name": ".create",
       "norm_label": "flightdocschema"
     },
     {
@@ -15044,8 +15077,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "frontend_types_api_flightdoc",
-      "community": 92,
-      "community_name": "availability.py",
+      "community": 1,
+      "community_name": "Community 1",
       "norm_label": "flightdoc"
     },
     {
@@ -15055,8 +15088,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "frontend_types_api_parseflightdoc",
-      "community": 1,
-      "community_name": "Community 1",
+      "community": 93,
+      "community_name": ".create",
       "norm_label": "parseflightdoc()"
     },
     {
@@ -15308,8 +15341,8 @@
       "source_location": "L296",
       "_origin": "ast",
       "id": "frontend_types_api_cityopenjaw",
-      "community": 29,
-      "community_name": "Community 29",
+      "community": 25,
+      "community_name": "Community 25",
       "norm_label": "cityopenjaw"
     },
     {
@@ -15330,8 +15363,8 @@
       "source_location": "L318",
       "_origin": "ast",
       "id": "frontend_types_api_citytwin",
-      "community": 29,
-      "community_name": "Community 29",
+      "community": 25,
+      "community_name": "Community 25",
       "norm_label": "citytwin"
     },
     {
@@ -15374,8 +15407,8 @@
       "source_location": "L353",
       "_origin": "ast",
       "id": "frontend_types_api_citysummary",
-      "community": 44,
-      "community_name": "Community 44",
+      "community": 38,
+      "community_name": "Community 38",
       "norm_label": "citysummary"
     },
     {
@@ -15561,8 +15594,8 @@
       "source_location": "L487",
       "_origin": "ast",
       "id": "frontend_types_api_citydetailresponseschema",
-      "community": 84,
-      "community_name": "admin.py",
+      "community": 86,
+      "community_name": "parseOrigins",
       "norm_label": "citydetailresponseschema"
     },
     {
@@ -16881,8 +16914,8 @@
       "source_location": "L305",
       "_origin": "ast",
       "id": "scraper_azair_parser_filter_by_price",
-      "community": 51,
-      "community_name": "academic.ts",
+      "community": 27,
+      "community_name": "Community 27",
       "norm_label": "filter_by_price()"
     },
     {
@@ -17068,8 +17101,8 @@
       "source_location": "L306",
       "_origin": "ast",
       "id": "scraper_azair_parser_rationale_306",
-      "community": 51,
-      "community_name": "academic.ts",
+      "community": 27,
+      "community_name": "Community 27",
       "norm_label": "filter flights by maximum price."
     },
     {
@@ -17277,8 +17310,8 @@
       "source_location": "L345",
       "_origin": "ast",
       "id": "scraper_azair_scraper_azairscraper_find_deals",
-      "community": 51,
-      "community_name": "academic.ts",
+      "community": 27,
+      "community_name": "Community 27",
       "norm_label": ".find_deals()"
     },
     {
@@ -17409,8 +17442,8 @@
       "source_location": "L355",
       "_origin": "ast",
       "id": "scraper_azair_scraper_rationale_355",
-      "community": 51,
-      "community_name": "academic.ts",
+      "community": 27,
+      "community_name": "Community 27",
       "norm_label": "find deals under a certain price.          convenience method that searches an"
     },
     {
@@ -34910,7 +34943,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L75",
+      "source_location": "L78",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34921,7 +34954,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L546",
+      "source_location": "L645",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34932,7 +34965,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L560",
+      "source_location": "L659",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34943,7 +34976,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L520",
+      "source_location": "L619",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34954,7 +34987,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L49",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34966,7 +34999,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L15",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34978,7 +35011,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L15",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -34990,7 +35023,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L27",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35002,7 +35035,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L27",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35014,7 +35047,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L27",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35026,7 +35059,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35038,7 +35071,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35050,7 +35083,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35062,7 +35095,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35074,7 +35107,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35086,7 +35119,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L18",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35098,7 +35131,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L18",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35118,11 +35151,35 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/app/calendar/page.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_app_calendar_page",
+      "target": "frontend_components_tripcal_monthblock_stretchcontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/app/calendar/page.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_app_calendar_page",
+      "target": "frontend_components_tripcal_monthblock_stretchselection",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L16",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35134,7 +35191,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L17",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35146,7 +35203,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L34",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35158,7 +35215,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L34",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35170,7 +35227,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35182,7 +35239,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35194,7 +35251,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35206,7 +35263,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35218,7 +35275,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35230,7 +35287,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35326,7 +35383,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L26",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
@@ -35338,11 +35395,23 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L26",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page",
       "target": "frontend_lib_format_formatdelta",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/app/calendar/page.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_app_calendar_page",
+      "target": "frontend_lib_format_formatprice",
       "confidence_score": 1.0
     },
     {
@@ -35530,7 +35599,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L245",
+      "source_location": "L253",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35543,7 +35612,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L85",
+      "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35555,7 +35624,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L86",
+      "source_location": "L89",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35567,7 +35636,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L271",
+      "source_location": "L279",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35579,7 +35648,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L84",
+      "source_location": "L87",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35591,7 +35660,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L81",
+      "source_location": "L84",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35603,7 +35672,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L300",
+      "source_location": "L325",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35615,7 +35684,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L287",
+      "source_location": "L312",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35627,7 +35696,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L208",
+      "source_location": "L216",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35639,7 +35708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L179",
+      "source_location": "L187",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35651,7 +35720,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L143",
+      "source_location": "L151",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35663,7 +35732,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L311",
+      "source_location": "L356",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35675,7 +35744,19 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L88",
+      "source_location": "L391",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_app_calendar_page_calendarpage",
+      "target": "frontend_lib_format_formatprice"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/app/calendar/page.tsx",
+      "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35687,7 +35768,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L256",
+      "source_location": "L264",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35699,7 +35780,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L481",
+      "source_location": "L584",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35711,7 +35792,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L89",
+      "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35723,7 +35804,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L98",
+      "source_location": "L101",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -35735,7 +35816,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/app/calendar/page.tsx",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_app_calendar_page_calendarpage",
@@ -46039,52 +46120,6 @@
       "target": "frontend_components_tripcal_calendarmath_daystr"
     },
     {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/GhostExtension.tsx",
-      "source_location": "L27",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_ghostextension",
-      "target": "frontend_components_tripcal_ghostextension_ghostextension",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/GhostExtension.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_ghostextension",
-      "target": "frontend_components_tripcal_ghostextension_ghostextensionprops",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L8",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_monthblock",
-      "target": "frontend_components_tripcal_ghostextension",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L8",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_monthblock",
-      "target": "frontend_components_tripcal_ghostextension_ghostextension",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -46094,18 +46129,6 @@
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock",
       "target": "frontend_components_tripcal_calendarmath",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L10",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_monthblock",
-      "target": "frontend_components_tripcal_calendarmath_adddays",
       "confidence_score": 1.0
     },
     {
@@ -46184,7 +46207,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L55",
+      "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock",
@@ -46195,11 +46218,57 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L20",
+      "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock",
       "target": "frontend_components_tripcal_monthblock_monthblockprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_monthblock",
+      "target": "frontend_components_tripcal_monthblock_stretchcontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_monthblock",
+      "target": "frontend_components_tripcal_monthblock_stretchselection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_monthblock",
+      "target": "frontend_components_tripcal_stretchoverlay",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_monthblock",
+      "target": "frontend_components_tripcal_stretchoverlay_stretchcell",
       "confidence_score": 1.0
     },
     {
@@ -46315,7 +46384,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L21",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblockprops",
@@ -46327,7 +46396,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L29",
+      "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblockprops",
@@ -46339,7 +46408,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L27",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblockprops",
@@ -46351,7 +46420,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L23",
+      "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblockprops",
@@ -46364,19 +46433,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L142",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_monthblock_monthblock",
-      "target": "frontend_components_tripcal_calendarmath_adddays"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L102",
+      "source_location": "L134",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
@@ -46388,7 +46445,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L205",
+      "source_location": "L206",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
@@ -46400,7 +46457,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L199",
+      "source_location": "L200",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
@@ -46412,7 +46469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L100",
+      "source_location": "L132",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
@@ -46424,7 +46481,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L216",
+      "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
@@ -46436,17 +46493,121 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/MonthBlock.tsx",
-      "source_location": "L72",
+      "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_monthblock_monthblock",
       "target": "frontend_lib_lanes_assignlanes"
     },
     {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "frontend/components/tripcal/MonthBlock.tsx",
+      "source_location": "L332",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_monthblock_monthblock",
+      "target": "frontend_lib_tests_trips_autoextend_test_trip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_components_tripcal_stretchoverlay_stretchcell",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_components_tripcal_stretchoverlay_stretchoverlay",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_components_tripcal_stretchoverlay_stretchoverlayprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_components_tripcal_stretchoverlay_tier_bar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_types_api",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_types_api_caltrip",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay",
+      "target": "frontend_types_api_trip",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/StretchOverlay.tsx",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_stretchoverlay_stretchoverlayprops",
+      "target": "frontend_types_api_caltrip",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripBar.tsx",
-      "source_location": "L23",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_tripbar",
@@ -46457,7 +46618,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripBar.tsx",
-      "source_location": "L34",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_tripbar",
@@ -46485,6 +46646,18 @@
       "_origin": "ast",
       "source": "frontend_components_tripcal_tripbar",
       "target": "frontend_lib_format",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend/components/tripcal/TripBar.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_tripbar",
+      "target": "frontend_lib_format_formatdelta",
       "confidence_score": 1.0
     },
     {
@@ -46553,7 +46726,19 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripBar.tsx",
-      "source_location": "L76",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "frontend_components_tripcal_tripbar_tripbar",
+      "target": "frontend_lib_format_formatdelta"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/components/tripcal/TripBar.tsx",
+      "source_location": "L84",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_tripbar_tripbar",
@@ -47170,18 +47355,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L197",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_triptooltip_stretchrow",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L37",
+      "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47192,7 +47366,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L21",
+      "source_location": "L14",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47204,67 +47378,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions_empty_stretches",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions_staystretch",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions_stretchcount",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions_stretchset",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L13",
+      "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47276,7 +47390,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L13",
+      "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47288,7 +47402,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L12",
+      "source_location": "L11",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47300,7 +47414,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L12",
+      "source_location": "L11",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
@@ -47329,18 +47443,6 @@
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip",
       "target": "frontend_lib_format_formatdateshort",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip",
-      "target": "frontend_lib_format_formatdelta",
       "confidence_score": 1.0
     },
     {
@@ -47408,19 +47510,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L26",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip_triptooltipprops",
-      "target": "frontend_components_tripcal_usestayextensions_stretchset",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "field",
-      "confidence": "EXTRACTED",
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L22",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltipprops",
@@ -47433,19 +47523,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L55",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip_triptooltip",
-      "target": "frontend_components_tripcal_usestayextensions_stretchcount"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L62",
+      "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltip",
@@ -47457,7 +47535,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L119",
+      "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltip",
@@ -47469,7 +47547,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L92",
+      "source_location": "L77",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltip",
@@ -47481,7 +47559,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L88",
+      "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltip",
@@ -47493,35 +47571,11 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L89",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_components_tripcal_triptooltip_triptooltip",
       "target": "frontend_lib_format_nightslabel"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L217",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip_stretchrow",
-      "target": "frontend_lib_format_formatdelta"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/components/tripcal/TripTooltip.tsx",
-      "source_location": "L208",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "frontend_components_tripcal_triptooltip_stretchrow",
-      "target": "frontend_lib_format_formatprice"
     },
     {
       "relation": "contains",
@@ -60649,90 +60703,90 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L1",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude",
-      "target": "claude_somewhere_flight_scraper_ai_context"
+      "target": "claude_somewhere_flight_scraper_ai_context",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L132",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_architectural_decisions"
+      "target": "claude_architectural_decisions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_architecture"
+      "target": "claude_architecture",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_current_status"
+      "target": "claude_current_status",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_graphify"
+      "target": "claude_graphify",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_how_to_run"
+      "target": "claude_how_to_run",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L122",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_key_config"
+      "target": "claude_key_config",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude.md",
+      "source_file": "CLAUDE.md",
       "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "claude_somewhere_flight_scraper_ai_context",
-      "target": "claude_key_files"
+      "target": "claude_key_files",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -61341,5 +61395,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "3fd8eff31c6ad9c31eb4c1ca594de08052ef8710"
+  "built_at_commit": "12240e14a4ada96614fc0cafc01acf8581f78d9a"
 }

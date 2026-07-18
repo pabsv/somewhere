@@ -5,17 +5,47 @@ import type { Trip, DateWindow } from "@/types/api";
 import type { UniPeriod } from "@/lib/university/tue";
 import { assignLanes } from "@/lib/lanes";
 import TripBar from "./TripBar";
-import GhostExtension from "./GhostExtension";
+import StretchOverlay, { type StretchCell } from "./StretchOverlay";
 import DensityStrip from "./DensityStrip";
 import {
   type MonthSpec,
-  addDays,
   clampDayInMonth,
   dayStr,
   isWeekend,
   spansMonth,
   weekdayLetter,
 } from "./calendarMath";
+
+/** A committed trip-stretch swap for a bar not currently hovered. */
+export interface StretchSelection {
+  out_date: string;
+  return_date: string;
+  price: number;
+  nights: number;
+  /** displayed price − stored price (drives the "·+€21" bar tail). */
+  deltaPrice: number;
+}
+
+/** The live "full-length bubble" surface for the currently hovered bar. */
+export interface StretchContext {
+  /** hovered trip key. */
+  key: string;
+  /** availability-window (or stretch-envelope) bounds — the bubble span. */
+  winStart: string;
+  winEnd: string;
+  /** currently displayed bar span (selected variant, or the base trip). */
+  selOut: string;
+  selRet: string;
+  /** bar label without the delta tail, e.g. "BCN €60". */
+  barLabel: string;
+  /** signed delta tail, e.g. "+€21" (null = unmodified). */
+  deltaLabel: string | null;
+  modified: boolean;
+  /** free-day fare cells (dates + labels; columns resolved per month here). */
+  cells: Array<{ date: string; side: "earlier" | "later"; label: string; active: boolean }>;
+  onPickDay: (date: string) => void;
+  onBar: () => void;
+}
 
 interface MonthBlockProps {
   spec: MonthSpec;
@@ -29,15 +59,16 @@ interface MonthBlockProps {
   uniPeriods?: UniPeriod[];
   today: string;
   /**
-   * Hovered trip's stretch ghosts: dashed segments beside the bar — earlier
-   * side spans startDate → outbound−1, later side spans return+1 → endDate.
-   * Labels are the price chips rendered on the segments.
+   * Committed trip-stretch swaps keyed by trip.key — a modified bar that isn't
+   * currently hovered renders at these swapped dates with a "·+€21" tail.
    */
-  ghost?: {
-    trip: Trip;
-    earlier?: { startDate: string; label: string } | null;
-    later?: { endDate: string; label: string } | null;
-  } | null;
+  selections?: Map<string, StretchSelection>;
+  /**
+   * The live "full-length bubble" for the hovered bar (design option 2c): a
+   * dashed pill over the whole availability window with a fare on each free
+   * day. Only rendered in the month that fully contains the window.
+   */
+  stretch?: StretchContext | null;
   onBarHover: (trip: Trip | null, el: HTMLElement | null) => void;
   onBarClick: (trip: Trip) => void;
   onDayClick: (day: string) => void;
@@ -59,7 +90,8 @@ export default function MonthBlock({
   windows,
   uniPeriods,
   today,
-  ghost = null,
+  selections,
+  stretch = null,
   onBarHover,
   onBarClick,
   onDayClick,
@@ -121,63 +153,35 @@ export default function MonthBlock({
 
   const dayNumbers = Array.from({ length: cols }, (_, i) => i + 1);
 
-  // ─── Trip-stretch ghost segments (hovered bar only) ────────────────────────
-  // Each side renders in the month containing the trip's edge date; a segment
-  // that would spill past the month's boundary is clipped square at the edge
-  // (no cross-month ghosts — same convention as before).
-  const ghostPlacements = useMemo(() => {
-    if (!ghost) return [];
-    const lane = lanes.get(ghost.trip.key);
-    if (lane == null) return [];
-    const placements: Array<{
-      side: "earlier" | "later";
-      startCol: number;
-      endCol: number;
-      lane: number;
-      clipped: boolean;
-      label: string;
-    }> = [];
-
-    if (ghost.later) {
-      const start = addDays(ghost.trip.return_date, 1);
-      if (
-        ghost.trip.return_date >= spec.startStr && // return is in this month…
-        ghost.trip.return_date <= spec.endStr &&
-        start <= spec.endStr && // …and isn't the month's last day
-        ghost.later.endDate >= start
-      ) {
-        placements.push({
-          side: "later",
-          startCol: clampDayInMonth(start, spec),
-          endCol: clampDayInMonth(ghost.later.endDate, spec),
-          lane,
-          clipped: ghost.later.endDate > spec.endStr,
-          label: ghost.later.label,
-        });
-      }
-    }
-
-    if (ghost.earlier) {
-      const end = addDays(ghost.trip.outbound_date, -1);
-      if (
-        ghost.trip.outbound_date >= spec.startStr && // outbound is in this month…
-        ghost.trip.outbound_date <= spec.endStr &&
-        end >= spec.startStr && // …and isn't the month's first day
-        ghost.earlier.startDate <= end
-      ) {
-        placements.push({
-          side: "earlier",
-          startCol: clampDayInMonth(ghost.earlier.startDate, spec),
-          endCol: clampDayInMonth(end, spec),
-          lane,
-          clipped: ghost.earlier.startDate < spec.startStr,
-          label: ghost.earlier.label,
-        });
-      }
-    }
-
-    return placements;
-  }, [ghost, lanes, spec]);
+  // ─── Trip-stretch bubble (hovered bar only) ────────────────────────────────
+  // The full-length bubble uses window-local percentage geometry, so it only
+  // renders in the month that fully contains the availability window. When the
+  // window straddles a month boundary we skip it and the bar shows plainly.
+  const overlay = useMemo(() => {
+    if (!stretch) return null;
+    const lane = lanes.get(stretch.key);
+    if (lane == null) return null;
+    const base = placedTrips.find((t) => t.key === stretch.key);
+    if (!base) return null;
+    if (stretch.winStart < spec.startStr || stretch.winEnd > spec.endStr)
+      return null;
+    const cells: StretchCell[] = stretch.cells.map((c) => ({
+      dayCol: clampDayInMonth(c.date, spec),
+      side: c.side,
+      label: c.label,
+      active: c.active,
+      date: c.date,
+    }));
+    return {
+      trip: base,
+      lane,
+      winStartCol: clampDayInMonth(stretch.winStart, spec),
+      winEndCol: clampDayInMonth(stretch.winEnd, spec),
+      barStartCol: clampDayInMonth(stretch.selOut, spec),
+      barEndCol: clampDayInMonth(stretch.selRet, spec),
+      cells,
+    };
+  }, [stretch, lanes, spec, placedTrips]);
 
   return (
     <section className="rounded-card border border-line bg-card p-4 shadow-card">
@@ -308,34 +312,48 @@ export default function MonthBlock({
           }}
         >
           {placedTrips.map((trip) => {
-            const startCol = clampDayInMonth(trip.outbound_date, spec);
-            const endCol = clampDayInMonth(trip.return_date, spec);
+            // The hovered trip renders via the bubble overlay in this month.
+            if (overlay && stretch?.key === trip.key) return null;
+            // A committed swap (not hovered) shows at its stretched dates + tail.
+            const sel = selections?.get(trip.key);
+            const out = sel?.out_date ?? trip.outbound_date;
+            const ret = sel?.return_date ?? trip.return_date;
+            const shown = sel
+              ? { ...trip, outbound_date: out, return_date: ret, price: sel.price, duration_days: sel.nights }
+              : trip;
             return (
               <TripBar
                 key={trip.key}
-                trip={trip}
-                startCol={startCol}
-                endCol={endCol}
+                trip={shown}
+                startCol={clampDayInMonth(out, spec)}
+                endCol={clampDayInMonth(ret, spec)}
                 lane={lanes.get(trip.key) ?? 0}
-                clippedStart={trip.outbound_date < spec.startStr}
-                clippedEnd={trip.return_date > spec.endStr}
-                onHover={onBarHover}
-                onClick={onBarClick}
+                clippedStart={out < spec.startStr}
+                clippedEnd={ret > spec.endStr}
+                stretchDelta={sel ? sel.deltaPrice : null}
+                onHover={(t, el) => onBarHover(t ? trip : null, el)}
+                onClick={() => onBarClick(trip)}
               />
             );
           })}
 
-          {ghostPlacements.map((g) => (
-            <GhostExtension
-              key={g.side}
-              startCol={g.startCol}
-              endCol={g.endCol}
-              lane={g.lane}
-              side={g.side}
-              clipped={g.clipped}
-              label={g.label}
+          {overlay && stretch && (
+            <StretchOverlay
+              trip={overlay.trip}
+              winStartCol={overlay.winStartCol}
+              winEndCol={overlay.winEndCol}
+              lane={overlay.lane}
+              barStartCol={overlay.barStartCol}
+              barEndCol={overlay.barEndCol}
+              cells={overlay.cells}
+              barLabel={stretch.barLabel}
+              deltaLabel={stretch.deltaLabel}
+              modified={stretch.modified}
+              onPickDay={stretch.onPickDay}
+              onBar={stretch.onBar}
+              onHover={onBarHover}
             />
-          ))}
+          )}
         </div>
       </div>
 

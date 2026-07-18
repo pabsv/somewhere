@@ -1,7 +1,7 @@
 "use client";
 
 import type { CalTrip, Trip } from "@/types/api";
-import { formatPrice } from "@/lib/format";
+import { formatDelta, formatPrice } from "@/lib/format";
 
 interface TripBarProps {
   trip: CalTrip;
@@ -15,6 +15,11 @@ interface TripBarProps {
   clippedStart: boolean;
   /** true if the trip ends after this month (right edge is a continuation). */
   clippedEnd: boolean;
+  /**
+   * Committed trip-stretch delta vs the stored fare (a bar the user swapped to
+   * a longer/earlier variant but isn't hovering). Appends "·+€21"; null = none.
+   */
+  stretchDelta?: number | null;
   onHover: (trip: CalTrip | null, el: HTMLElement | null) => void;
   onClick: (trip: CalTrip) => void;
 }
@@ -38,10 +43,13 @@ export default function TripBar({
   lane,
   clippedStart,
   clippedEnd,
+  stretchDelta = null,
   onHover,
   onClick,
 }: TripBarProps) {
   const span = Math.max(1, endCol - startCol + 1);
+  const stretchMark =
+    stretchDelta != null ? ` ·${formatDelta(stretchDelta)}` : null;
 
   // Open-jaw marker: "+MAD" = twin-city trip flying home from another city;
   // "→AMS" = returns into a different airport; "2×" = two singles instead of
@@ -89,6 +97,7 @@ export default function TripBar({
         {ojMark && <span className="opacity-70">{ojMark}</span>}{" "}
         {formatPrice(trip.price)}
         {aeMark && <span className="opacity-70">{aeMark}</span>}
+        {stretchMark && <span className="opacity-70">{stretchMark}</span>}
       </span>
     </button>
   );
