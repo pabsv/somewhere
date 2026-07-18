@@ -33,6 +33,13 @@ export const MAX_DEAL_PRICE = 400;
  * exclude such fares entirely (they're routing artifacts, not trips).
  */
 export const HARD_PRICE_CEILING = 700;
+/**
+ * Default calendar price cap (EUR, round trip). Within this app's short-haul
+ * Europe/N.Africa/Levant pool, a >€200 round trip is never interesting — it
+ * only clutters the calendar. Users can still type a higher "Max €" to see
+ * everything; an empty field means this default, not "no cap".
+ */
+export const CALENDAR_DEFAULT_MAX_PRICE = 200;
 
 // Fallback-score curve when the route baseline is cold (null).
 const FALLBACK_PRICE_CEILING = 150;

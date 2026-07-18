@@ -5,6 +5,7 @@ import Sheet from "@/components/ui/Sheet";
 import FareTag from "@/components/ui/FareTag";
 import type { Trip } from "@/types/api";
 import { getTrips, ApiError } from "@/lib/client";
+import { CALENDAR_DEFAULT_MAX_PRICE } from "@/lib/score";
 import { getDestination } from "@/data/destinations.gen";
 import { formatDateShort, formatRange, nightsLabel } from "@/lib/format";
 
@@ -38,7 +39,7 @@ export default function DaySheet({ day, from, onClose, onPick }: DaySheetProps) 
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getTrips({ from, start: day, end: day })
+    getTrips({ from, start: day, end: day, maxPrice: CALENDAR_DEFAULT_MAX_PRICE })
       .then((res) => {
         if (cancelled) return;
         const sorted = [...res.trips].sort((a, b) => b.score - a.score);

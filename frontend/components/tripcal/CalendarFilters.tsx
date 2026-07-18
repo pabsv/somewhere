@@ -67,7 +67,9 @@ function NumField({
 /**
  * Calendar filter row. All fields map straight onto getTrips params upstream:
  * maxPrice, minNights, maxNights, direct, tier. Empty / "all" values mean
- * "no filter" and are dropped before the fetch.
+ * "no filter" and are dropped before the fetch — except maxPrice, where an
+ * empty field falls back to CALENDAR_DEFAULT_MAX_PRICE upstream (type a
+ * bigger number to see pricier trips).
  */
 export default function CalendarFilters({
   value,
@@ -86,7 +88,7 @@ export default function CalendarFilters({
         value={value.maxPrice}
         onChange={(v) => set("maxPrice", v)}
         width="w-24"
-        placeholder="any"
+        placeholder="200"
       />
 
       <div className="flex items-center gap-2">

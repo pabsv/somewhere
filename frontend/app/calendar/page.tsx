@@ -8,7 +8,7 @@ import { getTrips, getOpenJaw, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
-import { promoteFavouriteTier } from "@/lib/score";
+import { promoteFavouriteTier, CALENDAR_DEFAULT_MAX_PRICE } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
@@ -82,8 +82,9 @@ export default function CalendarPage() {
   const [onlyFree, setOnlyFree] = useState(true);
   const [savedOnly, setSavedOnly] = useState(false);
 
-  // open-jaw combos as bars — behind a chip (default off), gated by the
-  // allow_open_jaw preference and ≥2 selected origins
+  // open-jaw + twin-city combos as bars — behind a chip (default off), gated
+  // by the allow_open_jaw preference. Works from a single origin (twin-city
+  // trips and two-singles wins don't need an origin pair).
   const allowOpenJaw = useOpenJawPref();
   const [openJawOn, setOpenJawOn] = useState(false);
   const [openJawTrips, setOpenJawTrips] = useState<OpenJawTrip[]>([]);
@@ -114,7 +115,10 @@ export default function CalendarPage() {
       from: origins,
       start: today,
       end: rangeEnd,
-      maxPrice: filters.maxPrice && maxPrice > 0 ? maxPrice : undefined,
+      maxPrice:
+        filters.maxPrice && maxPrice > 0
+          ? maxPrice
+          : CALENDAR_DEFAULT_MAX_PRICE,
       minNights: filters.minNights && minNights > 0 ? minNights : undefined,
       maxNights: filters.maxNights && maxNights > 0 ? maxNights : undefined,
       direct: filters.direct ? true : undefined,
@@ -161,7 +165,7 @@ export default function CalendarPage() {
   const openJawActive =
     openJawOn &&
     allowOpenJaw &&
-    origins.length >= 2 &&
+    origins.length >= 1 &&
     !filters.direct &&
     filters.tier === "all";
   useEffect(() => {
@@ -222,8 +226,10 @@ export default function CalendarPage() {
   const savedKey = [...saved].sort().join(",");
   const shownTrips = useMemo(() => {
     const roundtrips = trips ?? [];
-    // Dedupe combos against round-trip bars: a bar already exists for the
-    // same destination + exact dates → skip the combo (no duplicate spans).
+    // Dedupe origin-side combos against round-trip bars: a bar already exists
+    // for the same destination + exact dates → skip the combo (no duplicate
+    // spans). Twin-city combos are exempt — they're a different trip (a second
+    // city) even when the fly-in dest + dates match a round-trip bar.
     const spans = new Set(
       roundtrips.map((t) => `${t.destination}|${t.outbound_date}|${t.return_date}`),
     );
@@ -231,6 +237,7 @@ export default function CalendarPage() {
       ? openJawTrips
           .filter(
             (oj) =>
+              oj.ground != null ||
               !spans.has(`${oj.destination}|${oj.out.date}|${oj.back.date}`),
           )
           .map(toCalTrip)
@@ -327,12 +334,12 @@ export default function CalendarPage() {
                   Only my free dates
                 </Chip>
               )}
-              {allowOpenJaw && origins.length >= 2 && (
+              {allowOpenJaw && origins.length >= 1 && (
                 <Chip
                   size="sm"
                   selected={openJawOn}
                   onClick={() => setOpenJawOn((v) => !v)}
-                  title="Open-jaw combos: fly out of one airport, back into another — two separate tickets"
+                  title="Open-jaw & twin-city combos: mixed airports or two cities in one trip — two separate tickets"
                 >
                   ⇄ Mix &amp; match
                 </Chip>
@@ -342,7 +349,7 @@ export default function CalendarPage() {
         />
         {openJawOn &&
           allowOpenJaw &&
-          origins.length >= 2 &&
+          origins.length >= 1 &&
           (filters.direct || filters.tier !== "all") && (
             <p className="mt-2 text-xs text-ink-muted">
               Mix &amp; match fares carry no stops or tier data, so they’re
