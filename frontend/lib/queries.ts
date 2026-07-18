@@ -19,7 +19,7 @@ import {
   type StretchVariant,
   type Trip,
 } from "@/types/api";
-import { toTrip, dedupeTrips, buildDensity, applyAutoExtend } from "@/lib/trips";
+import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
 import {
   enumerateStretchCandidates,
   priceStretchCandidates,
@@ -790,9 +790,10 @@ export async function getTripsData(
         hourOf(t.ret.arr),
       ),
     );
-    // Every surviving bar fits inside a window, so a longer same-outbound
-    // variant at ~the same price is strictly better — show it directly.
-    bars = applyAutoExtend(bars);
+    // NOTE: auto-extend (applyAutoExtend) is intentionally OFF — it pre-filled
+    // each free window and stamped a "+1d free" badge, which conflicted with
+    // the full-length bubble stretch UI (it left no free days to hover). Trips
+    // now keep their booked length; stretching is manual via the bubble.
   }
 
   if (params.tier) {

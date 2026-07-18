@@ -480,8 +480,8 @@
     "semantic_hash": "144e92defd089cff6c3d1588301063e6"
   },
   "frontend/components/tripcal/MonthBlock.tsx": {
-    "mtime": 1784375842.0930455,
-    "ast_hash": "97d3fdb965aca1088286107381f224f2",
+    "mtime": 1784377766.4191022,
+    "ast_hash": "d1ff3155f7ef52e32dc037c681282b7e",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripBar.tsx": {
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784360264.5941458,
-    "ast_hash": "c5fbc80ba5be34ddb5b993c27ff76c87",
+    "mtime": 1784377347.7516673,
+    "ast_hash": "38bb03cab4d6f93594ceda6b4f9250b7",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -1160,8 +1160,8 @@
     "semantic_hash": ""
   },
   "frontend/components/tripcal/StretchOverlay.tsx": {
-    "mtime": 1784376324.1894855,
-    "ast_hash": "fa091fab22e8a1f04baeac8c954afbe2",
+    "mtime": 1784377776.7001357,
+    "ast_hash": "b95e6afde8679ac3a631956e7f2a0335",
     "semantic_hash": ""
   }
 }
