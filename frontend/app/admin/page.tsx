@@ -44,15 +44,10 @@ export default function AdminPage() {
   useEffect(() => load(), [load]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-      <header className="mb-8">
-        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
-          Admin
-        </h1>
-        <p className="mt-2 max-w-xl text-base text-ink-muted">
-          Read-only pool health and the live scrape feed.
-        </p>
-      </header>
+    <>
+      <p className="mb-8 max-w-xl text-base text-ink-muted">
+        Read-only pool health and the live scrape feed.
+      </p>
 
       {/* Live board (self-loading, 10s refresh) */}
       <section className="mb-10 space-y-4">
@@ -101,6 +96,6 @@ export default function AdminPage() {
       <section className="mb-10">
         <DangerZone />
       </section>
-    </div>
+    </>
   );
 }

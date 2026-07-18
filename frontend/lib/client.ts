@@ -7,6 +7,7 @@
 import type {
   AdminPoolSummary,
   AdminRunsResponse,
+  AdminUsersResponse,
   AvailabilityResponse,
   CitiesResponse,
   CityDetailResponse,
@@ -341,6 +342,11 @@ export function adminPool(): Promise<AdminPoolSummary> {
 /** GET /api/admin/runs */
 export function adminRuns(limit?: number): Promise<AdminRunsResponse> {
   return request(`/api/admin/runs${qs({ limit })}`);
+}
+
+/** GET /api/admin/users — full people rollup */
+export function adminUsers(): Promise<AdminUsersResponse> {
+  return request(`/api/admin/users`);
 }
 
 /** POST /api/admin/wipe — flights only by contract */

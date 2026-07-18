@@ -519,3 +519,91 @@ export const GroupTripsResponseSchema = z.object({
   truncated: z.boolean(),
 });
 export type GroupTripsResponse = z.infer<typeof GroupTripsResponseSchema>;
+
+// ─── Admin — users (people rollup, /api/admin/users) ─────────────────────────
+// Read-only. Server derives has_password/has_google booleans and NEVER emits
+// the raw password_hash / google_id. Reuses DateWindowSchema + GroupRoleSchema.
+
+export const AdminUserGroupSchema = z.object({
+  group_id: z.string(),
+  name: z.string(),
+  my_role: GroupRoleSchema,
+});
+export type AdminUserGroup = z.infer<typeof AdminUserGroupSchema>;
+
+/** A user's friend, as a minimal name/email reference (never self). */
+export const AdminFriendRefSchema = z.object({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+});
+export type AdminFriendRef = z.infer<typeof AdminFriendRefSchema>;
+
+/** Slim, tolerant view of users.preferences — older docs may miss fields. */
+export const AdminUserPrefsSchema = z.object({
+  origins: z.array(z.string()),
+  trip_min_nights: z.number().nullable(),
+  trip_max_nights: z.number().nullable(),
+  direct_only: z.boolean(),
+  max_price: z.number().nullable(),
+  busy_weekdays: z.array(z.number().int()),
+  university: z.string().nullable(),
+  notify_optin: z.boolean(),
+});
+export type AdminUserPrefs = z.infer<typeof AdminUserPrefsSchema>;
+
+export const AdminUserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: z.string(),
+  /** true = has a credentials password (never the hash itself). */
+  has_password: z.boolean(),
+  /** true = linked a Google account (never the google_id itself). */
+  has_google: z.boolean(),
+  created_at: z.string().nullable(),
+  onboarded: z.boolean(),
+  onboarded_at: z.string().nullable(),
+  preferences: AdminUserPrefsSchema,
+  saved_cities: z.array(z.string()),
+  friend_count: z.number(),
+  friends: z.array(AdminFriendRefSchema),
+  availability_window_count: z.number(),
+  availability: z.array(DateWindowSchema),
+  groups: z.array(AdminUserGroupSchema),
+});
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+export const AdminGroupMemberSchema = z.object({
+  user_id: z.string(),
+  name: z.string(),
+  role: GroupRoleSchema,
+});
+export type AdminGroupMember = z.infer<typeof AdminGroupMemberSchema>;
+
+export const AdminGroupSchema = z.object({
+  group_id: z.string(),
+  name: z.string(),
+  owner_name: z.string(),
+  member_count: z.number(),
+  created_at: z.string().nullable(),
+  members: z.array(AdminGroupMemberSchema),
+});
+export type AdminGroup = z.infer<typeof AdminGroupSchema>;
+
+/** GET /api/admin/users — full people rollup (admin only). */
+export const AdminUsersResponseSchema = z.object({
+  tiles: z.object({
+    total_users: z.number(),
+    admins: z.number(),
+    onboarded: z.number(),
+    with_availability: z.number(),
+    with_favourites: z.number(),
+    in_a_group: z.number(),
+    total_groups: z.number(),
+    accepted_friendships: z.number(),
+  }),
+  users: z.array(AdminUserSchema),
+  groups: z.array(AdminGroupSchema),
+});
+export type AdminUsersResponse = z.infer<typeof AdminUsersResponseSchema>;
