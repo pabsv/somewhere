@@ -132,6 +132,8 @@ export type OpenJawParams = {
   min_nights?: number;
   max_nights?: number;
   max_price?: number;
+  /** city mode only: origin-side combos (default), twin-city, or both merged */
+  mode?: "origin" | "multicity" | "all";
   /** calendar mode only: inclusive range bounds (overlap semantics) */
   start?: string;
   end?: string;

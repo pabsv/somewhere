@@ -6,8 +6,8 @@
 //                   origin (default) = open-jaw home airports, multicity =
 //                   twin-city trips via curated ground pairs, all = both merged.
 //   calendar mode:  no dest; adds &start=YYYY-MM-DD &end=YYYY-MM-DD → curated
-//                   WINNING combos across all destinations (Calendar, Phase 3).
-//                   `mode` is ignored here (origin-side only).
+//                   WINNING combos across all destinations (Calendar, Phase 3)
+//                   including twin-city wins (Phase 5). `mode` is ignored here.
 // → { trips: OpenJawTrip[] } — cheapest-first, capped server-side.
 //
 // Prices come from the `oneway_fares` grids (date-level only — no times or

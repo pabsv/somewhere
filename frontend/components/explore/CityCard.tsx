@@ -28,9 +28,10 @@ export default function CityCard({
   showOpenJaw = true,
 }: CityCardProps) {
   const { best } = city;
-  // Open-jaw chip: only present when the combo beats the cheapest stored
-  // round trip (the API attaches it under exactly that condition).
+  // Open-jaw / twin-city hints: only present when the combo beats the cheapest
+  // stored round trip (the API attaches them under exactly that condition).
   const openjaw = showOpenJaw ? (city.openjaw ?? null) : null;
+  const twin = showOpenJaw ? (city.twin ?? null) : null;
   const { signedIn, isSaved, toggle } = useSavedCities();
   const favourited = isSaved(city.code);
   // Favourites get relaxed tier coloring (a "deal" reads as a "steal", etc.).
@@ -100,6 +101,14 @@ export default function CityCard({
                   {openjaw.out_origin} out · {openjaw.back_origin} back
                 </span>
               )}
+            </p>
+          )}
+          {twin && (
+            <p
+              className="tnum mt-0.5 truncate font-mono text-xs font-medium text-steal"
+              title={`Twin city: fly into ${city.code}, ~${twin.hours}h overland, fly home from ${twin.other} — the whole two-city trip beats any stored round trip here`}
+            >
+              +{twin.other} twin city €{Math.round(twin.total_price)}
             </p>
           )}
         </div>

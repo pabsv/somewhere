@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { CitiesResponseSchema, type CitySummary } from "@/types/api";
-import { getBestOpenJawByDest } from "@/lib/openjaw";
+import { getExploreOpenJaw } from "@/lib/openjaw";
 import {
   getCitiesData,
   loadUserAvailability,
@@ -27,11 +27,11 @@ const OJ_MIN_NIGHTS = 2;
 const OJ_MAX_NIGHTS = 10;
 
 /**
- * Attach each destination's best open-jaw combo (Phase 3) — but ONLY when it
- * beats the destination's cheapest stored round trip. The chip is a "mix &
- * match wins here" signal, not a parallel price list. Combos need ≥2 origins
- * to differ (same-origin two-singles wins still count). Failure is non-fatal:
- * the grid sweep must never take Explore down.
+ * Attach each destination's best open-jaw combo (Phase 3) and best twin-city
+ * combo (Phase 5) — each ONLY when it beats the destination's cheapest stored
+ * round trip. The chips are "mix & match / twin city wins here" signals, not
+ * parallel price lists. One shared grid sweep feeds both. Failure is
+ * non-fatal: the sweep must never take Explore down.
  */
 async function withOpenJaw(
   cities: CitySummary[],
@@ -40,14 +40,19 @@ async function withOpenJaw(
 ): Promise<CitySummary[]> {
   if (cities.length === 0) return cities;
   try {
-    const combos = await getBestOpenJawByDest(origins, {
+    const { openjaw, twin } = await getExploreOpenJaw(origins, {
       minNights: OJ_MIN_NIGHTS,
       maxNights: OJ_MAX_NIGHTS,
       avail,
     });
     return cities.map((c) => {
-      const oj = combos.get(c.code);
-      return oj && oj.total_price < c.min_price ? { ...c, openjaw: oj } : c;
+      const oj = openjaw.get(c.code);
+      const tw = twin.get(c.code);
+      return {
+        ...c,
+        ...(oj && oj.total_price < c.min_price ? { openjaw: oj } : {}),
+        ...(tw && tw.total_price < c.min_price ? { twin: tw } : {}),
+      };
     });
   } catch (err) {
     console.warn("[GET /api/cities] open-jaw attach failed:", err);

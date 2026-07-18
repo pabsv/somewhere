@@ -10,11 +10,12 @@
 import type { Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getDestination } from "@/data/destinations.gen";
-import { getGroundLinks } from "@/data/groundpairs.gen";
+import { GROUND_PAIRS, getGroundLinks } from "@/data/groundpairs.gen";
 import { combineGrids, type CombineOptions } from "@/lib/openjaw-core";
 import {
   OnewayFareDocSchema,
   type CityOpenJaw,
+  type CityTwin,
   type FlightDoc,
   type OnewayFareDoc,
   type OpenJawTrip,
@@ -395,17 +396,23 @@ function loadAllGrids(origins: string[]): Promise<OnewayFareDoc[]> {
 }
 
 /**
- * Cheapest open-jaw combo per destination across the selected origins — the
- * Explore chip's data. No round-trip comparison here: the caller compares
- * against CitySummary.min_price (the cheapest stored round trip) and attaches
- * the combo only when it wins. Availability (when given) filters date-level.
+ * Explore sweep (Phases 3 + 5): cheapest origin-side open-jaw combo AND
+ * cheapest twin-city combo per destination, from ONE grid load. No round-trip
+ * comparison here: the caller compares against CitySummary.min_price (the
+ * cheapest stored round trip) and attaches each map entry only when it wins.
+ * Availability (when given) filters date-level. Twin combos are keyed by
+ * their FLY-IN city (the card the hint lands on).
  */
-export async function getBestOpenJawByDest(
+export async function getExploreOpenJaw(
   origins: string[],
   opts: OpenJawOptions,
-): Promise<Map<string, CityOpenJaw>> {
-  const best = new Map<string, CityOpenJaw>();
-  if (origins.length === 0) return best;
+): Promise<{
+  openjaw: Map<string, CityOpenJaw>;
+  twin: Map<string, CityTwin>;
+}> {
+  const openjaw = new Map<string, CityOpenJaw>();
+  const twin = new Map<string, CityTwin>();
+  if (origins.length === 0) return { openjaw, twin };
 
   const byDest = indexGridsByDest(await loadAllGrids(origins), origins);
 
@@ -415,6 +422,18 @@ export async function getBestOpenJawByDest(
     maxPrice: opts.maxPrice,
   };
 
+  bestOpenJawInto(openjaw, byDest, combineOpts, opts);
+  bestTwinInto(twin, byDest, combineOpts, opts);
+  return { openjaw, twin };
+}
+
+/** Origin-side half of the Explore sweep — cheapest combo per destination. */
+function bestOpenJawInto(
+  best: Map<string, CityOpenJaw>,
+  byDest: Map<string, DestGrids>,
+  combineOpts: CombineOptions,
+  opts: OpenJawOptions,
+): void {
   for (const [dest, { out, back }] of byDest) {
     if (!getDestination(dest)) continue;
     let cheapest: CityOpenJaw | null = null;
@@ -445,7 +464,58 @@ export async function getBestOpenJawByDest(
     }
     if (cheapest) best.set(dest, cheapest);
   }
-  return best;
+}
+
+/**
+ * Twin-city half of the Explore sweep (Phase 5) — cheapest twin combo per
+ * FLY-IN city across all ground pairs and both orientations. `other` on the
+ * result is the fly-out city; `hours` the overland hop, display-only.
+ */
+function bestTwinInto(
+  best: Map<string, CityTwin>,
+  byDest: Map<string, DestGrids>,
+  combineOpts: CombineOptions,
+  opts: OpenJawOptions,
+): void {
+  for (const { a, b, hours } of GROUND_PAIRS) {
+    for (const [inCity, outCity] of [
+      [a, b],
+      [b, a],
+    ] as const) {
+      if (!getDestination(inCity)) continue;
+      const inGrids = byDest.get(inCity)?.out; // home origin → fly-in city
+      const outGrids = byDest.get(outCity)?.back; // fly-out city → home origin
+      if (!inGrids?.size || !outGrids?.size) continue;
+
+      for (const [o1, outDoc] of inGrids) {
+        for (const [o2, backDoc] of outGrids) {
+          for (const c of combineGrids(
+            outDoc.prices,
+            backDoc.prices,
+            combineOpts,
+          )) {
+            const cur = best.get(inCity);
+            if (cur && c.total >= cur.total_price) continue;
+            if (
+              opts.avail &&
+              !fitsAnyWindow(c.outDate, c.backDate, opts.avail.windows)
+            )
+              continue;
+            best.set(inCity, {
+              total_price: c.total,
+              other: outCity,
+              hours,
+              out_origin: o1,
+              back_origin: o2,
+              out_date: c.outDate,
+              back_date: c.backDate,
+              nights: c.nights,
+            });
+          }
+        }
+      }
+    }
+  }
 }
 
 // ─── Phase 3b — Calendar: winning combos across all destinations ─────────────
@@ -458,10 +528,12 @@ export interface CalendarOpenJawOptions extends OpenJawOptions {
 
 /**
  * Open-jaw combos worth a calendar bar, across ALL destinations for the
- * selected origins. Curated hard so the calendar doesn't flood:
- *   - only combos that WIN — beat the stored round trip for the same
- *     destination + exact dates (vs_roundtrip > 0), or fill a date hole the
- *     round-trip data doesn't cover (vs_roundtrip null);
+ * selected origins — origin-side combos plus twin-city combos (Phase 5).
+ * Curated hard so the calendar doesn't flood:
+ *   - origin-side: only combos that WIN — beat the stored round trip for the
+ *     same destination + exact dates (vs_roundtrip > 0), or fill a date hole
+ *     the round-trip data doesn't cover (vs_roundtrip null);
+ *   - twin-city: strict wins only (vs_roundtrip > 0 against the fly-in city);
  *   - best per (destination, out_date, back_date);
  *   - max CAL_PER_DEST_PER_MONTH per destination per outbound month;
  *   - global cap MAX_CALENDAR_COMBOS, cheapest-first.
@@ -540,6 +612,78 @@ export async function getOpenJawCalendarTrips(
             vs_roundtrip: vsRoundtrip,
             scraped_at: scrapedAt,
           });
+        }
+      }
+    }
+  }
+
+  // Twin-city pass (Phase 5): fly into one city of a ground pair, home from
+  // the other. Stricter win rule than origin-side — only combos that BEAT a
+  // stored round trip to the fly-in city (vs_roundtrip > 0) earn a bar. A
+  // missing round trip is NOT a win here: twin trips have no round-trip
+  // equivalent, so "fills a hole" would flood the calendar with every pair.
+  for (const { a, b, hours } of GROUND_PAIRS) {
+    for (const [inCity, outCity] of [
+      [a, b],
+      [b, a],
+    ] as const) {
+      const meta = getDestination(inCity);
+      if (!meta) continue;
+      const inGrids = byDest.get(inCity)?.out;
+      const outGrids = byDest.get(outCity)?.back;
+      if (!inGrids?.size || !outGrids?.size) continue;
+
+      for (const [o1, outDoc] of inGrids) {
+        for (const [o2, backDoc] of outGrids) {
+          const scrapedAt = olderScrapedAt(outDoc, backDoc);
+          for (const c of combineGrids(
+            outDoc.prices,
+            backDoc.prices,
+            combineOpts,
+          )) {
+            if (opts.start && c.backDate < opts.start) continue;
+            if (opts.end && c.outDate > opts.end) continue;
+            if (
+              opts.avail &&
+              !fitsAnyWindow(c.outDate, c.backDate, opts.avail.windows)
+            )
+              continue;
+
+            const rt =
+              roundtrips.get(`${inCity}|${c.outDate}|${c.backDate}`) ?? null;
+            const vsRoundtrip = rt === null ? null : rt - c.total;
+            if (vsRoundtrip === null || vsRoundtrip <= 0) continue;
+
+            // Best per (city pair, dates) — namespaced apart from the
+            // origin-side keys so a twin never shadows a plain combo.
+            const key = `${inCity}+${outCity}|${c.outDate}|${c.backDate}`;
+            const existing = byKey.get(key);
+            if (existing && existing.total_price <= c.total) continue;
+
+            byKey.set(key, {
+              key: `${o1}-${inCity}-${c.outDate}|${outCity}-${o2}-${c.backDate}`,
+              destination: inCity,
+              city: meta.name,
+              out: {
+                origin: o1,
+                destination: inCity,
+                date: c.outDate,
+                price: c.outPrice,
+              },
+              back: {
+                origin: outCity,
+                destination: o2,
+                date: c.backDate,
+                price: c.backPrice,
+              },
+              total_price: c.total,
+              nights: c.nights,
+              same_origin: o1 === o2,
+              vs_roundtrip: vsRoundtrip,
+              scraped_at: scrapedAt,
+              ground: { from: inCity, to: outCity, hours },
+            });
+          }
         }
       }
     }

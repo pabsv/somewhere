@@ -43,12 +43,15 @@ export default function TripBar({
 }: TripBarProps) {
   const span = Math.max(1, endCol - startCol + 1);
 
-  // Open-jaw marker: "→AMS" = returns into a different airport; "2×" = two
-  // singles instead of a return ticket. Plain trips carry no openjaw payload.
+  // Open-jaw marker: "+MAD" = twin-city trip flying home from another city;
+  // "→AMS" = returns into a different airport; "2×" = two singles instead of
+  // a return ticket. Plain trips carry no openjaw payload.
   const ojMark = trip.openjaw
-    ? trip.openjaw.same_origin
-      ? "2×"
-      : `→${trip.openjaw.back.destination}`
+    ? trip.openjaw.ground
+      ? `+${trip.openjaw.back.origin}`
+      : trip.openjaw.same_origin
+        ? "2×"
+        : `→${trip.openjaw.back.destination}`
     : null;
 
   return (

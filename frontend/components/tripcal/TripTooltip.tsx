@@ -77,7 +77,9 @@ export default function TripTooltip({
         {dest?.name ?? trip.destination}
         <span className="tnum ml-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-muted">
           {oj
-            ? `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
+            ? oj.ground
+              ? `${oj.out.origin} → ${oj.out.destination} ⇢ ${oj.back.origin} → ${oj.back.destination}`
+              : `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
             : `${trip.origin} → ${trip.destination}`}
         </span>
       </p>
@@ -103,7 +105,9 @@ export default function TripTooltip({
       {oj && (
         <div className="mt-2 border-t border-line pt-1.5">
           <p className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">
-            Mix &amp; match — {oj.same_origin ? "two singles" : "two tickets"}
+            {oj.ground
+              ? "Twin city — two tickets"
+              : `Mix & match — ${oj.same_origin ? "two singles" : "two tickets"}`}
           </p>
           <ul className="mt-1 space-y-0.5">
             <li className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink">
@@ -116,6 +120,12 @@ export default function TripTooltip({
               </span>
               <span>{formatPrice(oj.out.price)}</span>
             </li>
+            {oj.ground && (
+              <li className="tnum font-mono text-xs text-ink-muted">
+                ⇢ {oj.ground.from} → {oj.ground.to} · ~{oj.ground.hours}h
+                overland
+              </li>
+            )}
             <li className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink">
               <span>
                 {oj.back.origin} → {oj.back.destination}

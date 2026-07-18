@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import Sheet from "@/components/ui/Sheet";
 import FareTag from "@/components/ui/FareTag";
@@ -119,7 +120,9 @@ export default function TripPopover({
             <div className="min-w-0">
               <p className="tnum font-mono text-sm font-semibold uppercase tracking-wide text-ink">
                 {oj
-                  ? `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
+                  ? oj.ground
+                    ? `${oj.out.origin} → ${oj.out.destination} ⇢ ${oj.back.origin} → ${oj.back.destination}`
+                    : `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
                   : `${trip.origin} → ${trip.destination}`}
               </p>
               <p className="tnum mt-1 font-mono text-xs text-ink-muted">
@@ -140,10 +143,13 @@ export default function TripPopover({
             <>
               <div className="rounded-card border border-line bg-paper px-3 py-2.5">
                 <p className="font-mono text-xs text-ink">
-                  Mix &amp; match —{" "}
-                  {oj.same_origin
-                    ? "two one-way singles instead of a return ticket"
-                    : "two separate one-way tickets"}
+                  {oj.ground
+                    ? `Twin city — fly into ${oj.out.destination}, home from ${oj.back.origin}. Two separate one-way tickets; the overland hop is on you.`
+                    : `Mix & match — ${
+                        oj.same_origin
+                          ? "two one-way singles instead of a return ticket"
+                          : "two separate one-way tickets"
+                      }`}
                 </p>
                 <p className="tnum mt-0.5 font-mono text-[11px] text-ink-muted">
                   {oj.vs_roundtrip != null && oj.vs_roundtrip > 0 ? (
@@ -157,32 +163,45 @@ export default function TripPopover({
               </div>
               <div className="rounded-card border border-line bg-card px-3">
                 {[oj.out, oj.back].map((leg, i) => (
-                  <a
-                    key={i}
-                    href={buildGoogleFlightsOneWayUrl(
-                      leg.origin,
-                      leg.destination,
-                      leg.date,
+                  <Fragment key={i}>
+                    {/* Twin-city trips: overland hop between the two flights */}
+                    {i === 1 && oj.ground && (
+                      <div className="flex items-baseline justify-between gap-3 border-b border-line py-2">
+                        <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+                          Overland
+                        </span>
+                        <span className="tnum font-mono text-xs text-ink-muted">
+                          {oj.ground.from} ⇢ {oj.ground.to} · ~{oj.ground.hours}
+                          h
+                        </span>
+                      </div>
                     )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
-                    title={`Book one-way ${leg.origin} → ${leg.destination} on Google Flights`}
-                  >
-                    <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-                      {i === 0 ? "Out" : "Back"}
-                    </span>
-                    <span className="tnum font-mono text-xs text-ink">
-                      {leg.origin} → {leg.destination}
-                      <span className="ml-2 text-ink-muted">
-                        {formatDateShort(leg.date)}
+                    <a
+                      href={buildGoogleFlightsOneWayUrl(
+                        leg.origin,
+                        leg.destination,
+                        leg.date,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
+                      title={`Book one-way ${leg.origin} → ${leg.destination} on Google Flights`}
+                    >
+                      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+                        {i === 0 ? "Out" : "Back"}
                       </span>
-                      <span className="ml-2">{formatPrice(leg.price)}</span>
-                      <span aria-hidden="true" className="ml-1 text-ink-muted/50">
-                        ↗
+                      <span className="tnum font-mono text-xs text-ink">
+                        {leg.origin} → {leg.destination}
+                        <span className="ml-2 text-ink-muted">
+                          {formatDateShort(leg.date)}
+                        </span>
+                        <span className="ml-2">{formatPrice(leg.price)}</span>
+                        <span aria-hidden="true" className="ml-1 text-ink-muted/50">
+                          ↗
+                        </span>
                       </span>
-                    </span>
-                  </a>
+                    </a>
+                  </Fragment>
                 ))}
               </div>
             </>

@@ -251,6 +251,28 @@ export const CityOpenJawSchema = z.object({
 });
 export type CityOpenJaw = z.infer<typeof CityOpenJawSchema>;
 
+/**
+ * Best twin-city (destination-side multi-city) combo for one FLY-IN
+ * destination, attached to its CitySummary on Explore (Phase 5) ONLY when the
+ * whole two-city trip is cheaper than the destination's cheapest stored round
+ * trip (`min_price`). `other` is the fly-out city of the ground pair; `hours`
+ * is the overland time (display only, never priced). Slim on purpose — the
+ * City page's Twin city section is the drill-down.
+ */
+export const CityTwinSchema = z.object({
+  total_price: z.number(),
+  /** fly-out city IATA code (the other half of the ground pair) */
+  other: z.string(),
+  /** approximate one-way overland hours between the two cities */
+  hours: z.number(),
+  out_origin: z.string(),
+  back_origin: z.string(),
+  out_date: DateStringSchema,
+  back_date: DateStringSchema,
+  nights: z.number(),
+});
+export type CityTwin = z.infer<typeof CityTwinSchema>;
+
 // ─── CitySummary — Explore grid cell (spec section D) ────────────────────────
 
 export const CityBestSchema = z.object({
@@ -281,6 +303,8 @@ export const CitySummarySchema = z.object({
   best: CityBestSchema,
   /** Best open-jaw combo when it beats min_price (Phase 3); absent otherwise. */
   openjaw: CityOpenJawSchema.nullable().optional(),
+  /** Best twin-city combo when it beats min_price (Phase 5); absent otherwise. */
+  twin: CityTwinSchema.nullable().optional(),
 });
 export type CitySummary = z.infer<typeof CitySummarySchema>;
 

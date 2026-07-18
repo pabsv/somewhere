@@ -220,9 +220,9 @@
     "semantic_hash": "bc1d4d77a6b6b6bb5ab7f1e17da482a7"
   },
   "frontend/app/api/cities/route.ts": {
-    "mtime": 1781350650.9077299,
-    "ast_hash": "e9ed2bbb6c6f50e49478e17896a71e0c",
-    "semantic_hash": "e9ed2bbb6c6f50e49478e17896a71e0c"
+    "mtime": 1784353426.5401073,
+    "ast_hash": "5424b97db6388bc60d52cae0f3bd425b",
+    "semantic_hash": ""
   },
   "frontend/app/api/friends/[id]/route.ts": {
     "mtime": 1784111194.3025906,
@@ -245,8 +245,8 @@
     "semantic_hash": "479965f9220744a163ae280da5eb7c25"
   },
   "frontend/app/api/preferences/route.ts": {
-    "mtime": 1784272583.301044,
-    "ast_hash": "1a452aa9645188e841c705aeede46d90",
+    "mtime": 1784353432.1670969,
+    "ast_hash": "73d42bd2a4dcd5fb99907a1e97ce34fe",
     "semantic_hash": ""
   },
   "frontend/app/api/saved-cities/route.ts": {
@@ -265,8 +265,8 @@
     "semantic_hash": "c24b6c2c1280e14ecac430b062b48892"
   },
   "frontend/app/calendar/page.tsx": {
-    "mtime": 1784272599.1797402,
-    "ast_hash": "641bda4ecf2f89676389c8c67a956b71",
+    "mtime": 1784353757.8058958,
+    "ast_hash": "4644e26bf4d610bc626ea1e4d51ceb3c",
     "semantic_hash": ""
   },
   "frontend/app/city/[code]/page.tsx": {
@@ -275,8 +275,8 @@
     "semantic_hash": "abb3cd9079772f88a63a4ab3e65d73ff"
   },
   "frontend/app/explore/page.tsx": {
-    "mtime": 1784273541.498425,
-    "ast_hash": "fc6c147fb30cf97b3d7b2511ab3c6470",
+    "mtime": 1784353500.132077,
+    "ast_hash": "c86c545d15cdb7e2fbb53916607f07ed",
     "semantic_hash": ""
   },
   "frontend/app/fonts.ts": {
@@ -380,8 +380,8 @@
     "semantic_hash": "756141cc0a8809825dc33f502e5a61ca"
   },
   "frontend/components/city/CityDetail.tsx": {
-    "mtime": 1784281073.4387646,
-    "ast_hash": "e59abe5970d5cf96ffb27017243eaf65",
+    "mtime": 1784353804.008132,
+    "ast_hash": "322b2116c690761785243d0f88856f51",
     "semantic_hash": ""
   },
   "frontend/components/city/CityHeader.tsx": {
@@ -400,8 +400,8 @@
     "semantic_hash": "d2f9d8c5aedea7cd06a2f5937adae303"
   },
   "frontend/components/explore/CityCard.tsx": {
-    "mtime": 1784272521.561622,
-    "ast_hash": "0d2f63550c74d5c55bbd547cbf326afd",
+    "mtime": 1784353484.0332606,
+    "ast_hash": "e22ec23491a3812210086f4029e38d78",
     "semantic_hash": ""
   },
   "frontend/components/explore/ExploreControls.tsx": {
@@ -450,8 +450,8 @@
     "semantic_hash": ""
   },
   "frontend/components/settings/PreferencesCard.tsx": {
-    "mtime": 1784272678.0064578,
-    "ast_hash": "d2101e8ea35fa07b7ce7f09ec5336e2a",
+    "mtime": 1784353782.566288,
+    "ast_hash": "051db1563e6cdaf770fdb4a65d0f6d34",
     "semantic_hash": ""
   },
   "frontend/components/settings/YearPaint.tsx": {
@@ -485,18 +485,18 @@
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripBar.tsx": {
-    "mtime": 1781113481.5936687,
-    "ast_hash": "ea3acee7130d9fbd953c6323469aefa6",
-    "semantic_hash": "ea3acee7130d9fbd953c6323469aefa6"
+    "mtime": 1784353525.2702456,
+    "ast_hash": "fb46b4ea7543bd1bc89f610f06f473b1",
+    "semantic_hash": ""
   },
   "frontend/components/tripcal/TripPopover.tsx": {
-    "mtime": 1784254886.3225093,
-    "ast_hash": "e3ef30858b574185e2b84203ae82f468",
+    "mtime": 1784353645.0326688,
+    "ast_hash": "04dfae98723cbd186de23f4601cb3feb",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripTooltip.tsx": {
-    "mtime": 1784254702.6582506,
-    "ast_hash": "614680c656ea5242e9e9c91ec7ca5f38",
+    "mtime": 1784353560.3432817,
+    "ast_hash": "5011585cc19409c86b4112faa16cd782",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/calendarMath.ts": {
@@ -560,9 +560,9 @@
     "semantic_hash": ""
   },
   "frontend/data/airports.gen.ts": {
-    "mtime": 1784003862.6612582,
-    "ast_hash": "587e0b7e27fc60f23f2bc18632d3cbc0",
-    "semantic_hash": "587e0b7e27fc60f23f2bc18632d3cbc0"
+    "mtime": 1784354968.567558,
+    "ast_hash": "3560f6eaf39939fc150d57285f42bc74",
+    "semantic_hash": ""
   },
   "frontend/data/colors.ts": {
     "mtime": 1771936170.0046341,
@@ -570,9 +570,9 @@
     "semantic_hash": "3ccdcdc6002c3eebfaabd7d1fa36450d"
   },
   "frontend/data/destinations.gen.ts": {
-    "mtime": 1784003862.6612582,
-    "ast_hash": "60aae7a953d327b1ec4ccefeeed5faed",
-    "semantic_hash": "60aae7a953d327b1ec4ccefeeed5faed"
+    "mtime": 1784354968.567558,
+    "ast_hash": "9d5c207e6c1aac5b27a21cb06d909484",
+    "semantic_hash": ""
   },
   "frontend/eslint.config.mjs": {
     "mtime": 1771252540.0864487,
@@ -590,8 +590,8 @@
     "semantic_hash": "4c979db69cb9b6fed854008e00b59a8f"
   },
   "frontend/lib/client.ts": {
-    "mtime": 1784280997.9478388,
-    "ast_hash": "5bf59db322fcddcbfc69f089ab19c3a0",
+    "mtime": 1784353440.0294683,
+    "ast_hash": "e651cf16e74938494fd1f6df59b276f2",
     "semantic_hash": ""
   },
   "frontend/lib/format.ts": {
@@ -675,8 +675,8 @@
     "semantic_hash": ""
   },
   "frontend/types/api.ts": {
-    "mtime": 1784280745.4825814,
-    "ast_hash": "627e999cf399fc84007164aa2271cd7d",
+    "mtime": 1784354987.148278,
+    "ast_hash": "bcff304e81287e7c46f55f9da7a2b4ed",
     "semantic_hash": ""
   },
   "frontend/types/next-auth.d.ts": {
@@ -740,8 +740,8 @@
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
   "scraper/targets.py": {
-    "mtime": 1784252203.0131557,
-    "ast_hash": "aa575b5d7e3e8eeb57d3577121cf6077",
+    "mtime": 1784354910.4663332,
+    "ast_hash": "c19e15c772c8b80f13c1f8f1962f1c4c",
     "semantic_hash": ""
   },
   "scripts/__init__.py": {
@@ -750,9 +750,9 @@
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
   "scripts/export_destinations.py": {
-    "mtime": 1781079104.7882054,
-    "ast_hash": "52467909263dd1f90e575773f1ac0632",
-    "semantic_hash": "52467909263dd1f90e575773f1ac0632"
+    "mtime": 1784354944.0197606,
+    "ast_hash": "5f9d6499538da9b3e3ea7c9f2dcacef0",
+    "semantic_hash": ""
   },
   "scripts/migrate_v2.py": {
     "mtime": 1781079091.5702598,
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784282262.1551855,
-    "ast_hash": "9aa800e2096523e46f4a94f4d351d94c",
+    "mtime": 1784355401.975917,
+    "ast_hash": "968654a321ad463a4001fa1445947f5f",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -1045,18 +1045,18 @@
     "semantic_hash": ""
   },
   "claude.md": {
-    "mtime": 1784276259.3759463,
-    "ast_hash": "92549320cfbb986bd8b0e3ef0da57ed7",
+    "mtime": 1784354499.8472779,
+    "ast_hash": "1e3cb807c905058b875538f7a67502df",
     "semantic_hash": ""
   },
   "docs/MULTICITY_PLAN.md": {
-    "mtime": 1784282208.8265214,
-    "ast_hash": "8691f571756daa6e062832e73c4c58f1",
+    "mtime": 1784355383.6111083,
+    "ast_hash": "eae24d9d66987dc43dcdf185b0fd57ac",
     "semantic_hash": ""
   },
   "frontend/app/api/openjaw/route.ts": {
-    "mtime": 1784275856.3928683,
-    "ast_hash": "b90fffcc54e1d3f06d15cd1a4f266e9b",
+    "mtime": 1784355057.052257,
+    "ast_hash": "8ba36cab3661e138f090e893fee51967",
     "semantic_hash": ""
   },
   "frontend/lib/__tests__/openjaw-core.test.ts": {
@@ -1070,8 +1070,8 @@
     "semantic_hash": ""
   },
   "frontend/lib/openjaw.ts": {
-    "mtime": 1784276037.477873,
-    "ast_hash": "937fa4c713500c5c59ad1dc1c5c85ff0",
+    "mtime": 1784355030.011841,
+    "ast_hash": "85283f7701328da920a6826d097b83a6",
     "semantic_hash": ""
   },
   "frontend/app/admin/layout.tsx": {
@@ -1122,6 +1122,21 @@
   "frontend/components/city/OpenJawSection.tsx": {
     "mtime": 1784281043.0198317,
     "ast_hash": "1e75a77894afe8ec670ef525d0b868d2",
+    "semantic_hash": ""
+  },
+  "frontend/lib/useOpenJawPref.ts": {
+    "mtime": 1784353447.6213655,
+    "ast_hash": "e9960d2d34a00ddc6cd13205deadf489",
+    "semantic_hash": ""
+  },
+  "frontend/data/groundpairs.gen.ts": {
+    "mtime": 1784354968.5685413,
+    "ast_hash": "799e1f674c114456bbf1fb376163ecf1",
+    "semantic_hash": ""
+  },
+  "frontend/lib/__tests__/groundpairs.test.ts": {
+    "mtime": 1784355089.6172543,
+    "ast_hash": "36a5a6aedcddc1fe8692f62a717d525d",
     "semantic_hash": ""
   }
 }

@@ -25,6 +25,7 @@ import CityHeader from "./CityHeader";
 import BestPerMonth from "./BestPerMonth";
 import TripRow, { TripRowSkeleton } from "./TripRow";
 import OpenJawSection from "./OpenJawSection";
+import TwinCitySection from "./TwinCitySection";
 
 interface CityDetailProps {
   code: string;
@@ -263,11 +264,18 @@ export default function CityDetail({ code }: CityDetailProps) {
           collection — they can exist even when the round-trip board is empty.
           Hidden entirely when the user opted out (allow_open_jaw). */}
       {allowOpenJaw && (
-        <OpenJawSection
-          dest={city.code}
-          origins={origins}
-          directOnly={directOnly}
-        />
+        <>
+          <OpenJawSection
+            dest={city.code}
+            origins={origins}
+            directOnly={directOnly}
+          />
+          <TwinCitySection
+            dest={city.code}
+            origins={origins}
+            directOnly={directOnly}
+          />
+        </>
       )}
     </Shell>
   );
