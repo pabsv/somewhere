@@ -57,7 +57,7 @@ export default async function RootLayout({
         />
         {/* Bottom padding clears the mobile tab bar (+ the phone's home-bar
             safe area); removed at md where the tab bar is hidden. */}
-        <main className="pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="safe-bottom-nav md:pb-0">
           <Providers session={session}>{children}</Providers>
         </main>
       </body>

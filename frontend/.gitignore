@@ -15,7 +15,7 @@
 
 # next.js
 /.next/
-/.next-alt/
+/.next-*/
 /out/
 
 # production

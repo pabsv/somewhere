@@ -184,7 +184,7 @@ export default function Navigation({ user }: NavigationProps) {
           Desktop: wordmark + inline links + session. Mobile: wordmark +
           session only (primary nav moves to the bottom tab bar). pt safe-area
           keeps the wordmark clear of the notch when installed full-screen. */}
-      <header className="sticky top-0 z-40 border-b border-line bg-paper/90 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
+      <header className="sticky top-0 z-40 border-b border-line bg-paper/90 safe-top backdrop-blur-sm">
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           {/* Wordmark */}
           <Link href="/" className="group flex shrink-0 items-center gap-2">
@@ -245,7 +245,7 @@ export default function Navigation({ user }: NavigationProps) {
           home-indicator safe area. */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 safe-bottom backdrop-blur-sm md:hidden"
       >
         <ul
           className="mx-auto grid max-w-6xl"

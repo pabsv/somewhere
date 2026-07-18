@@ -108,6 +108,21 @@
   }
 }
 
+/* Safe-area insets — declared as real utilities because Turbopack's dev CSS
+   parser chokes on Tailwind arbitrary values containing env()
+   (e.g. pt-[env(safe-area-inset-top)]). Production builds were fine; this
+   keeps dev and prod on one code path. */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* main-content clearance for the mobile tab bar (4.25rem) + home indicator */
+@utility safe-bottom-nav {
+  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+}
+
 /* tabular figures — all flight data numbers */
 @utility tnum {
   font-variant-numeric: tabular-nums;
