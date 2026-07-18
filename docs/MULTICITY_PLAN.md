@@ -19,7 +19,7 @@ Master plan for open-jaw and multi-city support in Somewhere. Executed **one pha
 | 1 | Combo engine + API (origin-side, no UI) | ✅ Done 2026-07-17 — `lib/openjaw-core.ts` (pure join, 9 unit tests) + `lib/openjaw.ts` + `GET /api/openjaw`; verified via curl against live grids |
 | 2 | Origin-side UI — City page + booking links | ✅ Done 2026-07-17 — `buildGoogleFlightsOneWayUrl`, `getOpenJaw()` client, `OpenJawRow` + `OpenJawSection` ("Mix & match") on `/city/[code]`; verified live (links, direct-only note, 1-origin + no-grid hiding) |
 | 3 | Origin-side UI — Explore + Calendar integration | ✅ Done 2026-07-18 — `getBestOpenJawByDest` + `getOpenJawCalendarTrips` in `lib/openjaw.ts`, `CitySummary.openjaw` chip on CityCard, calendar-mode `/api/openjaw` (no `dest`), "⇄ Mix & match" chip + `CalTrip` bars on `/calendar` (TripBar `2×`/`→AMS` markers, open-jaw tooltip + popover with two booking links), `Preferences.allow_open_jaw` opt-out (Settings toggle, gates Explore/Calendar/City) |
-| 4 | Destination-side pairing data + engine extension | 🔴 |
+| 4 | Destination-side pairing data + engine extension | ✅ Done 2026-07-18 — `GROUND_PAIRS` (68 curated overland pairs) in `scraper/targets.py` + `validate_ground_pairs()`, codegen → `frontend/data/groundpairs.gen.ts` (`getGroundLinks`, both directions), `getMultiCityTrips` in `lib/openjaw.ts` (both orientations per pair, `ground` hop on `OpenJawTrip`), `/api/openjaw` `mode=origin\|multicity\|all`; 5 new unit tests; verified live (BCN-in/MAD-out €121 = EIN→BCN €54 + MAD→MST €67 ✓) |
 | 5 | Destination-side UI — twin-city trips | 🔴 |
 | 6 | Polish — availability edge cases, saved cities, groups, admin observability | 🔴 |
 

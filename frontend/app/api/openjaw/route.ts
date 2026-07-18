@@ -1,9 +1,13 @@
 // ─── GET /api/openjaw — open-jaw combos (origin-side) ────────────────────────
 // Public (avail=1 needs a session, like /api/trips). Two modes:
 //   city mode:      ?dest=BCN &from=EIN,AMS &min_nights &max_nights &max_price
-//                   &avail=1 → combos for one destination (City page, Phase 2)
+//                   &avail=1 → combos for one destination (City page, Phase 2).
+//                   &mode=origin|multicity|all picks the flavor (Phase 4):
+//                   origin (default) = open-jaw home airports, multicity =
+//                   twin-city trips via curated ground pairs, all = both merged.
 //   calendar mode:  no dest; adds &start=YYYY-MM-DD &end=YYYY-MM-DD → curated
-//                   WINNING combos across all destinations (Calendar, Phase 3)
+//                   WINNING combos across all destinations (Calendar, Phase 3).
+//                   `mode` is ignored here (origin-side only).
 // → { trips: OpenJawTrip[] } — cheapest-first, capped server-side.
 //
 // Prices come from the `oneway_fares` grids (date-level only — no times or
@@ -17,6 +21,7 @@ import { auth } from "@/auth";
 import { OpenJawResponseSchema } from "@/types/api";
 import {
   getOpenJawTrips,
+  getMultiCityTrips,
   getOpenJawCalendarTrips,
   type CalendarOpenJawOptions,
 } from "@/lib/openjaw";
@@ -43,6 +48,7 @@ const QuerySchema = z.object({
   min_nights: z.coerce.number().int().nonnegative().optional(),
   max_nights: z.coerce.number().int().nonnegative().optional(),
   max_price: z.coerce.number().positive().optional(),
+  mode: z.enum(["origin", "multicity", "all"]).optional().default("origin"),
   start: DateParam.optional(),
   end: DateParam.optional(),
   avail: z
@@ -80,6 +86,7 @@ export async function GET(req: NextRequest) {
       max_nights: sp.get("max_nights") ?? undefined,
       avail: sp.get("avail") ?? undefined,
       max_price: sp.get("max_price") ?? undefined,
+      mode: sp.get("mode") ?? undefined,
       start: sp.get("start") ?? undefined,
       end: sp.get("end") ?? undefined,
     });
@@ -121,7 +128,20 @@ export async function GET(req: NextRequest) {
 
     let trips;
     if (q.dest) {
-      trips = await getOpenJawTrips(q.dest, origins, baseOpts);
+      if (q.mode === "multicity") {
+        trips = await getMultiCityTrips(q.dest, origins, baseOpts);
+      } else if (q.mode === "all") {
+        const [origin, multi] = await Promise.all([
+          getOpenJawTrips(q.dest, origins, baseOpts),
+          getMultiCityTrips(q.dest, origins, baseOpts),
+        ]);
+        // Each engine caps at 50; merged list re-ranks and re-caps.
+        trips = [...origin, ...multi]
+          .sort((a, b) => a.total_price - b.total_price || a.nights - b.nights)
+          .slice(0, 50);
+      } else {
+        trips = await getOpenJawTrips(q.dest, origins, baseOpts);
+      }
     } else {
       const calOpts: CalendarOpenJawOptions = {
         ...baseOpts,

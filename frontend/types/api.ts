@@ -179,6 +179,18 @@ export const OpenJawLegSchema = z.object({
 });
 export type OpenJawLeg = z.infer<typeof OpenJawLegSchema>;
 
+/**
+ * Overland hop of a destination-side multi-city trip (Phase 4): fly into
+ * `from`, train/bus to `to`, fly home from there. `hours` is the approximate
+ * one-way ground time — displayed as info, never priced into total_price.
+ */
+export const GroundHopSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  hours: z.number(),
+});
+export type GroundHop = z.infer<typeof GroundHopSchema>;
+
 export const OpenJawTripSchema = z.object({
   key: z.string(), // "EIN-BCN-2026-10-03|BCN-AMS-2026-10-08"
   destination: z.string(),
@@ -198,6 +210,12 @@ export const OpenJawTripSchema = z.object({
   vs_roundtrip: z.number().nullable(),
   /** older `scraped_at` of the two source grids — "prices as of" honesty */
   scraped_at: z.string(),
+  /**
+   * Present on destination-side multi-city trips only (Phase 4): the overland
+   * hop between the fly-in city (`destination`) and the fly-out city
+   * (`back.origin`). Absent on origin-side open-jaw combos.
+   */
+  ground: GroundHopSchema.optional(),
 });
 export type OpenJawTrip = z.infer<typeof OpenJawTripSchema>;
 

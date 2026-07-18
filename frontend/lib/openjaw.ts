@@ -10,6 +10,7 @@
 import type { Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getDestination } from "@/data/destinations.gen";
+import { getGroundLinks } from "@/data/groundpairs.gen";
 import { combineGrids, type CombineOptions } from "@/lib/openjaw-core";
 import {
   OnewayFareDocSchema,
@@ -84,13 +85,13 @@ export async function loadFareGrids(
 /**
  * Cheapest stored ROUND-TRIP price per exact (destination, outbound_date,
  * return_date) across the selected origins, keyed "dest|out|ret". Pass `dest`
- * to scope the query to one destination (city page); omit for all (calendar
- * sweep — one query instead of one per destination).
+ * (one code or a list) to scope the query; omit for all destinations
+ * (calendar sweep — one query instead of one per destination).
  * This is the "is open-jaw actually a win?" baseline.
  */
 async function loadRoundtripBaseline(
   origins: string[],
-  dest?: string,
+  dest?: string | string[],
 ): Promise<Map<string, number>> {
   const db = await getDb();
   const docs = await db
@@ -98,7 +99,9 @@ async function loadRoundtripBaseline(
     .find(
       {
         ...buildTripFilter({ origins, start: todayStr() }),
-        ...(dest ? { destination: dest } : {}),
+        ...(dest
+          ? { destination: Array.isArray(dest) ? { $in: dest } : dest }
+          : {}),
       },
       {
         projection: {
@@ -260,6 +263,118 @@ export async function getOpenJawTrips(
         });
       }
     }
+  }
+
+  return [...byKey.values()]
+    .sort((a, b) => a.total_price - b.total_price || a.nights - b.nights)
+    .slice(0, MAX_COMBOS);
+}
+
+// ─── Phase 4 — destination-side multi-city (twin cities) ─────────────────────
+
+/**
+ * Destination-side multi-city trips touching one city: fly into one city of a
+ * curated ground pair, travel overland, fly home from the other. For each
+ * ground pair containing `dest`, BOTH orientations are emitted — dest as the
+ * fly-in city and dest as the fly-out city — so `/city/BCN` sees "BCN in,
+ * MAD out" and "MAD in, BCN out" alike. `destination` on the trip is always
+ * the FLY-IN city; the fly-out city is `back.origin`, and `ground` names the
+ * overland hop. Same home origin both ways is allowed and expected here (the
+ * default, in fact) — a twin-city trip can never be replaced by one return
+ * ticket, so there is no same-origin suppression. `nights` spans the whole
+ * trip (both cities). vs_roundtrip compares against the best stored round
+ * trip to the FLY-IN city for the same dates — an informational baseline.
+ * Never invents dest↔dest flight legs (no such grids exist; the ground hop
+ * covers that gap). Capped at MAX_COMBOS cheapest-first.
+ */
+export async function getMultiCityTrips(
+  dest: string,
+  origins: string[],
+  opts: OpenJawOptions,
+): Promise<OpenJawTrip[]> {
+  const links = getGroundLinks(dest);
+  if (!getDestination(dest) || origins.length === 0 || links.length === 0)
+    return [];
+
+  const cities = [dest, ...links.map((l) => l.other)];
+  const [grids, roundtrips] = await Promise.all([
+    loadFareGrids({
+      $or: [
+        { origin: { $in: origins }, destination: { $in: cities } },
+        { origin: { $in: cities }, destination: { $in: origins } },
+      ],
+    }),
+    loadRoundtripBaseline(origins, cities),
+  ]);
+  const byDest = indexGridsByDest(grids, origins);
+
+  const combineOpts: CombineOptions = {
+    minNights: opts.minNights,
+    maxNights: opts.maxNights,
+    maxPrice: opts.maxPrice,
+  };
+
+  const byKey = new Map<string, OpenJawTrip>();
+
+  const addCombos = (inCity: string, outCity: string, hours: number) => {
+    const meta = getDestination(inCity);
+    if (!meta) return;
+    const inGrids = byDest.get(inCity)?.out; // home origin → inCity
+    const outGrids = byDest.get(outCity)?.back; // outCity → home origin
+    if (!inGrids?.size || !outGrids?.size) return;
+
+    for (const [o1, outDoc] of inGrids) {
+      for (const [o2, backDoc] of outGrids) {
+        const scrapedAt = olderScrapedAt(outDoc, backDoc);
+        for (const c of combineGrids(
+          outDoc.prices,
+          backDoc.prices,
+          combineOpts,
+        )) {
+          if (
+            opts.avail &&
+            !fitsAnyWindow(c.outDate, c.backDate, opts.avail.windows)
+          )
+            continue;
+
+          const rt =
+            roundtrips.get(`${inCity}|${c.outDate}|${c.backDate}`) ?? null;
+
+          const key = `${o1}-${inCity}-${c.outDate}|${outCity}-${o2}-${c.backDate}`;
+          const existing = byKey.get(key);
+          if (existing && existing.total_price <= c.total) continue;
+
+          byKey.set(key, {
+            key,
+            destination: inCity,
+            city: meta.name,
+            out: {
+              origin: o1,
+              destination: inCity,
+              date: c.outDate,
+              price: c.outPrice,
+            },
+            back: {
+              origin: outCity,
+              destination: o2,
+              date: c.backDate,
+              price: c.backPrice,
+            },
+            total_price: c.total,
+            nights: c.nights,
+            same_origin: o1 === o2,
+            vs_roundtrip: rt === null ? null : rt - c.total,
+            scraped_at: scrapedAt,
+            ground: { from: inCity, to: outCity, hours },
+          });
+        }
+      }
+    }
+  };
+
+  for (const { other, hours } of links) {
+    addCombos(dest, other, hours); // fly into dest, home from the twin
+    addCombos(other, dest, hours); // fly into the twin, home from dest
   }
 
   return [...byKey.values()]
