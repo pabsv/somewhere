@@ -54,6 +54,13 @@ export default function TripBar({
         : `→${trip.openjaw.back.destination}`
     : null;
 
+  // Auto-extend badge: the calendar swapped in a longer variant at ~the same
+  // fare because the extra days fit the user's free window.
+  const ae = trip.auto_extended;
+  const aeMark = ae
+    ? ` +${ae.extra_nights}d${Math.round(ae.delta_price) <= 0 ? " free" : ` +€${Math.round(ae.delta_price)}`}`
+    : null;
+
   return (
     <button
       type="button"
@@ -66,7 +73,11 @@ export default function TripBar({
         gridColumn: `${startCol} / span ${span}`,
         gridRow: lane + 1,
       }}
-      title={`${trip.origin} → ${trip.destination} · ${formatPrice(trip.price)}`}
+      title={`${trip.origin} → ${trip.destination} · ${formatPrice(trip.price)}${
+        ae
+          ? ` · auto-stretched +${ae.extra_nights} night${ae.extra_nights === 1 ? "" : "s"} for ${formatPrice(ae.delta_price)} more`
+          : ""
+      }`}
       className={`group/bar relative z-10 flex h-6 min-w-0 items-center overflow-hidden rounded-full px-1.5 text-left transition-transform duration-[120ms] ease-out-quart hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
         TIER_BAR[trip.deal_tier]
       } ${clippedStart ? "rounded-l-none" : ""} ${
@@ -77,6 +88,7 @@ export default function TripBar({
         {trip.destination}
         {ojMark && <span className="opacity-70">{ojMark}</span>}{" "}
         {formatPrice(trip.price)}
+        {aeMark && <span className="opacity-70">{aeMark}</span>}
       </span>
     </button>
   );

@@ -16,10 +16,15 @@ import {
   type CitySummary,
   type FlightDoc,
   type GroupTrip,
+  type StretchVariant,
   type Trip,
-  type TripVariant,
 } from "@/types/api";
-import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
+import { toTrip, dedupeTrips, buildDensity, applyAutoExtend } from "@/lib/trips";
+import {
+  enumerateStretchCandidates,
+  priceStretchCandidates,
+  type ExactFare,
+} from "@/lib/stretch-core";
 import { HARD_PRICE_CEILING } from "@/lib/score";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
@@ -453,42 +458,72 @@ export async function getCityData(
 // ─── /api/trips/extensions ───────────────────────────────────────────────────
 
 /**
- * "Stay longer" variants for one hovered trip: every stored itinerary with the
- * SAME origin + destination + outbound_date, as slim scored variants sorted by
- * return_date asc. Returns ALL return dates (shorter/equal/longer) — the
- * client filters to the window it wants. Rides the {origin, outbound_date,
- * price} index (destination filtered residually — tiny result set).
+ * Trip-stretch variants for one hovered trip: leave 1–3 days earlier, return
+ * 1–3 days later, plus the full availability window when bounds are given.
+ * Hybrid pricing — an exact stored round-trip fare wins; otherwise the sum of
+ * the route's two one-way grids becomes an `estimated` variant (real bookable
+ * price for two tickets, ~ in the UI). Pairs with neither source are dropped.
+ * Two DB round-trips: one flights $in query + one oneway_fares lookup.
  */
-export async function getTripExtensionsData(
+export async function getTripStretchData(
   origin: string,
   destination: string,
   outbound: string,
-): Promise<{ variants: TripVariant[] }> {
-  const flights = await flightsCollection();
-
-  const docs = await flights
-    .find({
-      origin,
-      destination,
-      outbound_date: outbound,
-      price: { $lte: HARD_PRICE_CEILING },
-    })
-    .toArray();
-
-  const baselines = await getBaselines();
-  const trips = dedupeTrips(scoreFlights(docs, baselines)).sort((a, b) =>
-    a.return_date < b.return_date ? -1 : a.return_date > b.return_date ? 1 : 0,
+  ret: string,
+  winStart?: string,
+  winEnd?: string,
+): Promise<{ variants: StretchVariant[] }> {
+  const candidates = enumerateStretchCandidates(
+    { out: outbound, ret },
+    { winStart, winEnd },
+    todayStr(),
   );
+  if (candidates.length === 0) return { variants: [] };
+
+  const outs = [...new Set(candidates.map((c) => c.out))];
+  const rets = [...new Set(candidates.map((c) => c.ret))];
+  const wanted = new Set(candidates.map((c) => `${c.out}|${c.ret}`));
+
+  const flights = await flightsCollection();
+  const outLeg = `${origin}-${destination}`;
+  const backLeg = `${destination}-${origin}`;
+
+  const [docs, baselines, grids] = await Promise.all([
+    flights
+      .find({
+        origin,
+        destination,
+        outbound_date: { $in: outs },
+        return_date: { $in: rets },
+        price: { $lte: HARD_PRICE_CEILING },
+      })
+      .toArray(),
+    getBaselines(),
+    // dynamic import: lib/openjaw imports from this module — avoid a static cycle
+    import("@/lib/openjaw").then((m) =>
+      m.loadFareGrids({ leg_key: { $in: [outLeg, backLeg] } }),
+    ),
+  ]);
+
+  const exactByPair = new Map<string, ExactFare>();
+  for (const t of dedupeTrips(scoreFlights(docs, baselines))) {
+    const k = `${t.outbound_date}|${t.return_date}`;
+    if (!wanted.has(k)) continue;
+    const cur = exactByPair.get(k);
+    if (!cur || t.price < cur.price)
+      exactByPair.set(k, {
+        price: t.price,
+        deal_tier: t.deal_tier,
+        delta_pct: t.delta_pct,
+        search_link: t.search_link,
+      });
+  }
+
+  const outGrid = grids.find((g) => g.leg_key === outLeg)?.prices ?? {};
+  const backGrid = grids.find((g) => g.leg_key === backLeg)?.prices ?? {};
 
   return {
-    variants: trips.map((t) => ({
-      return_date: t.return_date,
-      duration_days: t.duration_days,
-      price: t.price,
-      deal_tier: t.deal_tier,
-      delta_pct: t.delta_pct,
-      search_link: t.search_link,
-    })),
+    variants: priceStretchCandidates(candidates, exactByPair, outGrid, backGrid),
   };
 }
 
@@ -755,6 +790,9 @@ export async function getTripsData(
         hourOf(t.ret.arr),
       ),
     );
+    // Every surviving bar fits inside a window, so a longer same-outbound
+    // variant at ~the same price is strictly better — show it directly.
+    bars = applyAutoExtend(bars);
   }
 
   if (params.tier) {

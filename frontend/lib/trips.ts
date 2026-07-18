@@ -71,6 +71,73 @@ export function dedupeTrips(trips: Trip[]): Trip[] {
   return [...best.values()];
 }
 
+/** Auto-extend: max € a longer variant may cost over the base to still swap in. */
+const AUTO_EXTEND_MAX_DELTA = 5;
+
+/**
+ * Calendar auto-extend (avail-filtered requests only — the caller guarantees
+ * every trip already fits inside an availability window): within each
+ * origin|destination|outbound_date group, if a LONGER-return variant costs at
+ * most `maxDelta` € more than the group's best trip, show that longer variant
+ * as the bar (stamped with `auto_extended` so the UI can badge it) and drop
+ * the shorter variants it subsumes. Longer variants that DON'T qualify on
+ * price survive as their own bars. Exact stored fares only — estimates never
+ * reach this function.
+ */
+export function applyAutoExtend(
+  trips: Trip[],
+  maxDelta: number = AUTO_EXTEND_MAX_DELTA,
+): Trip[] {
+  const groups = new Map<string, Trip[]>();
+  for (const t of trips) {
+    const k = `${t.origin}|${t.destination}|${t.outbound_date}`;
+    const arr = groups.get(k);
+    if (arr) arr.push(t);
+    else groups.set(k, [t]);
+  }
+
+  const out: Trip[] = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      out.push(group[0]);
+      continue;
+    }
+    // base = what curation would have shown: best score, tie → cheaper
+    const base = group.reduce((a, b) =>
+      b.score > a.score || (b.score === a.score && b.price < a.price) ? b : a,
+    );
+    // candidate = longest return within the price tolerance (tie → cheaper)
+    let candidate = base;
+    for (const t of group) {
+      if (t.price > base.price + maxDelta) continue;
+      if (
+        t.return_date > candidate.return_date ||
+        (t.return_date === candidate.return_date && t.price < candidate.price)
+      )
+        candidate = t;
+    }
+    if (candidate.return_date <= base.return_date) {
+      out.push(...group);
+      continue;
+    }
+    out.push({
+      ...candidate,
+      auto_extended: {
+        base_return_date: base.return_date,
+        base_price: base.price,
+        extra_nights: candidate.duration_days - base.duration_days,
+        delta_price: candidate.price - base.price,
+      },
+    });
+    for (const t of group) {
+      if (t === candidate) continue;
+      // shorter variants are subsumed by the extended bar; keep longer ones
+      if (t.return_date > candidate.return_date) out.push(t);
+    }
+  }
+  return out;
+}
+
 /** Defensive cap on the days a single trip may contribute to density. */
 const MAX_SPAN_DAYS = 120;
 

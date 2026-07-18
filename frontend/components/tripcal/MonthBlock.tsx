@@ -28,8 +28,16 @@ interface MonthBlockProps {
   /** academic periods (exams/breaks) to wash under the bars; [] = no overlay */
   uniPeriods?: UniPeriod[];
   today: string;
-  /** hovered trip's "stay longer" tail: dashed ghost from return+1 → endDate */
-  ghost?: { trip: Trip; endDate: string } | null;
+  /**
+   * Hovered trip's stretch ghosts: dashed segments beside the bar — earlier
+   * side spans startDate → outbound−1, later side spans return+1 → endDate.
+   * Labels are the price chips rendered on the segments.
+   */
+  ghost?: {
+    trip: Trip;
+    earlier?: { startDate: string; label: string } | null;
+    later?: { endDate: string; label: string } | null;
+  } | null;
   onBarHover: (trip: Trip | null, el: HTMLElement | null) => void;
   onBarClick: (trip: Trip) => void;
   onDayClick: (day: string) => void;
@@ -113,27 +121,62 @@ export default function MonthBlock({
 
   const dayNumbers = Array.from({ length: cols }, (_, i) => i + 1);
 
-  // ─── "Stay longer" ghost tail (hovered bar only) ───────────────────────────
-  // Rendered in the month that contains the trip's return date; a tail that
-  // would spill into the next month is clipped at the edge (square right end).
-  const ghostPlacement = useMemo(() => {
-    if (!ghost) return null;
+  // ─── Trip-stretch ghost segments (hovered bar only) ────────────────────────
+  // Each side renders in the month containing the trip's edge date; a segment
+  // that would spill past the month's boundary is clipped square at the edge
+  // (no cross-month ghosts — same convention as before).
+  const ghostPlacements = useMemo(() => {
+    if (!ghost) return [];
     const lane = lanes.get(ghost.trip.key);
-    if (lane == null) return null;
-    const ghostStart = addDays(ghost.trip.return_date, 1);
-    if (
-      ghost.trip.return_date < spec.startStr || // return isn't in this month
-      ghostStart > spec.endStr || // trip ends on the month's last day
-      ghost.endDate < ghostStart // nothing to extend into
-    ) {
-      return null;
+    if (lane == null) return [];
+    const placements: Array<{
+      side: "earlier" | "later";
+      startCol: number;
+      endCol: number;
+      lane: number;
+      clipped: boolean;
+      label: string;
+    }> = [];
+
+    if (ghost.later) {
+      const start = addDays(ghost.trip.return_date, 1);
+      if (
+        ghost.trip.return_date >= spec.startStr && // return is in this month…
+        ghost.trip.return_date <= spec.endStr &&
+        start <= spec.endStr && // …and isn't the month's last day
+        ghost.later.endDate >= start
+      ) {
+        placements.push({
+          side: "later",
+          startCol: clampDayInMonth(start, spec),
+          endCol: clampDayInMonth(ghost.later.endDate, spec),
+          lane,
+          clipped: ghost.later.endDate > spec.endStr,
+          label: ghost.later.label,
+        });
+      }
     }
-    return {
-      startCol: clampDayInMonth(ghostStart, spec),
-      endCol: clampDayInMonth(ghost.endDate, spec),
-      lane,
-      clippedEnd: ghost.endDate > spec.endStr,
-    };
+
+    if (ghost.earlier) {
+      const end = addDays(ghost.trip.outbound_date, -1);
+      if (
+        ghost.trip.outbound_date >= spec.startStr && // outbound is in this month…
+        ghost.trip.outbound_date <= spec.endStr &&
+        end >= spec.startStr && // …and isn't the month's first day
+        ghost.earlier.startDate <= end
+      ) {
+        placements.push({
+          side: "earlier",
+          startCol: clampDayInMonth(ghost.earlier.startDate, spec),
+          endCol: clampDayInMonth(end, spec),
+          lane,
+          clipped: ghost.earlier.startDate < spec.startStr,
+          label: ghost.earlier.label,
+        });
+      }
+    }
+
+    return placements;
   }, [ghost, lanes, spec]);
 
   return (
@@ -282,14 +325,17 @@ export default function MonthBlock({
             );
           })}
 
-          {ghostPlacement && (
+          {ghostPlacements.map((g) => (
             <GhostExtension
-              startCol={ghostPlacement.startCol}
-              endCol={ghostPlacement.endCol}
-              lane={ghostPlacement.lane}
-              clippedEnd={ghostPlacement.clippedEnd}
+              key={g.side}
+              startCol={g.startCol}
+              endCol={g.endCol}
+              lane={g.lane}
+              side={g.side}
+              clipped={g.clipped}
+              label={g.label}
             />
-          )}
+          ))}
         </div>
       </div>
 

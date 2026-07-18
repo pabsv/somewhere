@@ -126,23 +126,46 @@ export const TripSchema = z.object({
   price_points: z.array(PricePointSchema),
   search_link: z.string().nullable(),
   last_seen_at: z.string(),
+  /**
+   * Present when the calendar auto-swapped this bar for a longer stored
+   * variant that costs ≤€5 more and still fits the user's availability window
+   * (avail-filtered requests only). Records what the shorter base trip was.
+   */
+  auto_extended: z
+    .object({
+      base_return_date: DateStringSchema,
+      base_price: z.number(),
+      extra_nights: z.number(),
+      /** this trip's price − base price (0 = same fare, ≤ 5 by construction) */
+      delta_price: z.number(),
+    })
+    .optional(),
 });
 export type Trip = z.infer<typeof TripSchema>;
 
-// ─── TripVariant — "stay longer" alternative return dates (calendar hover) ───
+// ─── StretchVariant — trip-stretch candidates for the calendar hover ─────────
 
-export const TripVariantSchema = z.object({
+/**
+ * One "stretch this trip" candidate: leave earlier, return later, or fill the
+ * whole availability window. `estimated` = priced as the sum of two one-way
+ * grid fares (~ prefix in the UI, two-tickets estimate) instead of a stored
+ * round-trip doc; estimated variants carry no tier/anchor/search_link.
+ */
+export const StretchVariantSchema = z.object({
+  out_date: DateStringSchema,
   return_date: DateStringSchema,
-  duration_days: z.number(),
+  nights: z.number(),
   price: z.number(),
-  deal_tier: DealTierSchema,
+  estimated: z.boolean(),
+  kind: z.enum(["earlier", "later", "full"]),
+  deal_tier: DealTierSchema.nullable(),
   delta_pct: z.number().nullable(),
   search_link: z.string().nullable(),
 });
-export type TripVariant = z.infer<typeof TripVariantSchema>;
+export type StretchVariant = z.infer<typeof StretchVariantSchema>;
 
 export const ExtensionsResponseSchema = z.object({
-  variants: z.array(TripVariantSchema),
+  variants: z.array(StretchVariantSchema),
 });
 export type ExtensionsResponse = z.infer<typeof ExtensionsResponseSchema>;
 
@@ -191,6 +214,20 @@ export const GroundHopSchema = z.object({
 });
 export type GroundHop = z.infer<typeof GroundHopSchema>;
 
+/**
+ * "Stay longer" option for an open-jaw combo (Phase 6): a LATER date from the
+ * same back-leg fare grid. `total` = out.price + back_price — the new combo
+ * total if the back ticket moves to `date`. Attached in calendar mode only.
+ */
+export const OpenJawExtensionSchema = z.object({
+  date: DateStringSchema,
+  /** one-way back fare on that date */
+  back_price: z.number(),
+  /** out.price + back_price — the new combo total */
+  total: z.number(),
+});
+export type OpenJawExtension = z.infer<typeof OpenJawExtensionSchema>;
+
 export const OpenJawTripSchema = z.object({
   key: z.string(), // "EIN-BCN-2026-10-03|BCN-AMS-2026-10-08"
   destination: z.string(),
@@ -216,6 +253,13 @@ export const OpenJawTripSchema = z.object({
    * (`back.origin`). Absent on origin-side open-jaw combos.
    */
   ground: GroundHopSchema.optional(),
+  /**
+   * Later back-leg dates from the same fare grid (Phase 6) — the calendar's
+   * "stay longer" hover for combo bars. Calendar mode only; absent in city
+   * mode (the section already lists every combo) and when no later dates
+   * exist in the grid.
+   */
+  extensions: z.array(OpenJawExtensionSchema).optional(),
 });
 export type OpenJawTrip = z.infer<typeof OpenJawTripSchema>;
 
@@ -362,6 +406,28 @@ export const AdminTargetSummarySchema = z.object({
 });
 export type AdminTargetSummary = z.infer<typeof AdminTargetSummarySchema>;
 
+/**
+ * One-way fare grid coverage (open-jaw Phase 6 observability). `stale_7d`
+ * counts grids older than the slowest tier cadence (168h) — routes that
+ * should have refreshed but haven't. `newest_scraped_at` going stale is the
+ * "grids stopped refreshing entirely" alarm (the pool writes grids every
+ * few minutes when healthy).
+ */
+export const AdminGridStatsSchema = z.object({
+  total: z.number(),
+  /** home origin → destination legs */
+  out_legs: z.number(),
+  /** destination → home origin legs */
+  back_legs: z.number(),
+  fresh_24h: z.number(),
+  stale_7d: z.number(),
+  /** median number of dates per grid */
+  median_price_count: z.number().nullable(),
+  oldest_scraped_at: z.string().nullable(),
+  newest_scraped_at: z.string().nullable(),
+});
+export type AdminGridStats = z.infer<typeof AdminGridStatsSchema>;
+
 export const AdminPoolSummarySchema = z.object({
   tiles: z.object({
     total: z.number(),
@@ -371,6 +437,7 @@ export const AdminPoolSummarySchema = z.object({
     never_scraped: z.number(),
     by_tier: z.record(TierSchema, z.number()),
   }),
+  grids: AdminGridStatsSchema,
   targets: z.array(AdminTargetSummarySchema),
 });
 export type AdminPoolSummary = z.infer<typeof AdminPoolSummarySchema>;

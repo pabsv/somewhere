@@ -16,7 +16,14 @@ import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
 import DaySheet from "@/components/tripcal/DaySheet";
-import { useStayExtensions } from "@/components/tripcal/useStayExtensions";
+import {
+  useStayExtensions,
+  pickOpenJawExtensions,
+  EMPTY_STRETCHES,
+  type StayStretch,
+  type StretchSet,
+} from "@/components/tripcal/useStayExtensions";
+import { formatDelta } from "@/lib/format";
 import CalendarFilters, {
   type CalendarFilterState,
   EMPTY_FILTERS,
@@ -237,12 +244,15 @@ export default function CalendarPage() {
           )
           .map(toCalTrip)
       : [];
+    // A twin-city bar is a favourite when EITHER city is starred — the fly-in
+    // city is t.destination, the fly-out city is the combo's back.origin.
+    const isFavourite = (t: CalTrip) =>
+      saved.has(t.destination) ||
+      (t.openjaw?.ground != null && saved.has(t.openjaw.back.origin));
     const all: CalTrip[] = [...roundtrips, ...combos];
-    const scoped = savedOnly
-      ? all.filter((t) => saved.has(t.destination))
-      : all;
+    const scoped = savedOnly ? all.filter(isFavourite) : all;
     return scoped.map((t) =>
-      saved.has(t.destination)
+      isFavourite(t)
         ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price) }
         : t,
     );
@@ -272,24 +282,71 @@ export default function CalendarPage() {
     setPopoverTrip(t);
   }, []);
 
-  // ─── "Stay longer" suggestions for the hovered bar ─────────────────────────
+  // ─── Trip-stretch suggestions for the hovered bar ──────────────────────────
   const clampToWindows = signedIn && onlyFree;
-  const { extensions } = useStayExtensions(
-    // open-jaw bars have no round-trip variants to extend — skip the fetch
+  const { stretches: rtStretches } = useStayExtensions(
+    // open-jaw bars ship their extensions inline — skip the variants fetch
     hovered && !hovered.trip.openjaw ? hovered.trip : null,
     windows,
     clampToWindows,
   );
-  const ghost = useMemo(
+  // Open-jaw bars: later back-leg dates come attached to the combo (Phase 6) —
+  // shaped client-side with the same window clamping as round-trip variants.
+  const stretches = useMemo<StretchSet>(
     () =>
-      hovered && extensions.length > 0
+      hovered?.trip.openjaw
         ? {
-            trip: hovered.trip,
-            endDate: extensions[extensions.length - 1].return_date,
+            ...EMPTY_STRETCHES,
+            later: pickOpenJawExtensions(hovered.trip, windows, clampToWindows),
+          }
+        : rtStretches,
+    [hovered, rtStretches, windows, clampToWindows],
+  );
+  // Ghost extents: furthest earlier/later candidate defines each segment (the
+  // full-window candidate counts toward both sides). Chip = that candidate's
+  // shift + delta, ~ when the price is a two-singles estimate.
+  const ghost = useMemo(() => {
+    if (!hovered) return null;
+    const chip = (arrow: string, days: number, s: StayStretch) =>
+      `${arrow}${days}d ${s.estimated ? "~" : ""}${formatDelta(s.deltaPrice)}`;
+
+    const earlierCands = [
+      ...stretches.earlier,
+      ...(stretches.fullWindow && stretches.fullWindow.daysEarlier > 0
+        ? [stretches.fullWindow]
+        : []),
+    ];
+    const laterCands = [
+      ...stretches.later,
+      ...(stretches.fullWindow && stretches.fullWindow.daysLater > 0
+        ? [stretches.fullWindow]
+        : []),
+    ];
+    const earliest = earlierCands.reduce<StayStretch | null>(
+      (a, s) => (a == null || s.out_date < a.out_date ? s : a),
+      null,
+    );
+    const latest = laterCands.reduce<StayStretch | null>(
+      (a, s) => (a == null || s.return_date > a.return_date ? s : a),
+      null,
+    );
+    if (!earliest && !latest) return null;
+    return {
+      trip: hovered.trip,
+      earlier: earliest
+        ? {
+            startDate: earliest.out_date,
+            label: chip("←", earliest.daysEarlier, earliest),
           }
         : null,
-    [hovered, extensions],
-  );
+      later: latest
+        ? {
+            endDate: latest.return_date,
+            label: chip("+", latest.daysLater, latest),
+          }
+        : null,
+    };
+  }, [hovered, stretches]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -349,6 +406,19 @@ export default function CalendarPage() {
             <p className="mt-2 text-xs text-ink-muted">
               Mix &amp; match fares carry no stops data, so they’re hidden
               while “Direct only” is on.
+            </p>
+          )}
+        {/* Edge-hour honesty (Phase 6): grids are date-only, so the "free
+            from / back by" hours on availability windows can't constrain
+            combo bars — say so instead of silently ignoring them. */}
+        {openJawActive &&
+          onlyFree &&
+          signedIn &&
+          windows.some((w) => w.start_time != null || w.end_time != null) && (
+            <p className="mt-2 text-xs text-ink-muted">
+              Mix &amp; match fares carry no departure times, so the “free
+              from / back by” hours on your windows can’t apply to them — only
+              the dates do.
             </p>
           )}
         {university && uniPeriods.length > 0 && (
@@ -423,7 +493,7 @@ export default function CalendarPage() {
         <TripTooltip
           trip={hovered.trip}
           anchor={hovered.el}
-          extensions={extensions}
+          stretches={stretches}
         />
       )}
 

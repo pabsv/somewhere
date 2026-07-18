@@ -146,11 +146,14 @@ export function getOpenJaw(params: OpenJawParams): Promise<OpenJawResponse> {
   return request(`/api/openjaw${qs(params)}`);
 }
 
-/** GET /api/trips/extensions — "stay longer" variants for one trip */
+/** GET /api/trips/extensions — trip-stretch variants for one trip */
 export function getTripExtensions(params: {
   from: string;
   to: string;
   outbound: string;
+  return: string;
+  win_start?: string;
+  win_end?: string;
 }): Promise<ExtensionsResponse> {
   return request(`/api/trips/extensions${qs(params)}`);
 }

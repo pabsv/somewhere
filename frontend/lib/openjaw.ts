@@ -37,6 +37,8 @@ const MAX_COMBOS = 50;
 
 /** Calendar sweep: global cap on combos across all destinations. */
 const MAX_CALENDAR_COMBOS = 40;
+/** Calendar sweep: later back-leg dates attached per combo ("stay longer"). */
+const MAX_OJ_EXTENSIONS = 4;
 /** Calendar sweep: per (destination, outbound-month) cap — mirrors the
  *  round-trip calendar's BARS_PER_DEST_PER_MONTH curation. */
 const CAL_PER_DEST_PER_MONTH = 2;
@@ -558,6 +560,9 @@ export async function getOpenJawCalendarTrips(
   };
 
   const byKey = new Map<string, OpenJawTrip>();
+  // Back grid per emitted trip (object identity) — after curation the winners
+  // get "stay longer" extensions from their own back grid (Phase 6).
+  const backGridOf = new Map<OpenJawTrip, Record<string, number>>();
   for (const [dest, { out, back }] of byDest) {
     const meta = getDestination(dest);
     if (!meta) continue;
@@ -590,7 +595,7 @@ export async function getOpenJawCalendarTrips(
           const existing = byKey.get(key);
           if (existing && existing.total_price <= c.total) continue;
 
-          byKey.set(key, {
+          const trip: OpenJawTrip = {
             key: `${o1}-${dest}-${c.outDate}|${dest}-${o2}-${c.backDate}`,
             destination: dest,
             city: meta.name,
@@ -611,7 +616,9 @@ export async function getOpenJawCalendarTrips(
             same_origin: sameOrigin,
             vs_roundtrip: vsRoundtrip,
             scraped_at: scrapedAt,
-          });
+          };
+          byKey.set(key, trip);
+          backGridOf.set(trip, backDoc.prices);
         }
       }
     }
@@ -660,7 +667,7 @@ export async function getOpenJawCalendarTrips(
             const existing = byKey.get(key);
             if (existing && existing.total_price <= c.total) continue;
 
-            byKey.set(key, {
+            const trip: OpenJawTrip = {
               key: `${o1}-${inCity}-${c.outDate}|${outCity}-${o2}-${c.backDate}`,
               destination: inCity,
               city: meta.name,
@@ -682,7 +689,9 @@ export async function getOpenJawCalendarTrips(
               vs_roundtrip: vsRoundtrip,
               scraped_at: scrapedAt,
               ground: { from: inCity, to: outCity, hours },
-            });
+            };
+            byKey.set(key, trip);
+            backGridOf.set(trip, backDoc.prices);
           }
         }
       }
@@ -703,5 +712,25 @@ export async function getOpenJawCalendarTrips(
     perDestMonth.set(k, n + 1);
     picked.push(t);
   }
+
+  // "Stay longer" (Phase 6): the next few LATER dates from each winner's own
+  // back grid — same data, zero extra queries. Unfiltered by nights/price
+  // caps (mirrors /api/trips/extensions returning all variants); the client
+  // clamps to availability windows. Empty = field absent (sparse is normal).
+  for (const t of picked) {
+    const grid = backGridOf.get(t);
+    if (!grid) continue;
+    const later = Object.keys(grid)
+      .filter((d) => d > t.back.date)
+      .sort()
+      .slice(0, MAX_OJ_EXTENSIONS)
+      .map((d) => ({
+        date: d,
+        back_price: grid[d],
+        total: t.out.price + grid[d],
+      }));
+    if (later.length > 0) t.extensions = later;
+  }
+
   return picked;
 }

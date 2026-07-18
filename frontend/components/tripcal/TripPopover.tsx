@@ -12,12 +12,18 @@ import { getDestination } from "@/data/destinations.gen";
 import { getSearchUrl, buildGoogleFlightsOneWayUrl } from "@/lib/searchUrl";
 import {
   formatDateShort,
+  formatDelta,
   formatRange,
   nightsLabel,
   formatPrice,
 } from "@/lib/format";
 import CountryFlag from "@/components/ui/CountryFlag";
-import { useStayExtensions } from "./useStayExtensions";
+import {
+  useStayExtensions,
+  pickOpenJawExtensions,
+  stretchCount,
+  type StayStretch,
+} from "./useStayExtensions";
 
 interface TripPopoverProps {
   trip: CalTrip | null;
@@ -36,12 +42,46 @@ const TIER_BADGE: Record<Trip["deal_tier"], "steal" | "deal" | "neutral"> = {
   fair: "neutral",
 };
 
-/** "+€8" / "−€4" / "±€0" — signed whole-euro delta vs the main fare. */
-function formatDelta(delta: number): string {
-  const r = Math.round(delta);
-  if (r > 0) return `+€${r}`;
-  if (r < 0) return `−€${-r}`;
-  return "±€0";
+/** One stretch row: label (children) → Google Flights for the shifted dates. */
+function StretchLink({
+  trip,
+  s,
+  children,
+}: {
+  trip: Trip;
+  s: StayStretch;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={getSearchUrl({
+        origin: trip.origin,
+        destination: trip.destination,
+        outbound_date: s.out_date,
+        return_date: s.return_date,
+        duration_days: s.nights,
+        search_link: s.search_link,
+      })}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
+    >
+      <span className="tnum font-mono text-xs text-ink">{children}</span>
+      <span className="tnum font-mono text-xs text-ink">
+        {s.estimated ? "~" : ""}
+        {formatPrice(s.price)}
+        <span
+          className={`ml-2 ${
+            Math.round(s.deltaPrice) > 0
+              ? "text-ink-muted"
+              : "font-medium text-steal"
+          }`}
+        >
+          {formatDelta(s.deltaPrice)}
+        </span>
+      </span>
+    </a>
+  );
 }
 
 function LegRow({
@@ -87,12 +127,16 @@ export default function TripPopover({
 }: TripPopoverProps) {
   const open = trip != null;
   const oj = trip?.openjaw ?? null;
-  // Open-jaw combos have no round-trip variants to extend — skip the fetch.
-  const { extensions, loading: extensionsLoading } = useStayExtensions(
+  // Open-jaw combos ship their extensions inline — skip the variants fetch.
+  const { stretches, loading: stretchesLoading } = useStayExtensions(
     oj ? null : trip,
     windows,
     clampToWindows,
   );
+  // Later back-leg dates attached to the combo (Phase 6), same clamping as
+  // the round-trip path. Empty = section hidden (sparse grids are normal).
+  const ojExtensions =
+    trip && oj ? pickOpenJawExtensions(trip, windows, clampToWindows) : [];
   const dest = trip ? getDestination(trip.destination) : undefined;
   const city = dest?.name ?? trip?.city ?? "";
   const title = trip ? (
@@ -129,6 +173,14 @@ export default function TripPopover({
                 {formatRange(trip.outbound_date, trip.return_date)} ·{" "}
                 {nightsLabel(trip.duration_days)}
               </p>
+              {trip.auto_extended && (
+                <p className="tnum mt-1 font-mono text-[11px] text-steal">
+                  Auto-stretched +{trip.auto_extended.extra_nights}d — same
+                  route was → {formatDateShort(trip.auto_extended.base_return_date)}{" "}
+                  for {formatPrice(trip.auto_extended.base_price)} (
+                  {formatDelta(trip.auto_extended.delta_price)})
+                </p>
+              )}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <FareTag price={trip.price} tier={trip.deal_tier} size="lg" />
@@ -257,51 +309,99 @@ export default function TripPopover({
           </div>
           )}
 
-          {/* ─── Stay longer ──────────────────────────────────────────── */}
-          {!oj && !extensionsLoading && (
+          {/* ─── Stay longer (open-jaw): move the back ticket later ───── */}
+          {oj && ojExtensions.length > 0 && (
             <div className="rounded-card border border-line bg-card px-3">
               <p className="border-b border-line py-2 font-mono text-[11px] uppercase tracking-wide text-ink-muted">
                 Stay longer
               </p>
-              {extensions.length > 0 ? (
-                extensions.map((ext) => (
-                  <a
-                    key={ext.return_date}
-                    href={getSearchUrl({
-                      origin: trip.origin,
-                      destination: trip.destination,
-                      outbound_date: trip.outbound_date,
-                      return_date: ext.return_date,
-                      duration_days: ext.duration_days,
-                      search_link: ext.search_link,
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
-                  >
-                    <span className="tnum font-mono text-xs text-ink">
-                      → {formatDateShort(ext.return_date)}
+              {ojExtensions.map((ext) => (
+                <a
+                  key={ext.return_date}
+                  href={buildGoogleFlightsOneWayUrl(
+                    oj.back.origin,
+                    oj.back.destination,
+                    ext.return_date,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Book the later one-way back ticket, ${oj.back.origin} → ${oj.back.destination}`}
+                  className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
+                >
+                  <span className="tnum font-mono text-xs text-ink">
+                    → {formatDateShort(ext.return_date)}
+                    <span className="ml-2 text-ink-muted">
+                      {nightsLabel(ext.nights)}
+                    </span>
+                  </span>
+                  <span className="tnum font-mono text-xs text-ink">
+                    {formatPrice(ext.price)}
+                    <span
+                      className={`ml-2 ${
+                        Math.round(ext.deltaPrice) > 0
+                          ? "text-ink-muted"
+                          : "font-medium text-steal"
+                      }`}
+                    >
+                      {formatDelta(ext.deltaPrice)}
+                    </span>
+                  </span>
+                </a>
+              ))}
+              <p className="py-2 font-mono text-[11px] text-ink-muted">
+                New combo total — only the back ticket moves; the link books
+                that one-way.
+              </p>
+            </div>
+          )}
+
+          {/* ─── Stretch this trip ────────────────────────────────────── */}
+          {!oj && !stretchesLoading && (
+            <div className="rounded-card border border-line bg-card px-3">
+              <p className="border-b border-line py-2 font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+                Stretch this trip
+              </p>
+              {stretchCount(stretches) > 0 ? (
+                <>
+                  {stretches.earlier.map((s) => (
+                    <StretchLink key={`e${s.out_date}`} trip={trip} s={s}>
+                      ←{s.daysEarlier}d earlier
                       <span className="ml-2 text-ink-muted">
-                        {nightsLabel(ext.duration_days)}
+                        dep {formatDateShort(s.out_date)}
                       </span>
-                    </span>
-                    <span className="tnum font-mono text-xs text-ink">
-                      {formatPrice(ext.price)}
-                      <span
-                        className={`ml-2 ${
-                          Math.round(ext.deltaPrice) > 0
-                            ? "text-ink-muted"
-                            : "font-medium text-steal"
-                        }`}
-                      >
-                        {formatDelta(ext.deltaPrice)}
+                    </StretchLink>
+                  ))}
+                  {stretches.later.map((s) => (
+                    <StretchLink key={`l${s.return_date}`} trip={trip} s={s}>
+                      +{s.daysLater}d longer
+                      <span className="ml-2 text-ink-muted">
+                        → {formatDateShort(s.return_date)}
                       </span>
-                    </span>
-                  </a>
-                ))
+                    </StretchLink>
+                  ))}
+                  {stretches.fullWindow && (
+                    <StretchLink key="full" trip={trip} s={stretches.fullWindow}>
+                      Full window
+                      <span className="ml-2 text-ink-muted">
+                        {formatRange(
+                          stretches.fullWindow.out_date,
+                          stretches.fullWindow.return_date,
+                        )}
+                      </span>
+                    </StretchLink>
+                  )}
+                  {(stretches.earlier.some((s) => s.estimated) ||
+                    stretches.later.some((s) => s.estimated) ||
+                    stretches.fullWindow?.estimated) && (
+                    <p className="py-2 font-mono text-[11px] text-ink-muted">
+                      ~ prices are two-single estimates from one-way fares —
+                      the round-trip fare may differ.
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="py-2 font-mono text-xs text-ink-muted">
-                  No longer stays seen yet for these dates.
+                  No stretch options seen yet for these dates.
                 </p>
               )}
             </div>

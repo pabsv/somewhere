@@ -59,6 +59,92 @@ export default function PoolTiles({ pool }: PoolTilesProps) {
           <TierStat tier="C" value={c} />
         </div>
       </div>
+
+      <GridStatsCard grids={pool.grids} />
+    </div>
+  );
+}
+
+/** "3h ago" / "2d ago" from an ISO timestamp; null when unparseable. */
+function agoLabel(iso: string | null): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso.endsWith("Z") ? iso : iso + "Z");
+  if (Number.isNaN(t)) return null;
+  const mins = Math.max(0, Math.floor((Date.now() - t) / 60_000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/**
+ * One-way fare grid coverage (open-jaw Phase 6): the data behind every
+ * Mix & match / Twin city surface. "Last write" going old is the "grids
+ * stopped refreshing" alarm — the pool writes grids every few minutes when
+ * healthy, so anything past 24h is flagged.
+ */
+function GridStatsCard({ grids }: { grids: AdminPoolSummary["grids"] }) {
+  const newestMs = grids.newest_scraped_at
+    ? Date.parse(
+        grids.newest_scraped_at.endsWith("Z")
+          ? grids.newest_scraped_at
+          : grids.newest_scraped_at + "Z",
+      )
+    : NaN;
+  const writesStalled =
+    grids.total === 0 ||
+    Number.isNaN(newestMs) ||
+    Date.now() - newestMs > 24 * 3_600_000;
+
+  return (
+    <div className="col-span-2 rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card) sm:col-span-3 lg:col-span-6">
+      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+        One-way grids (mix &amp; match data)
+      </span>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        <GridStat label="Grids" value={grids.total} alert={grids.total === 0} />
+        <GridStat label="Out / back" value={`${grids.out_legs} / ${grids.back_legs}`} />
+        <GridStat label="Fresh 24h" value={grids.fresh_24h} />
+        <GridStat
+          label="Stale >7d"
+          value={grids.stale_7d}
+          alert={grids.stale_7d > 0}
+        />
+        <GridStat
+          label="Dates/grid (med)"
+          value={grids.median_price_count ?? "—"}
+        />
+        <GridStat
+          label="Last write"
+          value={agoLabel(grids.newest_scraped_at) ?? "never"}
+          alert={writesStalled}
+        />
+      </div>
+    </div>
+  );
+}
+
+function GridStat({
+  label,
+  value,
+  alert,
+}: {
+  label: string;
+  value: number | string;
+  alert?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+        {label}
+      </span>
+      <span
+        className={`tnum font-mono text-lg font-semibold ${
+          alert ? "text-alert" : "text-ink"
+        }`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

@@ -21,7 +21,7 @@ Master plan for open-jaw and multi-city support in Somewhere. Executed **one pha
 | 3 | Origin-side UI — Explore + Calendar integration | ✅ Done 2026-07-18 — `getBestOpenJawByDest` + `getOpenJawCalendarTrips` in `lib/openjaw.ts`, `CitySummary.openjaw` chip on CityCard, calendar-mode `/api/openjaw` (no `dest`), "⇄ Mix & match" chip + `CalTrip` bars on `/calendar` (TripBar `2×`/`→AMS` markers, open-jaw tooltip + popover with two booking links), `Preferences.allow_open_jaw` opt-out (Settings toggle, gates Explore/Calendar/City) |
 | 4 | Destination-side pairing data + engine extension | ✅ Done 2026-07-18 — `GROUND_PAIRS` (68 curated overland pairs) in `scraper/targets.py` + `validate_ground_pairs()`, codegen → `frontend/data/groundpairs.gen.ts` (`getGroundLinks`, both directions), `getMultiCityTrips` in `lib/openjaw.ts` (both orientations per pair, `ground` hop on `OpenJawTrip`), `/api/openjaw` `mode=origin\|multicity\|all`; 5 new unit tests; verified live (BCN-in/MAD-out €121 = EIN→BCN €54 + MAD→MST €67 ✓) |
 | 5 | Destination-side UI — twin-city trips | ✅ Done 2026-07-18 — `TwinCitySection` ("Twin city") on `/city/[code]` (OpenJawRow grew a linked ground-hop row + "twin city" badge; works from 1 origin), `CitySummary.twin` "+MAD twin city €N" hint on CityCard (attached in `/api/cities` via shared `getExploreOpenJaw` sweep, only when it beats `min_price`), calendar sweep emits twin combos (strict wins only — `vs_roundtrip > 0`; `+MAD` TripBar marker, ground row in tooltip + popover, exempt from round-trip span dedupe); verified live (BOJ: 50 twin combos + `+VAR €214` hint vs €353 round trip; TIV `+DBV €137`) |
-| 6 | Polish — availability edge cases, saved cities, groups, admin observability | 🔴 |
+| 6 | Polish — availability edge cases, saved cities, groups, admin observability | ✅ Done 2026-07-18 — combo "stay longer" (`OpenJawTrip.extensions` attached in the calendar sweep + `pickOpenJawExtensions` client shaping → tooltip/ghost/popover with per-leg one-way links), twin bars count as favourites when either city is starred, edge-hour honesty note on `/calendar`, grid-coverage stats on `/admin` (`AdminGridStats` in `/api/admin/pool` + One-way grids card in PoolTiles). Trimmed by design: scheduler-side detail fetch (hour filtering hasn't proven to matter — costs API calls), groups extension (deferred; hook stays `getAcceptedFriendIds` + `fitsAnyWindow` fan-out when groups usage justifies it) |
 
 ---
 
@@ -126,16 +126,16 @@ What exists, for later phases to build on:
 
 ---
 
-## Phase 6 — Polish + integrations
+## Phase 6 — Polish + integrations ✅ (what landed)
 
 **Goal:** open-jaw becomes a first-class citizen of existing features. Grab-bag — trim to what proves useful.
 
-- **Availability edge times:** document (in UI copy) that open-jaw can't honor edge *hours* — or optionally add a scheduler-side detail-fetch for top-N open-jaw combos (Python `SearchFlights` one-way calls) to get real times/stops for the best combos only. Only do this if hour-filtering proves to matter; it costs API calls.
-- **Saved cities / stars:** open-jaw sections respect `useSavedCities` pinning; twin-city combos count as saved if either city is starred.
-- **Groups:** `getGroupTripsData` extension — group members free across an open-jaw combo's dates (reuse `fitsAnyWindow` fan-out).
-- **Stay-longer hover:** ghost-extension equivalent for open-jaw bars (later returns from the same back-grid — trivially available, same data).
-- **Admin/observability:** grid coverage stats on `/admin` (docs count, median price_count, stale grids); alert if grids stop refreshing.
-- **CLAUDE.md + docs:** keep Architectural Decisions current per phase (already the habit).
+- **Availability edge times** ✅ (copy only): `/calendar` shows a note when Mix & match + "Only my free dates" are on and any window carries `start_time`/`end_time` — grids are date-only, edge hours can't apply. The optional scheduler-side detail-fetch was **not** built (hour-filtering hasn't proven to matter; it costs API calls) — revisit only on demand.
+- **Saved cities / stars** ✅: on `/calendar`, a twin-city bar counts as a favourite when EITHER city is starred (fly-in = `destination`, fly-out = `openjaw.back.origin`) — both for the "★ Favourites" filter and tier promotion. Explore already pins whole cards, so openjaw/twin hints ride along for free.
+- **Groups** ⏭ deferred: combo trips in the group board need GroupTrip/-UI awareness for a young feature — not worth it yet. The hook is unchanged: fan `loadUserAvailability` over `getAcceptedFriendIds`, reuse date-level `fitsAnyWindow` over `getOpenJawCalendarTrips` output.
+- **Stay-longer hover** ✅: the calendar sweep attaches up to 4 LATER back-leg dates per winning combo (`OpenJawTrip.extensions` — same grid, zero extra queries); `pickOpenJawExtensions` (unit-tested) shapes them client-side with the same window clamping as round-trip stretches; tooltip rows + ghost tail + popover rows (each row links the one-way back ticket on Google Flights, price shown = new combo total).
+- **Admin/observability** ✅: `/api/admin/pool` gained `grids` (`AdminGridStats`: total, out/back legs, fresh 24h, stale >7d, median dates/grid, oldest/newest write) + a "One-way grids" card in PoolTiles; "Last write" flags alert past 24h — the "grids stopped refreshing" alarm.
+- **CLAUDE.md + docs** ✅.
 
 ---
 

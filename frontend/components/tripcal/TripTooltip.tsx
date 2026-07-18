@@ -4,29 +4,30 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { CalTrip } from "@/types/api";
 import {
   formatDateShort,
+  formatDelta,
   formatPrice,
   formatRange,
   nightsLabel,
 } from "@/lib/format";
 import { getDestination } from "@/data/destinations.gen";
 import CountryFlag from "@/components/ui/CountryFlag";
-import type { StayExtension } from "./useStayExtensions";
+import {
+  EMPTY_STRETCHES,
+  stretchCount,
+  type StayStretch,
+  type StretchSet,
+} from "./useStayExtensions";
 
 interface TripTooltipProps {
   trip: CalTrip;
   /** the bar element the tooltip points at */
   anchor: HTMLElement;
-  /** "stay longer" suggestions — omitted/empty = section hidden */
-  extensions?: StayExtension[];
+  /** trip-stretch suggestions — omitted/empty = section hidden */
+  stretches?: StretchSet;
 }
 
-/** "+€8" / "−€4" / "±€0" — signed whole-euro delta vs the main fare. */
-function formatDelta(delta: number): string {
-  const r = Math.round(delta);
-  if (r > 0) return `+€${r}`;
-  if (r < 0) return `−€${-r}`;
-  return "±€0";
-}
+/** Rows shown per direction in the tooltip (popover shows all). */
+const TOOLTIP_ROWS_PER_SIDE = 2;
 
 /**
  * Lightweight hover tooltip: route, dates, nights, price, and "% below typical"
@@ -36,7 +37,7 @@ function formatDelta(delta: number): string {
 export default function TripTooltip({
   trip,
   anchor,
-  extensions = [],
+  stretches = EMPTY_STRETCHES,
 }: TripTooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
@@ -50,8 +51,8 @@ export default function TripTooltip({
     left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
     const top = a.top - h - 8;
     setPos({ left, top: top < 8 ? a.bottom + 8 : top });
-    // reposition when the "stay longer" rows pop in (tooltip height changes)
-  }, [anchor, extensions.length]);
+    // reposition when the stretch rows pop in (tooltip height changes)
+  }, [anchor, stretchCount(stretches)]);
 
   const belowPct =
     trip.delta_pct != null && trip.delta_pct < 0
@@ -140,40 +141,81 @@ export default function TripTooltip({
         </div>
       )}
 
-      {/* ─── "Stay longer" suggestions (sparse data → often absent) ───────── */}
-      {extensions.length > 0 && (
+      {/* ─── Trip-stretch suggestions ──────────────────────────────────────── */}
+      {stretchCount(stretches) > 0 && (
         <div className="mt-2 border-t border-line pt-1.5">
           <p className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">
-            Stay longer
+            Stretch this trip
           </p>
           <ul className="mt-1 space-y-0.5">
-            {extensions.map((ext) => (
-              <li
-                key={ext.return_date}
-                className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink"
-              >
-                <span>
-                  +{ext.extraNights} night{ext.extraNights === 1 ? "" : "s"}
-                  <span className="text-ink-muted">
-                    {" "}
-                    · → {formatDateShort(ext.return_date)}
-                  </span>{" "}
-                  · {formatPrice(ext.price)}
+            {stretches.earlier.slice(0, TOOLTIP_ROWS_PER_SIDE).map((s) => (
+              <StretchRow key={`e${s.out_date}`} s={s}>
+                ←{s.daysEarlier}d
+                <span className="text-ink-muted">
+                  {" "}
+                  · dep {formatDateShort(s.out_date)}
                 </span>
-                <span
-                  className={
-                    Math.round(ext.deltaPrice) > 0
-                      ? "text-ink-muted"
-                      : "font-medium text-steal"
-                  }
-                >
-                  {formatDelta(ext.deltaPrice)}
-                </span>
-              </li>
+              </StretchRow>
             ))}
+            {stretches.later.slice(0, TOOLTIP_ROWS_PER_SIDE).map((s) => (
+              <StretchRow key={`l${s.return_date}`} s={s}>
+                +{s.daysLater}d
+                <span className="text-ink-muted">
+                  {" "}
+                  · → {formatDateShort(s.return_date)}
+                </span>
+              </StretchRow>
+            ))}
+            {stretches.fullWindow && (
+              <StretchRow key="full" s={stretches.fullWindow}>
+                Full window
+                <span className="text-ink-muted">
+                  {" "}
+                  ·{" "}
+                  {formatRange(
+                    stretches.fullWindow.out_date,
+                    stretches.fullWindow.return_date,
+                  )}
+                </span>
+              </StretchRow>
+            )}
           </ul>
+          {(stretches.earlier.some((s) => s.estimated) ||
+            stretches.later.some((s) => s.estimated) ||
+            stretches.fullWindow?.estimated) && (
+            <p className="mt-1 font-mono text-[9px] text-ink-muted">
+              ~ estimated from one-way fares (two tickets)
+            </p>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+/** One stretch row: label (children) · price on the left, delta on the right. */
+function StretchRow({
+  s,
+  children,
+}: {
+  s: StayStretch;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink">
+      <span>
+        {children} · {s.estimated ? "~" : ""}
+        {formatPrice(s.price)}
+      </span>
+      <span
+        className={
+          Math.round(s.deltaPrice) > 0
+            ? "text-ink-muted"
+            : "font-medium text-steal"
+        }
+      >
+        {formatDelta(s.deltaPrice)}
+      </span>
+    </li>
   );
 }

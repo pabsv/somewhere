@@ -1,27 +1,40 @@
-// ─── GET /api/trips/extensions — "stay longer" variants for one trip ─────────
-// Public. Query: ?from=EIN&to=BCN&outbound=YYYY-MM-DD (all required).
-// → { variants: TripVariant[] } — every stored return_date for that exact
-// origin + destination + outbound_date, sorted by return_date asc. The
-// calendar hover filters these client-side to the user's availability window.
+// ─── GET /api/trips/extensions — trip-stretch variants for one trip ──────────
+// Public. Query: ?from=EIN&to=BCN&outbound=YYYY-MM-DD&return=YYYY-MM-DD
+// (all required) + optional win_start/win_end (the availability window the
+// client wants the stretch clamped to — both or neither).
+// → { variants: StretchVariant[] } — leave-earlier / return-later /
+// full-window candidates, hybrid-priced (exact stored round trips win, one-way
+// grid sums fill gaps as `estimated`).
 
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ExtensionsResponseSchema } from "@/types/api";
-import { getTripExtensionsData } from "@/lib/queries";
+import { getTripStretchData } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
-const QuerySchema = z.object({
-  from: z
-    .string()
-    .regex(/^[A-Za-z]{3}$/, "expected a 3-letter IATA code")
-    .transform((v) => v.toUpperCase()),
-  to: z
-    .string()
-    .regex(/^[A-Za-z]{3}$/, "expected a 3-letter IATA code")
-    .transform((v) => v.toUpperCase()),
-  outbound: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD"),
-});
+const DateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
+
+const QuerySchema = z
+  .object({
+    from: z
+      .string()
+      .regex(/^[A-Za-z]{3}$/, "expected a 3-letter IATA code")
+      .transform((v) => v.toUpperCase()),
+    to: z
+      .string()
+      .regex(/^[A-Za-z]{3}$/, "expected a 3-letter IATA code")
+      .transform((v) => v.toUpperCase()),
+    outbound: DateParam,
+    return: DateParam,
+    win_start: DateParam.optional(),
+    win_end: DateParam.optional(),
+  })
+  .refine(
+    (q) =>
+      q.win_start == null || q.win_end == null || q.win_start <= q.win_end,
+    { message: "win_start must be <= win_end" },
+  );
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,6 +44,9 @@ export async function GET(req: NextRequest) {
       from: sp.get("from") ?? undefined,
       to: sp.get("to") ?? undefined,
       outbound: sp.get("outbound") ?? undefined,
+      return: sp.get("return") ?? undefined,
+      win_start: sp.get("win_start") ?? undefined,
+      win_end: sp.get("win_end") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -41,7 +57,16 @@ export async function GET(req: NextRequest) {
     }
 
     const q = parsed.data;
-    const data = await getTripExtensionsData(q.from, q.to, q.outbound);
+    // a lone win bound is meaningless — use the pair only when complete
+    const hasWin = q.win_start != null && q.win_end != null;
+    const data = await getTripStretchData(
+      q.from,
+      q.to,
+      q.outbound,
+      q.return,
+      hasWin ? q.win_start : undefined,
+      hasWin ? q.win_end : undefined,
+    );
 
     const body = ExtensionsResponseSchema.parse(data);
     return NextResponse.json(body);

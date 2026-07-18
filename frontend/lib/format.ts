@@ -50,3 +50,11 @@ export function formatRange(out: string, ret: string): string {
 export function nightsLabel(n: number): string {
   return n === 1 ? "1 night" : `${n} nights`;
 }
+
+/** "+€8" / "−€4" / "±€0" — signed whole-euro delta vs a reference fare. */
+export function formatDelta(delta: number): string {
+  const r = Math.round(delta);
+  if (r > 0) return `+€${r}`;
+  if (r < 0) return `−€${-r}`;
+  return "±€0";
+}

@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { getDb } from "@/lib/mongodb";
 import {
   AdminPoolSummarySchema,
+  type AdminGridStats,
   type AdminTargetSummary,
   type Tier,
 } from "@/types/api";
@@ -24,6 +25,81 @@ function num(v: unknown, fallback = 0): number {
 
 function numOrNull(v: unknown): number | null {
   return typeof v === "number" ? v : null;
+}
+
+/** scraped_at → epoch ms; Python writes BSON Dates, older docs naive strings. */
+function toMs(v: unknown): number | null {
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "string") {
+    const t = Date.parse(v.endsWith("Z") ? v : v + "Z");
+    return Number.isNaN(t) ? null : t;
+  }
+  return null;
+}
+
+/**
+ * One-way fare grid coverage (open-jaw Phase 6 observability). ~2,300 slim
+ * docs — a single projected fetch is fine. `stale_7d` = grids older than the
+ * slowest tier cadence (168h): routes that should have refreshed but didn't.
+ */
+async function loadGridStats(
+  db: Awaited<ReturnType<typeof getDb>>,
+  homeOrigins: Set<string>,
+): Promise<AdminGridStats> {
+  const docs = await db
+    .collection("oneway_fares")
+    .find(
+      {},
+      {
+        projection: {
+          _id: 0,
+          origin: 1,
+          destination: 1,
+          price_count: 1,
+          scraped_at: 1,
+        },
+      },
+    )
+    .toArray();
+
+  const now = Date.now();
+  const DAY = 24 * 3_600_000;
+  let outLegs = 0;
+  let backLegs = 0;
+  let fresh24h = 0;
+  let stale7d = 0;
+  let oldest: number | null = null;
+  let newest: number | null = null;
+  const priceCounts: number[] = [];
+
+  for (const d of docs) {
+    if (homeOrigins.has(String(d.origin))) outLegs++;
+    else if (homeOrigins.has(String(d.destination))) backLegs++;
+    if (typeof d.price_count === "number") priceCounts.push(d.price_count);
+    const t = toMs(d.scraped_at);
+    if (t == null) continue;
+    if (now - t <= DAY) fresh24h++;
+    if (now - t > 7 * DAY) stale7d++;
+    if (oldest == null || t < oldest) oldest = t;
+    if (newest == null || t > newest) newest = t;
+  }
+
+  priceCounts.sort((a, b) => a - b);
+  const median =
+    priceCounts.length === 0
+      ? null
+      : priceCounts[Math.floor(priceCounts.length / 2)];
+
+  return {
+    total: docs.length,
+    out_legs: outLegs,
+    back_legs: backLegs,
+    fresh_24h: fresh24h,
+    stale_7d: stale7d,
+    median_price_count: median,
+    oldest_scraped_at: oldest == null ? null : new Date(oldest).toISOString(),
+    newest_scraped_at: newest == null ? null : new Date(newest).toISOString(),
+  };
 }
 
 export async function GET() {
@@ -82,6 +158,11 @@ export async function GET() {
     a.route_key < b.route_key ? -1 : a.route_key > b.route_key ? 1 : 0,
   );
 
+  const grids = await loadGridStats(
+    db,
+    new Set(docs.map((d) => String(d.origin ?? ""))),
+  );
+
   const summary = AdminPoolSummarySchema.parse({
     tiles: {
       total: docs.length,
@@ -95,6 +176,7 @@ export async function GET() {
         C: byTier.C ?? 0,
       },
     },
+    grids,
     targets,
   });
 
