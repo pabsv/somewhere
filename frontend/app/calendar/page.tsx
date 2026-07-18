@@ -8,7 +8,7 @@ import { getTrips, getOpenJaw, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
-import { promoteFavouriteTier, CALENDAR_DEFAULT_MAX_PRICE } from "@/lib/score";
+import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
@@ -20,6 +20,9 @@ import { useStayExtensions } from "@/components/tripcal/useStayExtensions";
 import CalendarFilters, {
   type CalendarFilterState,
   EMPTY_FILTERS,
+  PRICE_MAX,
+  NIGHTS_MIN,
+  NIGHTS_MAX,
 } from "@/components/tripcal/CalendarFilters";
 import { useIsMobile } from "@/components/tripcal/useIsMobile";
 import {
@@ -108,21 +111,17 @@ export default function CalendarPage() {
 
   // ─── Build getTrips params from filter state ──────────────────────────────
   const params = useMemo(() => {
-    const maxPrice = Number(filters.maxPrice);
-    const minNights = Number(filters.minNights);
-    const maxNights = Number(filters.maxNights);
     return {
       from: origins,
       start: today,
       end: rangeEnd,
-      maxPrice:
-        filters.maxPrice && maxPrice > 0
-          ? maxPrice
-          : CALENDAR_DEFAULT_MAX_PRICE,
-      minNights: filters.minNights && minNights > 0 ? minNights : undefined,
-      maxNights: filters.maxNights && maxNights > 0 ? maxNights : undefined,
+      // Slider bounds mean "no filter"; price at PRICE_MAX means uncapped.
+      maxPrice: filters.maxPrice >= PRICE_MAX ? undefined : filters.maxPrice,
+      minNights:
+        filters.minNights > NIGHTS_MIN ? filters.minNights : undefined,
+      maxNights:
+        filters.maxNights < NIGHTS_MAX ? filters.maxNights : undefined,
       direct: filters.direct ? true : undefined,
-      tier: filters.tier === "all" ? undefined : filters.tier,
       avail: onlyFree && signedIn ? true : undefined,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,14 +159,10 @@ export default function CalendarPage() {
   useEffect(() => load(), [load]);
 
   // ─── Open-jaw combos (chip on + pref allows + ≥2 origins) ─────────────────
-  // Grids carry no stops or tier data, so combos can't honor "Direct only"
-  // or a tier filter — hide them entirely while either is active.
+  // Grids carry no stops data, so combos can't honor "Direct only" — hide
+  // them entirely while it's active.
   const openJawActive =
-    openJawOn &&
-    allowOpenJaw &&
-    origins.length >= 1 &&
-    !filters.direct &&
-    filters.tier === "all";
+    openJawOn && allowOpenJaw && origins.length >= 1 && !filters.direct;
   useEffect(() => {
     if (!openJawActive) {
       setOpenJawTrips([]);
@@ -350,10 +345,10 @@ export default function CalendarPage() {
         {openJawOn &&
           allowOpenJaw &&
           origins.length >= 1 &&
-          (filters.direct || filters.tier !== "all") && (
+          filters.direct && (
             <p className="mt-2 text-xs text-ink-muted">
-              Mix &amp; match fares carry no stops or tier data, so they’re
-              hidden while “Direct only” or a tier filter is on.
+              Mix &amp; match fares carry no stops data, so they’re hidden
+              while “Direct only” is on.
             </p>
           )}
         {university && uniPeriods.length > 0 && (
