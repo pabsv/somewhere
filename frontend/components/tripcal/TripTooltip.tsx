@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import type { Trip } from "@/types/api";
+import type { CalTrip } from "@/types/api";
 import {
   formatDateShort,
   formatPrice,
@@ -13,7 +13,7 @@ import CountryFlag from "@/components/ui/CountryFlag";
 import type { StayExtension } from "./useStayExtensions";
 
 interface TripTooltipProps {
-  trip: Trip;
+  trip: CalTrip;
   /** the bar element the tooltip points at */
   anchor: HTMLElement;
   /** "stay longer" suggestions — omitted/empty = section hidden */
@@ -59,6 +59,7 @@ export default function TripTooltip({
       : null;
 
   const dest = getDestination(trip.destination);
+  const oj = trip.openjaw ?? null;
 
   return (
     <div
@@ -75,7 +76,9 @@ export default function TripTooltip({
         <CountryFlag code={dest?.country} className="mr-1" />
         {dest?.name ?? trip.destination}
         <span className="tnum ml-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-muted">
-          {trip.origin} → {trip.destination}
+          {oj
+            ? `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
+            : `${trip.origin} → ${trip.destination}`}
         </span>
       </p>
       <p className="tnum mt-0.5 font-mono text-xs text-ink-muted">
@@ -89,7 +92,43 @@ export default function TripTooltip({
             {belowPct}% below typical
           </span>
         )}
+        {oj && oj.vs_roundtrip != null && oj.vs_roundtrip > 0 && (
+          <span className="ml-2 text-xs font-medium text-steal">
+            €{Math.round(oj.vs_roundtrip)} under round trip
+          </span>
+        )}
       </p>
+
+      {/* ─── Open-jaw legs (mix & match bar) ───────────────────────────────── */}
+      {oj && (
+        <div className="mt-2 border-t border-line pt-1.5">
+          <p className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">
+            Mix &amp; match — {oj.same_origin ? "two singles" : "two tickets"}
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            <li className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink">
+              <span>
+                {oj.out.origin} → {oj.out.destination}
+                <span className="text-ink-muted">
+                  {" "}
+                  · {formatDateShort(oj.out.date)}
+                </span>
+              </span>
+              <span>{formatPrice(oj.out.price)}</span>
+            </li>
+            <li className="tnum flex items-baseline justify-between gap-3 font-mono text-xs text-ink">
+              <span>
+                {oj.back.origin} → {oj.back.destination}
+                <span className="text-ink-muted">
+                  {" "}
+                  · {formatDateShort(oj.back.date)}
+                </span>
+              </span>
+              <span>{formatPrice(oj.back.price)}</span>
+            </li>
+          </ul>
+        </div>
+      )}
 
       {/* ─── "Stay longer" suggestions (sparse data → often absent) ───────── */}
       {extensions.length > 0 && (

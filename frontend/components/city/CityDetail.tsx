@@ -13,6 +13,7 @@ import { useSearchParams } from "next/navigation";
 import type { CityDetailResponse, Trip } from "@/types/api";
 import { getCity, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
 import { promoteFavouriteTier } from "@/lib/score";
 import { getDestination } from "@/data/destinations.gen";
@@ -49,6 +50,7 @@ export default function CityDetail({ code }: CityDetailProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [directOnly, setDirectOnly] = useState(false);
+  const allowOpenJaw = useOpenJawPref();
 
   const originsKey = origins.join(",");
 
@@ -258,12 +260,15 @@ export default function CityDetail({ code }: CityDetailProps) {
       )}
 
       {/* Open-jaw combos come from the oneway_fares grids, not the flights
-          collection — they can exist even when the round-trip board is empty. */}
-      <OpenJawSection
-        dest={city.code}
-        origins={origins}
-        directOnly={directOnly}
-      />
+          collection — they can exist even when the round-trip board is empty.
+          Hidden entirely when the user opted out (allow_open_jaw). */}
+      {allowOpenJaw && (
+        <OpenJawSection
+          dest={city.code}
+          origins={origins}
+          directOnly={directOnly}
+        />
+      )}
     </Shell>
   );
 }

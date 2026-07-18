@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import type { Trip, DateWindow } from "@/types/api";
-import { getTrips, getAvailability, ApiError } from "@/lib/client";
+import type { CalTrip, OpenJawTrip, Trip, DateWindow } from "@/types/api";
+import { getTrips, getOpenJaw, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
 import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
@@ -30,6 +31,37 @@ import {
 
 const MONTHS = 6;
 
+/**
+ * Dress an open-jaw combo as a CalTrip so MonthBlock/TripBar can render it.
+ * Tier: "deal" when it beats the stored round trip, "fair" when it fills a
+ * date hole. score 0 keeps combos below scored round trips in lane packing.
+ */
+function toCalTrip(oj: OpenJawTrip): CalTrip {
+  const emptyLeg = { dep: "", arr: "", duration: "", stops: 0 };
+  return {
+    key: `oj:${oj.key}`,
+    origin: oj.out.origin,
+    destination: oj.destination,
+    city: oj.city,
+    outbound_date: oj.out.date,
+    return_date: oj.back.date,
+    duration_days: oj.nights,
+    price: oj.total_price,
+    currency: "EUR",
+    airlines: [],
+    is_direct: false,
+    score: 0,
+    delta_pct: null,
+    deal_tier: oj.vs_roundtrip != null && oj.vs_roundtrip > 0 ? "deal" : "fair",
+    outbound: emptyLeg,
+    ret: emptyLeg,
+    price_points: [],
+    search_link: null,
+    last_seen_at: oj.scraped_at,
+    openjaw: oj,
+  };
+}
+
 export default function CalendarPage() {
   const { origins } = useOrigins();
   const searchParams = useSearchParams();
@@ -50,6 +82,12 @@ export default function CalendarPage() {
   const [onlyFree, setOnlyFree] = useState(true);
   const [savedOnly, setSavedOnly] = useState(false);
 
+  // open-jaw combos as bars — behind a chip (default off), gated by the
+  // allow_open_jaw preference and ≥2 selected origins
+  const allowOpenJaw = useOpenJawPref();
+  const [openJawOn, setOpenJawOn] = useState(false);
+  const [openJawTrips, setOpenJawTrips] = useState<OpenJawTrip[]>([]);
+
   const [trips, setTrips] = useState<Trip[] | null>(null);
   const [density, setDensity] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -59,10 +97,10 @@ export default function CalendarPage() {
 
   // hover tooltip + click popover + day sheet
   const [hovered, setHovered] = useState<{
-    trip: Trip;
+    trip: CalTrip;
     el: HTMLElement;
   } | null>(null);
-  const [popoverTrip, setPopoverTrip] = useState<Trip | null>(null);
+  const [popoverTrip, setPopoverTrip] = useState<CalTrip | null>(null);
   const [daySheet, setDaySheet] = useState<string | null>(null);
 
   const originsKey = origins.join(",");
@@ -117,6 +155,43 @@ export default function CalendarPage() {
 
   useEffect(() => load(), [load]);
 
+  // ─── Open-jaw combos (chip on + pref allows + ≥2 origins) ─────────────────
+  // Grids carry no stops or tier data, so combos can't honor "Direct only"
+  // or a tier filter — hide them entirely while either is active.
+  const openJawActive =
+    openJawOn &&
+    allowOpenJaw &&
+    origins.length >= 2 &&
+    !filters.direct &&
+    filters.tier === "all";
+  useEffect(() => {
+    if (!openJawActive) {
+      setOpenJawTrips([]);
+      return;
+    }
+    let cancelled = false;
+    getOpenJaw({
+      from: params.from,
+      start: params.start,
+      end: params.end,
+      min_nights: params.minNights,
+      max_nights: params.maxNights,
+      max_price: params.maxPrice,
+      avail: params.avail,
+    })
+      .then((res) => {
+        if (!cancelled) setOpenJawTrips(res.trips);
+      })
+      .catch(() => {
+        // Sparse grids and transient errors read the same: no combo bars.
+        if (!cancelled) setOpenJawTrips([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openJawActive, paramsKey]);
+
   // ─── Availability underlay (signed-in only) ───────────────────────────────
   useEffect(() => {
     if (!signedIn) {
@@ -146,7 +221,21 @@ export default function CalendarPage() {
   // filter. Cosmetic-only here; a `fav=` param on /api/trips is the follow-up.
   const savedKey = [...saved].sort().join(",");
   const shownTrips = useMemo(() => {
-    const all = trips ?? [];
+    const roundtrips = trips ?? [];
+    // Dedupe combos against round-trip bars: a bar already exists for the
+    // same destination + exact dates → skip the combo (no duplicate spans).
+    const spans = new Set(
+      roundtrips.map((t) => `${t.destination}|${t.outbound_date}|${t.return_date}`),
+    );
+    const combos = openJawActive
+      ? openJawTrips
+          .filter(
+            (oj) =>
+              !spans.has(`${oj.destination}|${oj.out.date}|${oj.back.date}`),
+          )
+          .map(toCalTrip)
+      : [];
+    const all: CalTrip[] = [...roundtrips, ...combos];
     const scoped = savedOnly
       ? all.filter((t) => saved.has(t.destination))
       : all;
@@ -156,7 +245,7 @@ export default function CalendarPage() {
         : t,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips, savedOnly, savedKey]);
+  }, [trips, savedOnly, savedKey, openJawActive, openJawTrips]);
 
   // Drop the saved-only filter if the last starred city is removed.
   useEffect(() => {
@@ -176,7 +265,7 @@ export default function CalendarPage() {
   const isCold = !loading && !error && trips != null && totalShown === 0;
 
   // close transient overlays when the popover / sheet opens
-  const openPopover = useCallback((t: Trip) => {
+  const openPopover = useCallback((t: CalTrip) => {
     setHovered(null);
     setPopoverTrip(t);
   }, []);
@@ -184,7 +273,8 @@ export default function CalendarPage() {
   // ─── "Stay longer" suggestions for the hovered bar ─────────────────────────
   const clampToWindows = signedIn && onlyFree;
   const { extensions } = useStayExtensions(
-    hovered?.trip ?? null,
+    // open-jaw bars have no round-trip variants to extend — skip the fetch
+    hovered && !hovered.trip.openjaw ? hovered.trip : null,
     windows,
     clampToWindows,
   );
@@ -237,9 +327,28 @@ export default function CalendarPage() {
                   Only my free dates
                 </Chip>
               )}
+              {allowOpenJaw && origins.length >= 2 && (
+                <Chip
+                  size="sm"
+                  selected={openJawOn}
+                  onClick={() => setOpenJawOn((v) => !v)}
+                  title="Open-jaw combos: fly out of one airport, back into another — two separate tickets"
+                >
+                  ⇄ Mix &amp; match
+                </Chip>
+              )}
             </>
           }
         />
+        {openJawOn &&
+          allowOpenJaw &&
+          origins.length >= 2 &&
+          (filters.direct || filters.tier !== "all") && (
+            <p className="mt-2 text-xs text-ink-muted">
+              Mix &amp; match fares carry no stops or tier data, so they’re
+              hidden while “Direct only” or a tier filter is on.
+            </p>
+          )}
         {university && uniPeriods.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">

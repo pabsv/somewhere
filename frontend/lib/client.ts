@@ -126,20 +126,22 @@ export function getTrips(params: TripsParams = {}): Promise<TripsResponse> {
 }
 
 export type OpenJawParams = {
-  /** destination IATA code */
-  dest: string;
+  /** destination IATA code; omit for the calendar sweep across all dests */
+  dest?: string;
   from?: string[];
   min_nights?: number;
   max_nights?: number;
   max_price?: number;
+  /** calendar mode only: inclusive range bounds (overlap semantics) */
+  start?: string;
+  end?: string;
   /** restrict to the signed-in user's availability windows (date-level only) */
   avail?: boolean;
 };
 
-/** GET /api/openjaw — origin-side open-jaw combos for one destination */
+/** GET /api/openjaw — open-jaw combos (one destination, or calendar sweep) */
 export function getOpenJaw(params: OpenJawParams): Promise<OpenJawResponse> {
-  const { dest, ...rest } = params;
-  return request(`/api/openjaw${qs({ dest, ...rest })}`);
+  return request(`/api/openjaw${qs(params)}`);
 }
 
 /** GET /api/trips/extensions — "stay longer" variants for one trip */

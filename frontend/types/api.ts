@@ -207,6 +207,32 @@ export const OpenJawResponseSchema = z.object({
 });
 export type OpenJawResponse = z.infer<typeof OpenJawResponseSchema>;
 
+/**
+ * Calendar-side view of a trip: a plain Trip, or an open-jaw combo dressed as
+ * one (Phase 3). Client-side ONLY — the API never emits `openjaw` on a Trip;
+ * the calendar page synthesizes these from OpenJawTrips so MonthBlock/TripBar
+ * can render combos without forking the bar machinery. A plain Trip is
+ * assignable (the field is optional).
+ */
+export type CalTrip = Trip & { openjaw?: OpenJawTrip };
+
+/**
+ * Best open-jaw combo for one destination, attached to a CitySummary on
+ * Explore (Phase 3) ONLY when its total beats the destination's cheapest
+ * stored round trip (`min_price`). Slim on purpose — the City page's
+ * Mix & match section is the drill-down.
+ */
+export const CityOpenJawSchema = z.object({
+  total_price: z.number(),
+  out_origin: z.string(),
+  back_origin: z.string(),
+  out_date: DateStringSchema,
+  back_date: DateStringSchema,
+  nights: z.number(),
+  same_origin: z.boolean(),
+});
+export type CityOpenJaw = z.infer<typeof CityOpenJawSchema>;
+
 // ─── CitySummary — Explore grid cell (spec section D) ────────────────────────
 
 export const CityBestSchema = z.object({
@@ -235,6 +261,8 @@ export const CitySummarySchema = z.object({
   trip_count: z.number(),
   baseline: z.number().nullable(),
   best: CityBestSchema,
+  /** Best open-jaw combo when it beats min_price (Phase 3); absent otherwise. */
+  openjaw: CityOpenJawSchema.nullable().optional(),
 });
 export type CitySummary = z.infer<typeof CitySummarySchema>;
 
@@ -263,6 +291,8 @@ export const PreferencesSchema = z.object({
   university: z.enum(["tue"]).nullable().optional(),
   /** Opted into deal-alert emails (feature not yet built — captured for later). */
   notify_optin: z.boolean().optional().default(false),
+  /** Show open-jaw / mix & match combos (split tickets) across the app. */
+  allow_open_jaw: z.boolean().optional().default(true),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 

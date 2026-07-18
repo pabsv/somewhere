@@ -15,6 +15,7 @@ import { type SearchSelection } from "@/components/explore/SearchCombobox";
 import { countryName } from "@/components/explore/countries";
 import { getCities, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
+import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
 import { formatDateBoard } from "@/lib/format";
 import type { CitySummary } from "@/types/api";
@@ -62,6 +63,8 @@ export default function ExplorePage() {
 
   // saved "interest" cities — pinned to the top of the grid, optional filter
   const { saved, signedIn: savedSignedIn } = useSavedCities();
+  // open-jaw opt-out (Preferences.allow_open_jaw) hides mix & match chips
+  const allowOpenJaw = useOpenJawPref();
   const [savedOnly, setSavedOnly] = useState(false);
 
   // "Only my free dates" — mirrors the Calendar chip (signed-in + has windows)
@@ -226,7 +229,12 @@ export default function ExplorePage() {
         <>
           <CityGrid>
             {visibleCities.map((c) => (
-              <CityCard key={c.code} city={c} query={cityQuery} />
+              <CityCard
+                key={c.code}
+                city={c}
+                query={cityQuery}
+                showOpenJaw={allowOpenJaw}
+              />
             ))}
           </CityGrid>
           <PriceDisclaimer className="mt-6 text-center" />

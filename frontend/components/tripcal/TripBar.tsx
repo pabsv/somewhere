@@ -1,10 +1,10 @@
 "use client";
 
-import type { Trip } from "@/types/api";
+import type { CalTrip, Trip } from "@/types/api";
 import { formatPrice } from "@/lib/format";
 
 interface TripBarProps {
-  trip: Trip;
+  trip: CalTrip;
   /** 1-based start column within the month (clamped to month edges). */
   startCol: number;
   /** 1-based end column within the month (inclusive, clamped). */
@@ -15,8 +15,8 @@ interface TripBarProps {
   clippedStart: boolean;
   /** true if the trip ends after this month (right edge is a continuation). */
   clippedEnd: boolean;
-  onHover: (trip: Trip | null, el: HTMLElement | null) => void;
-  onClick: (trip: Trip) => void;
+  onHover: (trip: CalTrip | null, el: HTMLElement | null) => void;
+  onClick: (trip: CalTrip) => void;
 }
 
 // tier → bar skin. Yellow allowed here (deal bars are a sanctioned yellow use).
@@ -43,6 +43,14 @@ export default function TripBar({
 }: TripBarProps) {
   const span = Math.max(1, endCol - startCol + 1);
 
+  // Open-jaw marker: "→AMS" = returns into a different airport; "2×" = two
+  // singles instead of a return ticket. Plain trips carry no openjaw payload.
+  const ojMark = trip.openjaw
+    ? trip.openjaw.same_origin
+      ? "2×"
+      : `→${trip.openjaw.back.destination}`
+    : null;
+
   return (
     <button
       type="button"
@@ -63,7 +71,9 @@ export default function TripBar({
       }`}
     >
       <span className="tnum truncate font-mono text-[11px] font-semibold uppercase tracking-wide">
-        {trip.destination} {formatPrice(trip.price)}
+        {trip.destination}
+        {ojMark && <span className="opacity-70">{ojMark}</span>}{" "}
+        {formatPrice(trip.price)}
       </span>
     </button>
   );

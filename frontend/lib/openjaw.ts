@@ -13,6 +13,7 @@ import { getDestination } from "@/data/destinations.gen";
 import { combineGrids, type CombineOptions } from "@/lib/openjaw-core";
 import {
   OnewayFareDocSchema,
+  type CityOpenJaw,
   type FlightDoc,
   type OnewayFareDoc,
   type OpenJawTrip,
@@ -31,6 +32,12 @@ export type { CombineOptions, GridCombo } from "@/lib/openjaw-core";
 
 /** Max combos returned per request, cheapest-first. */
 const MAX_COMBOS = 50;
+
+/** Calendar sweep: global cap on combos across all destinations. */
+const MAX_CALENDAR_COMBOS = 40;
+/** Calendar sweep: per (destination, outbound-month) cap — mirrors the
+ *  round-trip calendar's BARS_PER_DEST_PER_MONTH curation. */
+const CAL_PER_DEST_PER_MONTH = 2;
 
 // ─── Grid loading ────────────────────────────────────────────────────────────
 
@@ -75,13 +82,15 @@ export async function loadFareGrids(
 // ─── Round-trip comparison baseline ──────────────────────────────────────────
 
 /**
- * Cheapest stored ROUND-TRIP price per exact (outbound_date, return_date)
- * for one destination across the selected origins. Keyed "out|ret".
+ * Cheapest stored ROUND-TRIP price per exact (destination, outbound_date,
+ * return_date) across the selected origins, keyed "dest|out|ret". Pass `dest`
+ * to scope the query to one destination (city page); omit for all (calendar
+ * sweep — one query instead of one per destination).
  * This is the "is open-jaw actually a win?" baseline.
  */
 async function loadRoundtripBaseline(
-  dest: string,
   origins: string[],
+  dest?: string,
 ): Promise<Map<string, number>> {
   const db = await getDb();
   const docs = await db
@@ -89,20 +98,72 @@ async function loadRoundtripBaseline(
     .find(
       {
         ...buildTripFilter({ origins, start: todayStr() }),
-        destination: dest,
+        ...(dest ? { destination: dest } : {}),
       },
-      { projection: { _id: 0, outbound_date: 1, return_date: 1, price: 1 } },
+      {
+        projection: {
+          _id: 0,
+          destination: 1,
+          outbound_date: 1,
+          return_date: 1,
+          price: 1,
+        },
+      },
     )
     .toArray();
 
   const best = new Map<string, number>();
   for (const d of docs) {
     if (typeof d.price !== "number") continue;
-    const k = `${d.outbound_date}|${d.return_date}`;
+    const k = `${d.destination}|${d.outbound_date}|${d.return_date}`;
     const cur = best.get(k);
     if (cur === undefined || d.price < cur) best.set(k, d.price);
   }
   return best;
+}
+
+// ─── Grid indexing (shared by all sweeps) ────────────────────────────────────
+
+interface DestGrids {
+  /** home origin → O→dest grid doc */
+  out: Map<string, OnewayFareDoc>;
+  /** home origin → dest→O grid doc */
+  back: Map<string, OnewayFareDoc>;
+}
+
+/**
+ * Index a mixed grid list by destination and direction. `origins` is the home
+ * set — a doc whose destination is a home origin is a BACK grid for the city
+ * on its `origin` side; anything else is an OUT grid for its `destination`.
+ */
+function indexGridsByDest(
+  grids: OnewayFareDoc[],
+  origins: string[],
+): Map<string, DestGrids> {
+  const home = new Set(origins);
+  const byDest = new Map<string, DestGrids>();
+  const entry = (dest: string): DestGrids => {
+    let e = byDest.get(dest);
+    if (!e) {
+      e = { out: new Map(), back: new Map() };
+      byDest.set(dest, e);
+    }
+    return e;
+  };
+  for (const g of grids) {
+    if (home.has(g.origin) && !home.has(g.destination)) {
+      entry(g.destination).out.set(g.origin, g);
+    } else if (home.has(g.destination) && !home.has(g.origin)) {
+      entry(g.origin).back.set(g.destination, g);
+    }
+    // home↔home or dest↔dest legs (shouldn't exist in the pool) are ignored.
+  }
+  return byDest;
+}
+
+/** Older of two grid timestamps — "prices as of" honesty on a combo. */
+function olderScrapedAt(a: OnewayFareDoc, b: OnewayFareDoc): string {
+  return a.scraped_at < b.scraped_at ? a.scraped_at : b.scraped_at;
 }
 
 // ─── Public entry point ──────────────────────────────────────────────────────
@@ -140,16 +201,15 @@ export async function getOpenJawTrips(
         { origin: dest, destination: { $in: origins } },
       ],
     }),
-    loadRoundtripBaseline(dest, origins),
+    loadRoundtripBaseline(origins, dest),
   ]);
 
   // Index grids by direction. leg_key is unique, so last write wins is moot.
-  const outGrids = new Map<string, OnewayFareDoc>(); // origin → O→dest grid
-  const backGrids = new Map<string, OnewayFareDoc>(); // origin → dest→O grid
-  for (const g of grids) {
-    if (g.destination === dest) outGrids.set(g.origin, g);
-    else backGrids.set(g.destination, g);
-  }
+  const { out: outGrids, back: backGrids } =
+    indexGridsByDest(grids, origins).get(dest) ?? {
+      out: new Map<string, OnewayFareDoc>(),
+      back: new Map<string, OnewayFareDoc>(),
+    };
 
   const combineOpts: CombineOptions = {
     minNights: opts.minNights,
@@ -165,11 +225,7 @@ export async function getOpenJawTrips(
       const backDoc = backGrids.get(o2);
       if (!backDoc) continue;
       const sameOrigin = o1 === o2;
-
-      const scrapedAt =
-        outDoc.scraped_at < backDoc.scraped_at
-          ? outDoc.scraped_at
-          : backDoc.scraped_at;
+      const scrapedAt = olderScrapedAt(outDoc, backDoc);
 
       for (const c of combineGrids(outDoc.prices, backDoc.prices, combineOpts)) {
         if (
@@ -178,7 +234,8 @@ export async function getOpenJawTrips(
         )
           continue;
 
-        const rt = roundtrips.get(`${c.outDate}|${c.backDate}`) ?? null;
+        const rt =
+          roundtrips.get(`${dest}|${c.outDate}|${c.backDate}`) ?? null;
         const vsRoundtrip = rt === null ? null : rt - c.total;
 
         // Same-origin pairs only earn a slot when the two singles beat the
@@ -208,4 +265,184 @@ export async function getOpenJawTrips(
   return [...byKey.values()]
     .sort((a, b) => a.total_price - b.total_price || a.nights - b.nights)
     .slice(0, MAX_COMBOS);
+}
+
+// ─── Phase 3a — Explore: best combo per destination ──────────────────────────
+
+/** Load EVERY grid touching the selected home origins (both directions). */
+function loadAllGrids(origins: string[]): Promise<OnewayFareDoc[]> {
+  return loadFareGrids({
+    $or: [
+      { origin: { $in: origins } },
+      { destination: { $in: origins } },
+    ],
+  });
+}
+
+/**
+ * Cheapest open-jaw combo per destination across the selected origins — the
+ * Explore chip's data. No round-trip comparison here: the caller compares
+ * against CitySummary.min_price (the cheapest stored round trip) and attaches
+ * the combo only when it wins. Availability (when given) filters date-level.
+ */
+export async function getBestOpenJawByDest(
+  origins: string[],
+  opts: OpenJawOptions,
+): Promise<Map<string, CityOpenJaw>> {
+  const best = new Map<string, CityOpenJaw>();
+  if (origins.length === 0) return best;
+
+  const byDest = indexGridsByDest(await loadAllGrids(origins), origins);
+
+  const combineOpts: CombineOptions = {
+    minNights: opts.minNights,
+    maxNights: opts.maxNights,
+    maxPrice: opts.maxPrice,
+  };
+
+  for (const [dest, { out, back }] of byDest) {
+    if (!getDestination(dest)) continue;
+    let cheapest: CityOpenJaw | null = null;
+    for (const [o1, outDoc] of out) {
+      for (const [o2, backDoc] of back) {
+        for (const c of combineGrids(
+          outDoc.prices,
+          backDoc.prices,
+          combineOpts,
+        )) {
+          if (cheapest && c.total >= cheapest.total_price) continue;
+          if (
+            opts.avail &&
+            !fitsAnyWindow(c.outDate, c.backDate, opts.avail.windows)
+          )
+            continue;
+          cheapest = {
+            total_price: c.total,
+            out_origin: o1,
+            back_origin: o2,
+            out_date: c.outDate,
+            back_date: c.backDate,
+            nights: c.nights,
+            same_origin: o1 === o2,
+          };
+        }
+      }
+    }
+    if (cheapest) best.set(dest, cheapest);
+  }
+  return best;
+}
+
+// ─── Phase 3b — Calendar: winning combos across all destinations ─────────────
+
+export interface CalendarOpenJawOptions extends OpenJawOptions {
+  /** inclusive range bounds — overlap semantics, like buildTripFilter */
+  start?: string | null;
+  end?: string | null;
+}
+
+/**
+ * Open-jaw combos worth a calendar bar, across ALL destinations for the
+ * selected origins. Curated hard so the calendar doesn't flood:
+ *   - only combos that WIN — beat the stored round trip for the same
+ *     destination + exact dates (vs_roundtrip > 0), or fill a date hole the
+ *     round-trip data doesn't cover (vs_roundtrip null);
+ *   - best per (destination, out_date, back_date);
+ *   - max CAL_PER_DEST_PER_MONTH per destination per outbound month;
+ *   - global cap MAX_CALENDAR_COMBOS, cheapest-first.
+ * Range uses overlap semantics (return >= start, outbound <= end).
+ */
+export async function getOpenJawCalendarTrips(
+  origins: string[],
+  opts: CalendarOpenJawOptions,
+): Promise<OpenJawTrip[]> {
+  if (origins.length === 0) return [];
+
+  const [grids, roundtrips] = await Promise.all([
+    loadAllGrids(origins),
+    loadRoundtripBaseline(origins),
+  ]);
+  const byDest = indexGridsByDest(grids, origins);
+
+  const combineOpts: CombineOptions = {
+    minNights: opts.minNights,
+    maxNights: opts.maxNights,
+    maxPrice: opts.maxPrice,
+  };
+
+  const byKey = new Map<string, OpenJawTrip>();
+  for (const [dest, { out, back }] of byDest) {
+    const meta = getDestination(dest);
+    if (!meta) continue;
+    for (const [o1, outDoc] of out) {
+      for (const [o2, backDoc] of back) {
+        const sameOrigin = o1 === o2;
+        const scrapedAt = olderScrapedAt(outDoc, backDoc);
+        for (const c of combineGrids(
+          outDoc.prices,
+          backDoc.prices,
+          combineOpts,
+        )) {
+          if (opts.start && c.backDate < opts.start) continue;
+          if (opts.end && c.outDate > opts.end) continue;
+          if (
+            opts.avail &&
+            !fitsAnyWindow(c.outDate, c.backDate, opts.avail.windows)
+          )
+            continue;
+
+          const rt =
+            roundtrips.get(`${dest}|${c.outDate}|${c.backDate}`) ?? null;
+          const vsRoundtrip = rt === null ? null : rt - c.total;
+          // Calendar shows only wins: cheaper than the round trip, or dates
+          // the round-trip data doesn't cover at all.
+          if (vsRoundtrip !== null && vsRoundtrip <= 0) continue;
+
+          // Best per (dest, out_date, back_date) — one bar per span.
+          const key = `${dest}|${c.outDate}|${c.backDate}`;
+          const existing = byKey.get(key);
+          if (existing && existing.total_price <= c.total) continue;
+
+          byKey.set(key, {
+            key: `${o1}-${dest}-${c.outDate}|${dest}-${o2}-${c.backDate}`,
+            destination: dest,
+            city: meta.name,
+            out: {
+              origin: o1,
+              destination: dest,
+              date: c.outDate,
+              price: c.outPrice,
+            },
+            back: {
+              origin: dest,
+              destination: o2,
+              date: c.backDate,
+              price: c.backPrice,
+            },
+            total_price: c.total,
+            nights: c.nights,
+            same_origin: sameOrigin,
+            vs_roundtrip: vsRoundtrip,
+            scraped_at: scrapedAt,
+          });
+        }
+      }
+    }
+  }
+
+  // Curation: cheapest-first, ≤2 per (dest, outbound month), global cap.
+  const sorted = [...byKey.values()].sort(
+    (a, b) => a.total_price - b.total_price || a.nights - b.nights,
+  );
+  const perDestMonth = new Map<string, number>();
+  const picked: OpenJawTrip[] = [];
+  for (const t of sorted) {
+    if (picked.length >= MAX_CALENDAR_COMBOS) break;
+    const k = `${t.destination}|${t.out.date.slice(0, 7)}`;
+    const n = perDestMonth.get(k) ?? 0;
+    if (n >= CAL_PER_DEST_PER_MONTH) continue;
+    perDestMonth.set(k, n + 1);
+    picked.push(t);
+  }
+  return picked;
 }
