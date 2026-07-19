@@ -10,7 +10,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import Button from "@/components/ui/Button";
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
 import { AVAILABILITY_UPDATED_EVENT } from "@/components/settings/AcademicCard";
 import { useUniCalendar } from "@/lib/university/context";
@@ -124,6 +123,23 @@ function windowsToKeys(windows: DateWindow[]): Set<string> {
     for (const k of keysBetween(w.start_date, w.end_date)) set.add(k);
   }
   return set;
+}
+
+/** Stable serialization of a window set — order-independent, times normalized —
+ *  so autosave can tell a real user edit from a no-op re-derive. */
+function canonWindows(ws: DateWindow[]): string {
+  return JSON.stringify(
+    [...ws]
+      .sort((a, b) =>
+        a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0,
+      )
+      .map((w) => [
+        w.start_date,
+        w.end_date,
+        w.start_time ?? null,
+        w.end_time ?? null,
+      ]),
+  );
 }
 
 // ─── Edge roles + times ───────────────────────────────────────────────────────
@@ -260,6 +276,13 @@ export default function YearPaint() {
   );
   const [badge, setBadge] = useState<BadgeState | null>(null);
 
+  // ─── Autosave plumbing ──────────────────────────────────────────────────────
+  // canonical of the last server-synced windows — an edit is real only when the
+  // current windows diverge from this. Bumped on every seed (below) so a re-
+  // hydration is adopted as the baseline, never mistaken for a user edit.
+  const lastSyncedRef = useRef<string | null>(null);
+  const [seedTick, setSeedTick] = useState(0);
+
   // pointer-drag state (paint ranges OR scrub an edge time)
   const drag = useRef<DragState | null>(null);
   // true while a pointer gesture is in flight — pauses edge-time pruning so a
@@ -354,6 +377,10 @@ export default function YearPaint() {
     }
     setFromT(f);
     setBackT(b);
+    // mark this as a server-sourced (re)hydration, not a user edit — the
+    // baseline effect below adopts the freshly-derived windows so autosave
+    // stays quiet until the user actually changes something.
+    setSeedTick((n) => n + 1);
   }, []);
 
   useEffect(() => {
@@ -401,13 +428,16 @@ export default function YearPaint() {
       setPainted((prev) => {
         const next = new Set(prev);
         for (const k of keysBetween(from, to)) {
-          if (painting) next.add(k);
-          else next.delete(k);
+          // Past days are unbookable: they can be erased but never painted, so
+          // a range can't strand new stuck cells behind today.
+          if (painting) {
+            if (k >= today) next.add(k);
+          } else next.delete(k);
         }
         return next;
       });
     },
-    [],
+    [today],
   );
 
   const toggleDay = useCallback((key: string) => {
@@ -505,7 +535,8 @@ export default function YearPaint() {
         const role = roles.get(d.anchor);
         const vertical = Math.abs(dy) > Math.abs(dx);
         const canTime =
-          role === "first" || role === "last" || role === "single";
+          d.anchor >= today &&
+          (role === "first" || role === "last" || role === "single");
         if (vertical && canTime) {
           d.mode = "time";
           d.edge =
@@ -558,8 +589,10 @@ export default function YearPaint() {
         setPainted(() => {
           const next = new Set(d.snapshot);
           for (const k of keysBetween(spanA, spanB)) {
-            if (painting) next.add(k);
-            else next.delete(k);
+            // erase freely, but never paint a past (unbookable) day
+            if (painting) {
+              if (k >= today) next.add(k);
+            } else next.delete(k);
           }
           return next;
         });
@@ -607,7 +640,7 @@ export default function YearPaint() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [roles, fromT, backT, toggleDay, setFrom, setBack]);
+  }, [roles, fromT, backT, toggleDay, setFrom, setBack, today]);
 
   // ─── Keyboard ────────────────────────────────────────────────────────────────
   // Enter/Space keeps the two-click window flow. Arrow Up/Down adjusts the
@@ -650,13 +683,16 @@ export default function YearPaint() {
     [roles, fromT, backT, setFrom, setBack],
   );
 
-  // ─── Save ────────────────────────────────────────────────────────────────────
-  const onSave = useCallback(() => {
+  // ─── Autosave ─────────────────────────────────────────────────────────────
+  // PUT the given windows and adopt the server's echo as the new baseline. Does
+  // NOT re-seed the local paint (that would clobber edits made while the request
+  // is in flight and re-derive identical windows anyway).
+  const saveNow = useCallback((ws: DateWindow[]) => {
     setSaving(true);
     setSaveMsg(null);
-    putAvailability(windows)
+    return putAvailability(ws)
       .then((res) => {
-        seedFromWindows(res.windows);
+        lastSyncedRef.current = canonWindows(res.windows);
         setSaveMsg({ kind: "ok", text: "Saved ✓" });
       })
       .catch((e) => {
@@ -665,12 +701,34 @@ export default function YearPaint() {
         } else {
           setSaveMsg({
             kind: "err",
-            text: e instanceof Error ? e.message : "Could not save.",
+            text: e instanceof Error ? e.message : "Couldn't save — retry.",
           });
         }
       })
       .finally(() => setSaving(false));
-  }, [windows, seedFromWindows]);
+  }, []);
+
+  // Adopt server-seeded windows as the autosave baseline. Runs on mount and on
+  // every (re)seed. Declared BEFORE the autosave effect so, when a seed changes
+  // both `seedTick` and `windows` in one render, the baseline settles first and
+  // the autosave effect sees no diff.
+  useEffect(() => {
+    lastSyncedRef.current = canonWindows(windows);
+    // windows intentionally omitted: adopt only at seed moments, not every edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedTick]);
+
+  // Debounced autosave: fire ~700ms after the user stops editing, only once the
+  // current windows diverge from the last synced baseline.
+  useEffect(() => {
+    if (mode !== "ready" || lastSyncedRef.current === null) return;
+    if (canonWindows(windows) === lastSyncedRef.current) return;
+    const ws = windows;
+    const t = setTimeout(() => {
+      void saveNow(ws);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [windows, mode, saveNow]);
 
   // auto-fade the saved message
   useEffect(() => {
@@ -703,14 +761,33 @@ export default function YearPaint() {
     <div>
       {/* actions + hint */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="rounded-(--radius-tag) bg-ink text-paper hover:bg-night"
+        <span
+          aria-live="polite"
+          className={`text-sm transition-colors ${
+            saving
+              ? "text-ink-muted"
+              : saveMsg?.kind === "ok"
+                ? "text-steal"
+                : saveMsg?.kind === "err"
+                  ? "text-alert"
+                  : "text-ink-muted/70"
+          }`}
         >
-          {saving ? "Saving…" : "Save"}
-        </Button>
+          {saving
+            ? "Saving…"
+            : saveMsg
+              ? saveMsg.text
+              : "Changes save automatically"}
+        </span>
+        {saveMsg?.kind === "err" && !saving && (
+          <button
+            type="button"
+            onClick={() => void saveNow(windows)}
+            className="text-sm font-medium text-ink underline underline-offset-2 hover:text-alert"
+          >
+            Retry
+          </button>
+        )}
         <button
           type="button"
           onClick={clearAll}
@@ -719,15 +796,6 @@ export default function YearPaint() {
         >
           Clear all
         </button>
-        {saveMsg && (
-          <span
-            className={`text-sm transition-opacity ${
-              saveMsg.kind === "ok" ? "text-steal" : "text-alert"
-            }`}
-          >
-            {saveMsg.text}
-          </span>
-        )}
         <span className="text-sm text-ink-muted/70">
           Drag across days to paint free days. Drag a trip&apos;s first or last
           day up/down to set when you get free / must be back.
@@ -924,9 +992,10 @@ const MonthGrid = memo(function MonthGrid({
           // true window caps (first/last day of the whole range)
           const capLeft = isPainted && !prevPainted;
           const capRight = isPainted && !nextPainted;
-          // hover-to-delete: × on the hovered window's last day
-          const showDelete =
-            !isPast && hoverWin !== null && key === hoverWin.e;
+          // hover-to-delete: × on the hovered window's last day. Shown even
+          // when that day is past — an all-past window (stale tail left after
+          // its future days were removed) must still be deletable.
+          const showDelete = hoverWin !== null && key === hoverWin.e;
           // academic overlay stripe (skip past days — they're inert anyway)
           const uniKind = isPast ? undefined : uniDays.get(key);
 
@@ -934,12 +1003,15 @@ const MonthGrid = memo(function MonthGrid({
             <button
               key={key}
               type="button"
-              disabled={isPast}
-              data-daykey={isPast ? undefined : key}
+              // Past days can't be booked, so they can't be *added* — but a
+              // painted past day (a window's stale tail) must stay removable,
+              // else it's stuck forever. Enabled + hit-testable only when painted.
+              disabled={isPast && !isPainted}
+              data-daykey={isPast && !isPainted ? undefined : key}
               aria-pressed={isPainted}
               aria-label={`${day} ${label}${isPainted ? ` — free${ariaTime}` : ""}`}
               onPointerDown={(e) => {
-                if (isPast) return;
+                if (isPast && !isPainted) return;
                 onPointerDown(e, key);
               }}
               onPointerEnter={(e) => {
@@ -947,20 +1019,22 @@ const MonthGrid = memo(function MonthGrid({
                 onHoverCell(isPainted ? key : null);
               }}
               onClick={(e) => {
-                if (isPast) return;
+                if (isPast && !isPainted) return;
                 // Mouse clicks (detail >= 1) are handled by the pointer drag;
                 // only keyboard activations (detail === 0) take this path.
                 if (e.detail === 0) onKeyActivate(key);
               }}
               onKeyDown={(e) => {
-                if (isPast) return;
+                if (isPast && !isPainted) return;
                 onCellKeyDown(e, key);
               }}
               style={isEdge ? { touchAction: "none" } : undefined}
               className={[
                 "tnum relative aspect-square rounded-[5px] text-center font-mono text-xs transition-colors",
                 isPast
-                  ? "cursor-default text-ink-muted/25"
+                  ? isPainted
+                    ? "cursor-pointer text-ink-muted/50 hover:ring-1 hover:ring-ink/15"
+                    : "cursor-default text-ink-muted/25"
                   : "cursor-pointer hover:ring-1 hover:ring-ink/15",
                 isPainted ? "text-brand-ink font-semibold" : "text-ink",
                 isEdge ? "cursor-ns-resize" : "",
