@@ -34,6 +34,10 @@
   /* alert (admin/error only) */
   --color-alert: #d6453d;
 
+  /* near-miss amber — calendar bars that spill 1 day outside availability */
+  --color-nearmiss: #d97706;
+  --color-nearmiss-ink: #6b3a00;
+
   /* academic-calendar overlay (muted, low-opacity use only) */
   --color-uni-exam: #b45437;
   --color-uni-break: #64789b;

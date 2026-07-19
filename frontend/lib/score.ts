@@ -41,6 +41,20 @@ export const HARD_PRICE_CEILING = 700;
  */
 export const CALENDAR_DEFAULT_MAX_PRICE = 200;
 
+// ─── Near-miss availability (calendar exception bars) ────────────────────────
+/**
+ * Round-trip €-cap for a trip that misses the user's availability window by
+ * one day to still show on the calendar as an "exception" bar. A near-miss
+ * shows when it's a "steal" by tier OR at/below this absolute price — the user
+ * may want to move things around for a genuine bargain.
+ */
+export const NEAR_AVAIL_MAX_PRICE = 50;
+
+/** True when a trip is cheap enough to surface as a ±1-day availability miss. */
+export function isNearAvailWorthy(tier: DealTier, price: number): boolean {
+  return tier === "steal" || price <= NEAR_AVAIL_MAX_PRICE;
+}
+
 // ─── Ground-competitive destinations (train/Flixbus beats the flight) ────────
 /**
  * Round-trip €-cap for destinations close enough to the NL/BE origin cluster

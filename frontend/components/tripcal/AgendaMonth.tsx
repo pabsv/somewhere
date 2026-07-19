@@ -116,7 +116,11 @@ export default function AgendaMonth({
                       <button
                         type="button"
                         onClick={() => onPick(trip)}
-                        className="flex w-full items-center justify-between gap-3 rounded-card border border-line bg-card px-3 py-2.5 text-left transition-colors hover:border-ink-muted"
+                        className={`flex w-full items-center justify-between gap-3 rounded-card border bg-card px-3 py-2.5 text-left transition-colors ${
+                          trip.near_avail
+                            ? "border-dashed border-nearmiss hover:border-nearmiss-ink"
+                            : "border-line hover:border-ink-muted"
+                        }`}
                       >
                         <div className="min-w-0">
                           <p className="truncate font-display text-sm font-semibold text-ink">
@@ -130,6 +134,14 @@ export default function AgendaMonth({
                             )}{" "}
                             · {nightsLabel(trip.duration_days)}
                           </p>
+                          {trip.near_avail && (
+                            <p className="mt-0.5 text-[11px] font-medium text-nearmiss-ink">
+                              ⚠{" "}
+                              {trip.near_avail.out_spill > 0
+                                ? `−${trip.near_avail.out_spill}d before your free window`
+                                : `+${trip.near_avail.ret_spill}d after your free window`}
+                            </p>
+                          )}
                         </div>
                         <FareTag
                           price={trip.price}

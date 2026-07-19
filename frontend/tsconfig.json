@@ -42,7 +42,11 @@
     ".next-alt2/types/**/*.ts",
     ".next-alt2/dev/types/**/*.ts",
     ".next-buildcheck/types/**/*.ts",
-    ".next-buildcheck/dev/types/**/*.ts"
+    ".next-buildcheck/dev/types/**/*.ts",
+    ".next-alt3/types/**/*.ts",
+    ".next-alt3/dev/types/**/*.ts",
+    ".next-alt4/types/**/*.ts",
+    ".next-alt4/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

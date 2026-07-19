@@ -173,6 +173,15 @@ export default function TripPopover({
                 {formatRange(trip.outbound_date, trip.return_date)} ·{" "}
                 {nightsLabel(trip.duration_days)}
               </p>
+              {trip.near_avail && (
+                <p className="tnum mt-1 font-mono text-[11px] text-nearmiss-ink">
+                  ⚠ Outside your availability —{" "}
+                  {trip.near_avail.out_spill > 0
+                    ? `leaves ${trip.near_avail.out_spill} day before your free window opens`
+                    : `returns ${trip.near_avail.ret_spill} day after your free window ends`}
+                  . Shown because it&apos;s a bargain.
+                </p>
+              )}
               {trip.auto_extended && (
                 <p className="tnum mt-1 font-mono text-[11px] text-steal">
                   Auto-stretched +{trip.auto_extended.extra_nights}d — same

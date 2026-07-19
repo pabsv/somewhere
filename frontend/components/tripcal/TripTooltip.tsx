@@ -87,6 +87,16 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
         )}
       </p>
 
+      {/* ─── Near-miss: spills 1 day outside the free window ──────────────── */}
+      {trip.near_avail && (
+        <p className="mt-1 text-xs font-medium text-nearmiss-ink">
+          ⚠{" "}
+          {trip.near_avail.out_spill > 0
+            ? `Leaves ${trip.near_avail.out_spill} day before your free window`
+            : `Returns ${trip.near_avail.ret_spill} day after your free window`}
+        </p>
+      )}
+
       {/* ─── Open-jaw legs (mix & match bar) ───────────────────────────────── */}
       {oj && (
         <div className="mt-2 border-t border-line pt-1.5">

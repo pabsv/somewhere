@@ -29,6 +29,7 @@ import {
   HARD_PRICE_CEILING,
   GROUND_COMPETITIVE_CODES,
   GROUND_COMPETITIVE_MAX_PRICE,
+  isNearAvailWorthy,
 } from "@/lib/score";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
@@ -57,6 +58,8 @@ const ALL_ORIGIN_CODES = ORIGINS.map((o) => o.code);
 const BARS_PER_DEST_PER_MONTH = 2;
 /** Curation: global cap on bars per outbound-month. */
 const BARS_PER_MONTH = 40;
+/** Cap on ±1-day availability-exception bars per outbound-month (cheapest win). */
+const NEAR_AVAIL_MAX_PER_MONTH = 6;
 
 /** The `flights` collection typed as FlightDoc so filters/projections check. */
 async function flightsCollection(): Promise<Collection<FlightDoc>> {
@@ -579,15 +582,15 @@ export interface TripsData {
   truncated: boolean;
 }
 
-/** A user availability window, normalized to YYYY-MM-DD strings. */
-interface AvailWindow {
-  start: string;
-  end: string;
-  /** Hour (5–23) the user gets free on `start`; null = all day. */
-  startTime: number | null;
-  /** Hour (1–23) the user must be back by on `end`; null = all day. */
-  endTime: number | null;
-}
+// Window matching (fitsAnyWindow / nearMissWindow / AvailWindow) lives in the
+// Mongo-free lib/avail-core.ts so it's unit-testable; re-exported here for
+// existing callers.
+import {
+  fitsAnyWindow,
+  nearMissWindow,
+  type AvailWindow,
+} from "@/lib/avail-core";
+export { fitsAnyWindow, nearMissWindow, type AvailWindow };
 
 /**
  * Extract the hour (0–23) from a flight leg timestamp string
@@ -666,40 +669,6 @@ export async function loadUserAvailability(
   }
 
   return { windows, minNights, maxNights };
-}
-
-/**
- * True if [outbound,return] fits ENTIRELY inside at least one window,
- * respecting the window's edge times: on the first day the outbound must
- * depart at/after startTime, on the last day the return must arrive at/before
- * endTime. Legs with unparseable times are never filtered out.
- */
-export function fitsAnyWindow(
-  outbound: string,
-  ret: string,
-  windows: AvailWindow[],
-  depHour: number | null = null,
-  arrHour: number | null = null,
-): boolean {
-  for (const w of windows) {
-    if (outbound < w.start || ret > w.end) continue;
-    if (
-      w.startTime !== null &&
-      outbound === w.start &&
-      depHour !== null &&
-      depHour < w.startTime
-    )
-      continue;
-    if (
-      w.endTime !== null &&
-      ret === w.end &&
-      arrHour !== null &&
-      arrHour > w.endTime
-    )
-      continue;
-    return true;
-  }
-  return false;
 }
 
 /**
@@ -806,15 +775,52 @@ export async function getTripsData(
   let bars = dedupeTrips(scoreFlights(barDocs, baselines));
 
   if (avail) {
-    bars = bars.filter((t) =>
-      passesAvail(
+    const kept: Trip[] = [];
+    const nearMisses: Trip[] = [];
+    for (const t of bars) {
+      const depHour = hourOf(t.outbound.dep);
+      const arrHour = hourOf(t.ret.arr);
+      if (
+        passesAvail(
+          t.outbound_date,
+          t.return_date,
+          t.duration_days,
+          depHour,
+          arrHour,
+        )
+      ) {
+        kept.push(t);
+        continue;
+      }
+      // ±1-day exception: a very cheap trip that hangs one day over a window's
+      // edge still shows, flagged so the client renders it as "doesn't fit".
+      if (!isNearAvailWorthy(t.deal_tier, t.price)) continue;
+      if (avail.minNights !== null && t.duration_days < avail.minNights)
+        continue;
+      if (avail.maxNights !== null && t.duration_days > avail.maxNights)
+        continue;
+      const miss = nearMissWindow(
         t.outbound_date,
         t.return_date,
-        t.duration_days,
-        hourOf(t.outbound.dep),
-        hourOf(t.ret.arr),
-      ),
-    );
+        avail.windows,
+        depHour,
+        arrHour,
+      );
+      if (!miss || miss.out_spill + miss.ret_spill === 0) continue;
+      nearMisses.push({ ...t, near_avail: miss });
+    }
+    // Flood guard: the cheapest few exceptions per month, so one bargain route
+    // can't fill the calendar with spilled variants.
+    nearMisses.sort((a, b) => a.price - b.price);
+    const nearMissByMonth = new Map<string, number>();
+    for (const t of nearMisses) {
+      const mk = monthKey(t.outbound_date);
+      const n = nearMissByMonth.get(mk) ?? 0;
+      if (n >= NEAR_AVAIL_MAX_PER_MONTH) continue;
+      nearMissByMonth.set(mk, n + 1);
+      kept.push(t);
+    }
+    bars = kept;
     // NOTE: auto-extend (applyAutoExtend) is intentionally OFF — it pre-filled
     // each free window and stamped a "+1d free" badge, which conflicted with
     // the full-length bubble stretch UI (it left no free days to hover). Trips

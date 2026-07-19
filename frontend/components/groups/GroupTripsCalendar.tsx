@@ -17,7 +17,7 @@ import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
 import { useIsMobile } from "@/components/tripcal/useIsMobile";
-import { monthSpan, spansMonth, todayStr } from "@/components/tripcal/calendarMath";
+import { monthSpan, todayStr } from "@/components/tripcal/calendarMath";
 
 const MONTHS = 6;
 
@@ -80,8 +80,9 @@ export default function GroupTripsCalendar({
   const tripsByMonth = useMemo(
     () =>
       months.map((spec) =>
-        shownTrips.filter((t) =>
-          spansMonth(t.outbound_date, t.return_date, spec),
+        shownTrips.filter(
+          (t) =>
+            t.outbound_date >= spec.startStr && t.outbound_date <= spec.endStr,
         ),
       ),
     [shownTrips, months],

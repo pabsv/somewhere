@@ -38,7 +38,6 @@ import {
   monthSpan,
   todayStr,
   addMonths,
-  spansMonth,
 } from "@/components/tripcal/calendarMath";
 
 const MONTHS = 6;
@@ -270,11 +269,12 @@ export default function CalendarPage() {
     if (savedOnly && saved.size === 0) setSavedOnly(false);
   }, [savedOnly, saved]);
 
-  // ─── Slice trips per month (a trip can appear in each month it spans) ─────
+  // ─── Slice trips per month (a trip renders once, in its outbound month; a
+  // month-crossing bar clips at the edge and shows a return-date chip) ───────
   const tripsByMonth = useMemo(() => {
     return months.map((spec) =>
-      shownTrips.filter((t) =>
-        spansMonth(t.outbound_date, t.return_date, spec),
+      shownTrips.filter(
+        (t) => t.outbound_date >= spec.startStr && t.outbound_date <= spec.endStr,
       ),
     );
   }, [shownTrips, months]);
@@ -308,8 +308,11 @@ export default function CalendarPage() {
   // ─── Trip-stretch suggestions for the hovered bar ──────────────────────────
   const clampToWindows = signedIn && onlyFree;
   const { stretches: rtStretches } = useStayExtensions(
-    // open-jaw bars ship their extensions inline — skip the variants fetch
-    hovered && !hovered.trip.openjaw ? hovered.trip : null,
+    // open-jaw bars ship their extensions inline, near-miss bars sit outside
+    // the window — skip the variants fetch for both
+    hovered && !hovered.trip.openjaw && !hovered.trip.near_avail
+      ? hovered.trip
+      : null,
     windows,
     clampToWindows,
   );
@@ -343,7 +346,8 @@ export default function CalendarPage() {
   // click maps unambiguously to one variant; the full-window variant lives in
   // the popover.
   const stretch = useMemo<StretchContext | null>(() => {
-    if (!hovered || hovered.trip.openjaw) return null;
+    // near-miss bars sit partly outside the window — no stretch bubble
+    if (!hovered || hovered.trip.openjaw || hovered.trip.near_avail) return null;
     const base = hovered.trip;
     const sel = selections[base.key] ?? null;
 

@@ -140,6 +140,19 @@ export const TripSchema = z.object({
       delta_price: z.number(),
     })
     .optional(),
+  /**
+   * Present when the trip does NOT fit any availability window but misses one
+   * by exactly one day total and is cheap enough to show anyway (steal tier or
+   * ≤ NEAR_AVAIL_MAX_PRICE). Spills are in days: out_spill = leaves this many
+   * days before the window opens, ret_spill = returns this many days after it
+   * closes. Avail-filtered requests only.
+   */
+  near_avail: z
+    .object({
+      out_spill: z.number().int(),
+      ret_spill: z.number().int(),
+    })
+    .optional(),
 });
 export type Trip = z.infer<typeof TripSchema>;
 
