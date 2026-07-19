@@ -6,8 +6,7 @@
 // steal-green underlay, and the matched GroupTrips become the bars. Everything
 // is derived from the GroupTripsResponse the detail page already fetched — no
 // extra requests. Density is computed client-side from the curated trip set
-// (the group endpoint returns no density map); day clicks are a no-op because
-// DaySheet's own /api/trips fetch isn't group-aware.
+// (the group endpoint returns no density map).
 
 import { useCallback, useMemo, useState } from "react";
 import type { DateWindow, GroupTrip, Trip } from "@/types/api";
@@ -130,7 +129,6 @@ export default function GroupTripsCalendar({
                 setHovered(trip && el ? { trip, el } : null)
               }
               onBarClick={openPopover}
-              onDayClick={() => {}}
             />
           ),
         )}

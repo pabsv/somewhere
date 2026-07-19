@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Trip, DateWindow } from "@/types/api";
 import type { UniPeriod } from "@/lib/university/tue";
 import { assignLanes } from "@/lib/lanes";
 import TripBar from "./TripBar";
 import StretchOverlay, { type StretchCell } from "./StretchOverlay";
 import DensityStrip from "./DensityStrip";
+import FreeStrip from "./FreeStrip";
 import {
   type MonthSpec,
   clampDayInMonth,
-  dayStr,
   isWeekend,
   spansMonth,
   weekdayLetter,
@@ -55,6 +55,10 @@ interface MonthBlockProps {
   density: Record<string, number>;
   /** availability windows to underlay (already day-clipped is not required) */
   windows: DateWindow[];
+  /** draw the faint steal-green wash behind the bars (default true) */
+  underlay?: boolean;
+  /** render the slim steal-green FreeStrip above the day axis (default false) */
+  showFreeStrip?: boolean;
   /** academic periods (exams/breaks) to wash under the bars; [] = no overlay */
   uniPeriods?: UniPeriod[];
   today: string;
@@ -71,7 +75,6 @@ interface MonthBlockProps {
   stretch?: StretchContext | null;
   onBarHover: (trip: Trip | null, el: HTMLElement | null) => void;
   onBarClick: (trip: Trip) => void;
-  onDayClick: (day: string) => void;
 }
 
 const MAX_LANES = 6;
@@ -79,26 +82,33 @@ const LANE_H = 28; // px per lane row incl. gap
 
 /**
  * One month rendered as a horizontal gantt: equal-width day columns with a
- * faint weekend tint and a today marker line, a mono day-number axis, up to 6
- * lane-packed TripBars, an optional steal-green availability underlay, and a
- * density heat strip along the bottom.
+ * faint weekend tint and a today marker line, a mono day-number axis,
+ * lane-packed TripBars (6 lanes collapsed, unlimited when expanded via the
+ * header chevron or the "+N more" label), an optional steal-green availability
+ * underlay, and a density heat strip along the bottom.
  */
 export default function MonthBlock({
   spec,
   trips,
   density,
   windows,
+  underlay = true,
+  showFreeStrip = false,
   uniPeriods,
   today,
   selections,
   stretch = null,
   onBarHover,
   onBarClick,
-  onDayClick,
 }: MonthBlockProps) {
   const cols = spec.days;
 
-  // ─── Lane assignment (score desc, greedy ≤6, overflow → density) ──────────
+  // Expanded = no lane cap: every curated bar this month renders. Local state
+  // on purpose — purely presentational, per-month, and every consumer of
+  // MonthBlock (personal + group calendar) gets the toggle for free.
+  const [expanded, setExpanded] = useState(false);
+
+  // ─── Lane assignment (price asc, greedy ≤6 unless expanded) ───────────────
   const { lanes, overflow } = useMemo(
     () =>
       assignLanes(
@@ -106,11 +116,11 @@ export default function MonthBlock({
           key: t.key,
           outbound_date: t.outbound_date,
           return_date: t.return_date,
-          score: t.score,
+          price: t.price,
         })),
-        MAX_LANES,
+        expanded ? Number.POSITIVE_INFINITY : MAX_LANES,
       ),
-    [trips],
+    [trips, expanded],
   );
 
   const placedTrips = trips.filter((t) => lanes.has(t.key));
@@ -189,10 +199,39 @@ export default function MonthBlock({
         <h2 className="font-display text-xl font-semibold text-ink">
           {spec.label}
         </h2>
-        <span className="tnum font-mono text-[11px] text-ink-muted">
-          {placedTrips.length} shown
+        <span className="flex items-center gap-2">
+          <span className="tnum font-mono text-[11px] text-ink-muted">
+            {placedTrips.length} shown
+          </span>
+          {(overflow.length > 0 || expanded) && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              aria-label={expanded ? "Collapse month" : "Show all trips"}
+              className="rounded-tag p-0.5 text-ink-muted transition-colors hover:bg-paper hover:text-ink"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                  expanded ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              >
+                <path d="M5 7.5L10 12.5L15 7.5" />
+              </svg>
+            </button>
+          )}
         </span>
       </div>
+
+      {/* ─── Availability free-strip (steal-green, above the day axis) ─────── */}
+      {showFreeStrip && <FreeStrip spec={spec} windows={windows} />}
 
       {/* ─── Day-number axis ──────────────────────────────────────────────── */}
       <div
@@ -203,24 +242,21 @@ export default function MonthBlock({
           const weekend = isWeekend(spec.year, spec.month, d);
           const isToday = todayCol === d;
           return (
-            <button
+            <div
               key={d}
-              type="button"
-              onClick={() => onDayClick(dayStr(spec.year, spec.month, d))}
-              className={`tnum text-center font-mono text-[9px] leading-none transition-colors hover:text-ink ${
+              className={`tnum text-center font-mono text-[9px] leading-none ${
                 isToday
                   ? "font-bold text-ink"
                   : weekend
                     ? "text-ink-muted/50"
                     : "text-ink-muted"
               }`}
-              title={`Trips spanning ${dayStr(spec.year, spec.month, d)}`}
             >
               <span className="block text-[8px] leading-none opacity-70">
                 {weekdayLetter(spec.year, spec.month, d)}
               </span>
               <span className="mt-0.5 block">{d}</span>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -272,7 +308,7 @@ export default function MonthBlock({
         )}
 
         {/* availability underlay (steal-green soft fill) */}
-        {availSegments.length > 0 && (
+        {underlay && availSegments.length > 0 && (
           <div
             className="pointer-events-none absolute inset-0 grid gap-px"
             style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
@@ -362,7 +398,7 @@ export default function MonthBlock({
         spec={spec}
         density={density}
         overflowCount={overflow.length}
-        onDayClick={onDayClick}
+        onExpand={() => setExpanded(true)}
       />
     </section>
   );

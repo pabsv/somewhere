@@ -18,7 +18,6 @@ import MonthBlock, {
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
-import DaySheet from "@/components/tripcal/DaySheet";
 import {
   useStayExtensions,
   pickOpenJawExtensions,
@@ -115,7 +114,6 @@ export default function CalendarPage() {
     el: HTMLElement;
   } | null>(null);
   const [popoverTrip, setPopoverTrip] = useState<CalTrip | null>(null);
-  const [daySheet, setDaySheet] = useState<string | null>(null);
 
   // Committed trip-stretch swaps, keyed by trip.key — persist for the session
   // so a swap survives un-hover (design option 2c). A swapped-but-unhovered bar
@@ -459,7 +457,7 @@ export default function CalendarPage() {
         </h1>
         <p className="mt-2 max-w-xl text-base text-ink-muted">
           Six months of fares from your airports, laid out on the board. Hover a
-          bar for details, tap a day for everything spanning it.
+          bar for details, click it to book.
         </p>
       </header>
 
@@ -575,7 +573,9 @@ export default function CalendarPage() {
                 spec={spec}
                 trips={tripsByMonth[i]}
                 density={density}
-                windows={hasWindows && !onlyFree ? windows : []}
+                windows={hasWindows ? windows : []}
+                underlay={!onlyFree}
+                showFreeStrip={hasWindows}
                 uniPeriods={uniPeriods}
                 today={today}
                 selections={selectionsMap}
@@ -584,7 +584,6 @@ export default function CalendarPage() {
                   setHovered(trip && el ? { trip, el } : null)
                 }
                 onBarClick={(t) => openPopover(applySelection(t))}
-                onDayClick={setDaySheet}
               />
             ),
           )}
@@ -604,12 +603,6 @@ export default function CalendarPage() {
         onClose={() => setPopoverTrip(null)}
       />
 
-      <DaySheet
-        day={daySheet}
-        from={origins}
-        onClose={() => setDaySheet(null)}
-        onPick={openPopover}
-      />
     </div>
   );
 }

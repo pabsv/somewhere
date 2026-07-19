@@ -74,7 +74,7 @@ export default function AgendaMonth({
         const endDay = Math.min(startDay + 6, spec.days);
         return {
           label: `${dayStr(spec.year, spec.month, startDay).slice(8)}–${dayStr(spec.year, spec.month, endDay).slice(8)}`,
-          trips: ts.sort((x, y) => y.score - x.score),
+          trips: ts.sort((x, y) => x.price - y.price),
         };
       });
   }, [trips, spec]);

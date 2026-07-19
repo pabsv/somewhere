@@ -9,20 +9,21 @@ interface DensityStripProps {
   density: Record<string, number>;
   /** overflow count for this month (trips not shown as bars) */
   overflowCount: number;
-  /** click a day cell */
-  onDayClick: (day: string) => void;
+  /** expand the month (show all bars); when absent the "+N more" is passive */
+  onExpand?: () => void;
 }
 
 /**
  * Bottom heat row of a month block: one cell per day, brand-yellow opacity
  * scaled by that day's trip count vs the month's busiest day. When trips were
- * truncated into density, a mono "+N more" sits at the right end.
+ * truncated into density, a mono "+N more" sits at the right end — a button
+ * that expands the month when `onExpand` is provided.
  */
 export default function DensityStrip({
   spec,
   density,
   overflowCount,
-  onDayClick,
+  onExpand,
 }: DensityStripProps) {
   const days = Array.from({ length: spec.days }, (_, i) => {
     const day = dayStr(spec.year, spec.month, i + 1);
@@ -36,11 +37,20 @@ export default function DensityStrip({
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-muted/70">
           Activity
         </span>
-        {overflowCount > 0 && (
-          <span className="tnum font-mono text-[10px] text-ink-muted">
-            +{overflowCount} more
-          </span>
-        )}
+        {overflowCount > 0 &&
+          (onExpand ? (
+            <button
+              type="button"
+              onClick={onExpand}
+              className="tnum font-mono text-[10px] text-ink-muted underline decoration-dotted underline-offset-2 transition-colors hover:text-ink"
+            >
+              +{overflowCount} more
+            </button>
+          ) : (
+            <span className="tnum font-mono text-[10px] text-ink-muted">
+              +{overflowCount} more
+            </span>
+          ))}
       </div>
       <div
         className="grid gap-px"
@@ -53,13 +63,10 @@ export default function DensityStrip({
           const opacity =
             max > 0 && count > 0 ? 0.12 + 0.88 * (count / max) : 0;
           return (
-            <button
+            <div
               key={day}
-              type="button"
-              onClick={() => onDayClick(day)}
               title={`${count} trip${count === 1 ? "" : "s"} span this day`}
-              aria-label={`${count} trips span ${day}`}
-              className="h-3.5 rounded-[2px] bg-line/60 transition-colors hover:ring-1 hover:ring-ink"
+              className="h-3.5 rounded-[2px] bg-line/60"
             >
               {count > 0 && (
                 <span
@@ -67,7 +74,7 @@ export default function DensityStrip({
                   style={{ opacity }}
                 />
               )}
-            </button>
+            </div>
           );
         })}
       </div>

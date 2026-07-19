@@ -834,13 +834,13 @@ export async function getTripsData(
 
 /**
  * Curation for calendar bars (variety guard):
- *   1. per destination per outbound-month → keep top 2 by score
- *   2. then per outbound-month → keep global top 40 by score
- * Sorting throughout: score desc, tie → lower price.
+ *   1. per destination per outbound-month → keep the 2 cheapest
+ *   2. then per outbound-month → keep the global 40 cheapest
+ * Sorting throughout: price asc, tie → higher score.
  */
 function curateBars(trips: Trip[]): Trip[] {
-  const byScore = (a: Trip, b: Trip) =>
-    b.score - a.score || a.price - b.price;
+  const byPrice = (a: Trip, b: Trip) =>
+    a.price - b.price || b.score - a.score;
 
   // Step 1: cap per (month, destination).
   const perDestMonth = new Map<string, Trip[]>();
@@ -853,7 +853,7 @@ function curateBars(trips: Trip[]): Trip[] {
 
   const afterDestCap: Trip[] = [];
   for (const arr of perDestMonth.values()) {
-    arr.sort(byScore);
+    arr.sort(byPrice);
     for (const t of arr.slice(0, BARS_PER_DEST_PER_MONTH)) afterDestCap.push(t);
   }
 
@@ -868,11 +868,11 @@ function curateBars(trips: Trip[]): Trip[] {
 
   const out: Trip[] = [];
   for (const arr of perMonth.values()) {
-    arr.sort(byScore);
+    arr.sort(byPrice);
     for (const t of arr.slice(0, BARS_PER_MONTH)) out.push(t);
   }
 
-  out.sort(byScore);
+  out.sort(byPrice);
   return out;
 }
 
