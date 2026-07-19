@@ -6,10 +6,27 @@ import { bricolage, instrument, splineMono } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://flysomewhere.app"),
   title: "Somewhere — fly somewhere, cheap",
   description:
     "Where could you go, cheap? Live flight deals from airports near you — no dates, no destination, no problem.",
   applicationName: "Somewhere",
+  // Link previews (WhatsApp, iMessage, Slack, ...). The og:image itself is
+  // generated at /opengraph-image by app/opengraph-image.tsx.
+  openGraph: {
+    type: "website",
+    url: "https://flysomewhere.app",
+    siteName: "Somewhere",
+    title: "Somewhere — fly somewhere, cheap",
+    description:
+      "Where could you go, cheap? Live flight deals from airports near you — no dates, no destination, no problem.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Somewhere — fly somewhere, cheap",
+    description:
+      "Where could you go, cheap? Live flight deals from airports near you — no dates, no destination, no problem.",
+  },
   // Installed-app behavior on iOS: standalone (no Safari chrome), board-dark
   // status bar to match the splash.
   appleWebApp: {
