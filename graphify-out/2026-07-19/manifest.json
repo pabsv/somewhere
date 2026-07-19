@@ -265,8 +265,8 @@
     "semantic_hash": "c24b6c2c1280e14ecac430b062b48892"
   },
   "frontend/app/calendar/page.tsx": {
-    "mtime": 1784376136.2209377,
-    "ast_hash": "bc17df01e00fb7d6f7ad5257f3e8266a",
+    "mtime": 1784460018.3238854,
+    "ast_hash": "873255aeb45c45d9d3aa8c860ac9f924",
     "semantic_hash": ""
   },
   "frontend/app/city/[code]/page.tsx": {
@@ -480,8 +480,8 @@
     "semantic_hash": "144e92defd089cff6c3d1588301063e6"
   },
   "frontend/components/tripcal/MonthBlock.tsx": {
-    "mtime": 1784377766.4191022,
-    "ast_hash": "d1ff3155f7ef52e32dc037c681282b7e",
+    "mtime": 1784460011.668602,
+    "ast_hash": "bb732e2484ba54c31d2bc1cb3acaba0a",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripBar.tsx": {
@@ -615,8 +615,8 @@
     "semantic_hash": "fd454fec7d171651adf3e8eb7bba0dfd"
   },
   "frontend/lib/queries.ts": {
-    "mtime": 1784358119.1614478,
-    "ast_hash": "c3503fb4fae3a0a1a607acad3f480520",
+    "mtime": 1784459217.492356,
+    "ast_hash": "469eb4fdc0ab5e1fcc0ecd0bb23012a9",
     "semantic_hash": ""
   },
   "frontend/lib/saved-cities.tsx": {
@@ -630,8 +630,8 @@
     "semantic_hash": "32e77bb698d37c0b1f4a4e16b591ff2f"
   },
   "frontend/lib/score.ts": {
-    "mtime": 1784356593.5723443,
-    "ast_hash": "0f8051a46ca0e164847f986d0f83686a",
+    "mtime": 1784459183.210608,
+    "ast_hash": "b065e32c4df8bb05334ae7f863e6bd35",
     "semantic_hash": ""
   },
   "frontend/lib/searchUrl.ts": {
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784377347.7516673,
-    "ast_hash": "38bb03cab4d6f93594ceda6b4f9250b7",
+    "mtime": 1784460151.2132711,
+    "ast_hash": "8e30da8839f5d9ee6bba52d058e6da88",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -1162,6 +1162,11 @@
   "frontend/components/tripcal/StretchOverlay.tsx": {
     "mtime": 1784377776.7001357,
     "ast_hash": "b95e6afde8679ac3a631956e7f2a0335",
+    "semantic_hash": ""
+  },
+  "frontend/components/tripcal/FreeStrip.tsx": {
+    "mtime": 1784459952.85978,
+    "ast_hash": "3f55ee4b065437ca18caa6075828f0a5",
     "semantic_hash": ""
   }
 }

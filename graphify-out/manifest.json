@@ -265,8 +265,8 @@
     "semantic_hash": "c24b6c2c1280e14ecac430b062b48892"
   },
   "frontend/app/calendar/page.tsx": {
-    "mtime": 1784376136.2209377,
-    "ast_hash": "bc17df01e00fb7d6f7ad5257f3e8266a",
+    "mtime": 1784460967.5706716,
+    "ast_hash": "b80c6de4f0d02dcaaf6f72e7e4903029",
     "semantic_hash": ""
   },
   "frontend/app/city/[code]/page.tsx": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "frontend/components/tripcal/AgendaMonth.tsx": {
-    "mtime": 1784254975.5442784,
-    "ast_hash": "6eda67cac48adbe63061c566bf5a3f1f",
+    "mtime": 1784460950.0038836,
+    "ast_hash": "90365882e9e907e3c40a5d1f9352277b",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/CalendarFilters.tsx": {
@@ -469,19 +469,14 @@
     "ast_hash": "cef3aaba828fbd650b436ae314874469",
     "semantic_hash": ""
   },
-  "frontend/components/tripcal/DaySheet.tsx": {
-    "mtime": 1784356636.3188548,
-    "ast_hash": "47a2a32623adf64b70f1961c43fa7142",
+  "frontend/components/tripcal/DensityStrip.tsx": {
+    "mtime": 1784460927.017548,
+    "ast_hash": "6f5ae72a1758a9a947999aa7b3332099",
     "semantic_hash": ""
   },
-  "frontend/components/tripcal/DensityStrip.tsx": {
-    "mtime": 1781113577.422535,
-    "ast_hash": "144e92defd089cff6c3d1588301063e6",
-    "semantic_hash": "144e92defd089cff6c3d1588301063e6"
-  },
   "frontend/components/tripcal/MonthBlock.tsx": {
-    "mtime": 1784377766.4191022,
-    "ast_hash": "d1ff3155f7ef52e32dc037c681282b7e",
+    "mtime": 1784460910.1712646,
+    "ast_hash": "eda9470ad86a18ffa368fdf6f3097a65",
     "semantic_hash": ""
   },
   "frontend/components/tripcal/TripBar.tsx": {
@@ -605,9 +600,9 @@
     "semantic_hash": "ab5cf6338e95500b27daace0a0a776a3"
   },
   "frontend/lib/lanes.ts": {
-    "mtime": 1781079539.361594,
-    "ast_hash": "8597c337297265d25b377827addae5ce",
-    "semantic_hash": "8597c337297265d25b377827addae5ce"
+    "mtime": 1784460805.1415794,
+    "ast_hash": "acf57da1922a68174754622bddaf16b9",
+    "semantic_hash": ""
   },
   "frontend/lib/mongodb.ts": {
     "mtime": 1772217933.8840506,
@@ -615,8 +610,8 @@
     "semantic_hash": "fd454fec7d171651adf3e8eb7bba0dfd"
   },
   "frontend/lib/queries.ts": {
-    "mtime": 1784358119.1614478,
-    "ast_hash": "c3503fb4fae3a0a1a607acad3f480520",
+    "mtime": 1784460744.9642026,
+    "ast_hash": "60d3607dd3369999cf61498d640a79d9",
     "semantic_hash": ""
   },
   "frontend/lib/saved-cities.tsx": {
@@ -630,8 +625,8 @@
     "semantic_hash": "32e77bb698d37c0b1f4a4e16b591ff2f"
   },
   "frontend/lib/score.ts": {
-    "mtime": 1784356593.5723443,
-    "ast_hash": "0f8051a46ca0e164847f986d0f83686a",
+    "mtime": 1784459183.210608,
+    "ast_hash": "b065e32c4df8bb05334ae7f863e6bd35",
     "semantic_hash": ""
   },
   "frontend/lib/searchUrl.ts": {
@@ -775,8 +770,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784377347.7516673,
-    "ast_hash": "38bb03cab4d6f93594ceda6b4f9250b7",
+    "mtime": 1784460151.2132711,
+    "ast_hash": "8e30da8839f5d9ee6bba52d058e6da88",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -925,8 +920,8 @@
     "semantic_hash": ""
   },
   "frontend/components/groups/GroupTripsCalendar.tsx": {
-    "mtime": 1784254992.25184,
-    "ast_hash": "d7edca46bbd6d0cdcfb9468e42d5ec13",
+    "mtime": 1784461004.8158555,
+    "ast_hash": "f73d1cd487e88529900befe47eab04da",
     "semantic_hash": ""
   },
   "frontend/components/ui/CountryFlag.tsx": {
@@ -1162,6 +1157,16 @@
   "frontend/components/tripcal/StretchOverlay.tsx": {
     "mtime": 1784377776.7001357,
     "ast_hash": "b95e6afde8679ac3a631956e7f2a0335",
+    "semantic_hash": ""
+  },
+  "frontend/components/tripcal/FreeStrip.tsx": {
+    "mtime": 1784460478.6466613,
+    "ast_hash": "1d26bdf20595e0c1f5354090fcc27693",
+    "semantic_hash": ""
+  },
+  "frontend/lib/__tests__/lanes.test.ts": {
+    "mtime": 1784461023.2468393,
+    "ast_hash": "19f73f5c1b9d25161c59e8444b2059e6",
     "semantic_hash": ""
   }
 }
