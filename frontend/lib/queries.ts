@@ -25,11 +25,31 @@ import {
   priceStretchCandidates,
   type ExactFare,
 } from "@/lib/stretch-core";
-import { HARD_PRICE_CEILING } from "@/lib/score";
+import {
+  HARD_PRICE_CEILING,
+  GROUND_COMPETITIVE_CODES,
+  GROUND_COMPETITIVE_MAX_PRICE,
+} from "@/lib/score";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
+
+/**
+ * Mongo clause: drop "ground-competitive" destinations (all Germany, Lux,
+ * Paris, Lille) whose round-trip price is above GROUND_COMPETITIVE_MAX_PRICE —
+ * a train or Flixbus beats them there, so an expensive flight is only clutter
+ * on the discovery boards (Explore + Calendar). `$nor` with a single clause =
+ * "NOT (ground-competitive AND over the cap)", so it composes with an existing
+ * top-level `price` key without touching it. City drill-in pages are exempt
+ * (a deliberate visit shows the full picture).
+ */
+const GROUND_COMPETITIVE_NOR: Filter<FlightDoc>["$nor"] = [
+  {
+    destination: { $in: [...GROUND_COMPETITIVE_CODES] },
+    price: { $gt: GROUND_COMPETITIVE_MAX_PRICE },
+  },
+];
 
 const ALL_ORIGIN_CODES = ORIGINS.map((o) => o.code);
 
@@ -142,6 +162,9 @@ export function buildTripFilter(params: TripFilterParams): Filter<FlightDoc> {
   }
   if (Object.keys(dur).length > 0) filter.duration_days = dur;
 
+  // Ground-competitive destinations only survive when cheap enough to beat rail.
+  filter.$nor = GROUND_COMPETITIVE_NOR;
+
   return filter;
 }
 
@@ -200,6 +223,8 @@ export async function getCitiesData(
     origin: { $in: origins },
     outbound_date: { $gte: today },
     price: { $lte: HARD_PRICE_CEILING },
+    // Same rail-competitive gate as the calendar (see GROUND_COMPETITIVE_NOR).
+    $nor: GROUND_COMPETITIVE_NOR,
   };
   if (avail) {
     const nights: Record<string, number> = {};

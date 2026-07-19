@@ -41,6 +41,39 @@ export const HARD_PRICE_CEILING = 700;
  */
 export const CALENDAR_DEFAULT_MAX_PRICE = 200;
 
+// ─── Ground-competitive destinations (train/Flixbus beats the flight) ────────
+/**
+ * Round-trip €-cap for destinations close enough to the NL/BE origin cluster
+ * that a train or Flixbus is a real alternative. On the discovery boards these
+ * only surface when the WHOLE round trip is at or below this price; above it the
+ * ground option wins and a flight there is just clutter. Berlin/Frankfurt/etc.
+ * still appear — but only when genuinely cheap (the user's "take it if it's a
+ * steal" rule). Tune this one number to loosen/tighten the gate.
+ */
+export const GROUND_COMPETITIVE_MAX_PRICE = 100;
+
+/**
+ * Destination IATA codes that are train/bus-competitive from Eindhoven:
+ * all of Germany (the neighbour — always a Flixbus/ICE alternative),
+ * Luxembourg, and the northern-France airports (Paris + Lille). Southern
+ * France (Nice, Marseille, Bordeaux, Corsica…) is a genuine flight and stays
+ * uncapped. Switzerland/UK deliberately excluded (Alps trips / Channel).
+ */
+export const GROUND_COMPETITIVE_CODES: ReadonlySet<string> = new Set([
+  // Germany
+  "BER", "MUC", "FRA", "HAM", "STR", "HAJ", "NUE",
+  "LEJ", "DRS", "BRE", "FMM", "FKB", "FMO",
+  // Luxembourg
+  "LUX",
+  // Northern France — rail-competitive
+  "CDG", "ORY", "BVA", "LIL",
+]);
+
+/** True when a destination is close enough that ground travel competes. */
+export function isGroundCompetitive(code: string): boolean {
+  return GROUND_COMPETITIVE_CODES.has(code);
+}
+
 // Fallback-score curve when the route baseline is cold (null).
 const FALLBACK_PRICE_CEILING = 150;
 const FALLBACK_PRICE_DIVISOR = 1.5;
