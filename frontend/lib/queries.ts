@@ -8,6 +8,7 @@
 // Spec: docs/DESIGN_V1.md sections C + D.
 
 import type { Collection, Filter } from "mongodb";
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { getBaselines, type RouteBaseline } from "@/lib/baselines";
 import {
@@ -60,6 +61,8 @@ const BARS_PER_DEST_PER_MONTH = 2;
 const BARS_PER_MONTH = 40;
 /** Cap on ±1-day availability-exception bars per outbound-month (cheapest win). */
 const NEAR_AVAIL_MAX_PER_MONTH = 6;
+/** Data-cache TTL for the user-independent halves of the calendar payload. */
+const TRIPS_REVALIDATE_SECONDS = 120; // 2 min — matches /api/cities
 
 /** The `flights` collection typed as FlightDoc so filters/projections check. */
 async function flightsCollection(): Promise<Collection<FlightDoc>> {
@@ -686,36 +689,123 @@ export async function loadUserAvailability(
  *    explicitly asking to see only their free dates).
  *  - truncated = some bars were dropped by curation.
  */
+/** Compact density source row — one per matching flight, avail-agnostic. */
+interface DensitySourceRow {
+  outbound_date: string;
+  return_date: string;
+  duration_days: number;
+  dep_hour: number | null;
+  arr_hour: number | null;
+}
+
+/**
+ * Density source rows for (origins + date range) only — no per-user filtering,
+ * so it's shared across all callers and cached 2 min. The avail filter runs
+ * per request over this in-memory (cheap). Removes the ~1.5s Atlas round-trip
+ * on repeat/refresh loads — the reason the calendar crawled in local dev.
+ */
+function cachedDensitySource(
+  origins: string[],
+  start: string,
+  end: string,
+): Promise<DensitySourceRow[]> {
+  const key = JSON.stringify({ o: [...origins].sort(), start, end });
+  return unstable_cache(
+    async (): Promise<DensitySourceRow[]> => {
+      const flights = await flightsCollection();
+      const filter = buildTripFilter({ origins, start, end });
+      const docs = await flights
+        .find(filter, {
+          projection: {
+            _id: 0,
+            outbound_date: 1,
+            return_date: 1,
+            duration_days: 1,
+            outbound_departure: 1,
+            return_arrival: 1,
+          },
+        })
+        .toArray();
+      return docs.map((d) => ({
+        outbound_date: String(d.outbound_date),
+        return_date: String(d.return_date),
+        duration_days:
+          typeof d.duration_days === "number" ? d.duration_days : 0,
+        dep_hour: hourOf(d.outbound_departure),
+        arr_hour: hourOf(d.return_arrival),
+      }));
+    },
+    ["trips-density", key],
+    { revalidate: TRIPS_REVALIDATE_SECONDS },
+  )();
+}
+
+/**
+ * Scored + deduped bars for a filter (origins / date / price / direct / nights
+ * — all user-independent), cached 2 min. The avail / near-miss / tier / curate
+ * passes run per request over this. Caches BOTH the Atlas read (~3.4s) and the
+ * scoring pass, so a signed-in "only my free dates" reload no longer re-hits
+ * Atlas — only the cheap in-memory avail filter reruns. Scoring reuses
+ * getBaselines (itself memoized), matching the /api/cities cache pattern.
+ */
+function cachedScoredBars(p: {
+  origins: string[];
+  start: string;
+  end: string;
+  maxPrice?: number | null;
+  direct?: boolean;
+  minNights?: number | null;
+  maxNights?: number | null;
+}): Promise<Trip[]> {
+  const maxPrice = p.maxPrice ?? null;
+  const direct = p.direct ?? false;
+  const minNights = p.minNights ?? null;
+  const maxNights = p.maxNights ?? null;
+  const key = JSON.stringify({
+    o: [...p.origins].sort(),
+    start: p.start,
+    end: p.end,
+    maxPrice,
+    direct,
+    minNights,
+    maxNights,
+  });
+  return unstable_cache(
+    async (): Promise<Trip[]> => {
+      const flights = await flightsCollection();
+      const baselines = await getBaselines();
+      const filter = buildTripFilter({
+        origins: p.origins,
+        start: p.start,
+        end: p.end,
+        maxPrice,
+        direct,
+        minNights,
+        maxNights,
+      });
+      const docs = await flights
+        .find(filter, { projection: { _id: 0 } })
+        .toArray();
+      return dedupeTrips(scoreFlights(docs, baselines));
+    },
+    ["trips-bars", key],
+    { revalidate: TRIPS_REVALIDATE_SECONDS },
+  )();
+}
+
 export async function getTripsData(
   params: TripsQuery,
   session: TripsSession | null,
 ): Promise<TripsData> {
-  const flights = await flightsCollection();
-  const baselines = await getBaselines();
-
-  // ── Density base: origins + date range only ──────────────────────────────
-  const densityFilter = buildTripFilter({
-    origins: params.origins,
-    start: params.start,
-    end: params.end,
-  });
-
-  const densityProjection = {
-    _id: 0,
-    outbound_date: 1,
-    return_date: 1,
-    // fields needed only when avail filtering is active:
-    duration_days: 1,
-    outbound_departure: 1,
-    return_arrival: 1,
-  };
-
-  const densityDocs = await flights
-    .find(densityFilter, { projection: densityProjection })
-    .toArray();
-
-  // ── Bars base: full filter ────────────────────────────────────────────────
-  const barsFilter = buildTripFilter({
+  // Two user-independent halves, each cached 2 min. The Atlas round-trips and
+  // scoring dominate cost; the availability filtering below is cheap in-memory,
+  // so it stays per-request (availability edits are never served stale).
+  const densitySource = await cachedDensitySource(
+    params.origins,
+    params.start,
+    params.end,
+  );
+  const scoredBars = await cachedScoredBars({
     origins: params.origins,
     start: params.start,
     end: params.end,
@@ -724,8 +814,6 @@ export async function getTripsData(
     minNights: params.minNights,
     maxNights: params.maxNights,
   });
-
-  const barDocs = await flights.find(barsFilter).toArray();
 
   // ── Resolve availability (avail=1 + session) ──────────────────────────────
   let avail: UserAvailability | null = null;
@@ -752,27 +840,19 @@ export async function getTripsData(
   };
 
   // ── Density (heat) ────────────────────────────────────────────────────────
-  const densityInput = densityDocs
-    .map((d) => ({
-      outbound_date: String(d.outbound_date),
-      return_date: String(d.return_date),
-      duration_days: typeof d.duration_days === "number" ? d.duration_days : 0,
-      dep_hour: hourOf(d.outbound_departure),
-      arr_hour: hourOf(d.return_arrival),
-    }))
-    .filter((d) =>
-      passesAvail(
-        d.outbound_date,
-        d.return_date,
-        d.duration_days,
-        d.dep_hour,
-        d.arr_hour,
-      ),
-    );
+  const densityInput = densitySource.filter((d) =>
+    passesAvail(
+      d.outbound_date,
+      d.return_date,
+      d.duration_days,
+      d.dep_hour,
+      d.arr_hour,
+    ),
+  );
   const density = buildDensity(densityInput);
 
-  // ── Bars: score → dedupe → avail filter → tier filter → curate ────────────
-  let bars = dedupeTrips(scoreFlights(barDocs, baselines));
+  // ── Bars: (cached: score → dedupe) → avail filter → tier filter → curate ──
+  let bars = scoredBars;
 
   if (avail) {
     const kept: Trip[] = [];
