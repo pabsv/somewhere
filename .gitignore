@@ -29,4 +29,7 @@ scraper-azair/test_results.json
 # Claude Code local tooling (worktrees, launch config)
 .claude/
 scratch_*.py
-graphify-out/cost.json
+
+# Graphify knowledge graph — generated artifact, rebuilt per machine via `graphify update .`
+# (was committed; untracked 2026-07-20 to stop 40k-line graph.json diffs + parallel-session conflicts)
+graphify-out/
