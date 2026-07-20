@@ -39,7 +39,9 @@ export default function GroupDetailPage() {
 
   const [detail, setDetail] = useState<GroupDetailResponse | null>(null);
   const [trips, setTrips] = useState<GroupTripsResponse | null>(null);
-  const [tripsView, setTripsView] = useState<"list" | "calendar">("list");
+  const [tripsView, setTripsView] = useState<"list" | "calendar">("calendar");
+  const [fullOnly, setFullOnly] = useState(true);
+  const [infoOpen, setInfoOpen] = useState(true);
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -157,9 +159,10 @@ export default function GroupDetailPage() {
 
   const isOwner = detail.my_role === "owner";
   const myUserId = session?.user?.id ?? "";
+  const hasFullGroup = trips.trips.some((t) => t.full_group);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <Link
         href="/groups"
         className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink"
@@ -179,69 +182,95 @@ export default function GroupDetailPage() {
       </header>
 
       <section className="mb-10">
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* Toolbar: view toggle + everyone-free chip on the left, info panel
+            toggle on the right — all on one line. */}
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <Chip
+            size="sm"
+            selected={tripsView === "calendar"}
+            onClick={() => setTripsView("calendar")}
+          >
+            Calendar
+          </Chip>
+          <Chip
+            size="sm"
+            selected={tripsView === "list"}
+            onClick={() => setTripsView("list")}
+          >
+            List
+          </Chip>
+          {hasFullGroup && (
             <Chip
               size="sm"
-              selected={tripsView === "list"}
-              onClick={() => setTripsView("list")}
+              selected={fullOnly}
+              onClick={() => setFullOnly((v) => !v)}
             >
-              List
+              Everyone&rsquo;s free only
             </Chip>
-            <Chip
-              size="sm"
-              selected={tripsView === "calendar"}
-              onClick={() => setTripsView("calendar")}
-            >
-              Calendar
-            </Chip>
+          )}
+          <button
+            type="button"
+            onClick={() => setInfoOpen((v) => !v)}
+            aria-expanded={infoOpen}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-(--radius-tag) border border-line bg-card px-3 py-1 font-mono text-xs uppercase tracking-widest text-ink-muted transition-colors hover:text-ink"
+          >
+            {infoOpen ? "Hide info ›" : "‹ Group info"}
+          </button>
+        </div>
+
+        {/* Un-boxed calendar (matches the main /calendar look) beside a
+            collapsible right-hand group-info panel. */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
+            {tripsView === "list" ? (
+              <GroupTripsBoard
+                trips={trips.trips}
+                truncated={trips.truncated}
+                knownCount={trips.known_count}
+                unknownCount={trips.unknown_count}
+                fullOnly={fullOnly}
+              />
+            ) : (
+              <GroupTripsCalendar
+                trips={trips.trips}
+                sharedWindows={trips.shared_windows}
+                fullOnly={fullOnly}
+              />
+            )}
           </div>
-          {tripsView === "list" ? (
-            <GroupTripsBoard
-              trips={trips.trips}
-              truncated={trips.truncated}
-              knownCount={trips.known_count}
-              unknownCount={trips.unknown_count}
-            />
-          ) : (
-            <GroupTripsCalendar
-              trips={trips.trips}
-              sharedWindows={trips.shared_windows}
-            />
+
+          {infoOpen && (
+            <aside className="w-full shrink-0 space-y-6 lg:w-80">
+              <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card)">
+                <h2 className="mb-4 font-display text-lg font-semibold text-ink">
+                  Members
+                </h2>
+                <MembersCard
+                  members={detail.members}
+                  myRole={detail.my_role}
+                  myUserId={myUserId}
+                  onRemove={onRemoveMember}
+                  onLeave={onLeaveGroup}
+                />
+              </div>
+
+              <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card)">
+                <h2 className="mb-4 font-display text-lg font-semibold text-ink">
+                  Invite people
+                </h2>
+                <InviteCard
+                  groupId={id}
+                  inviteToken={detail.invite_token}
+                  existingMemberIds={detail.members.map((m) => m.user_id)}
+                  onMemberAdded={refetchAll}
+                />
+              </div>
+
+              {isOwner && <DangerZone onDelete={onDeleteGroup} />}
+            </aside>
           )}
         </div>
       </section>
-
-      <section className="mb-10">
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <h2 className="mb-4 font-display text-xl font-semibold text-ink">
-            Members
-          </h2>
-          <MembersCard
-            members={detail.members}
-            myRole={detail.my_role}
-            myUserId={myUserId}
-            onRemove={onRemoveMember}
-            onLeave={onLeaveGroup}
-          />
-        </div>
-      </section>
-
-      <section className="mb-10">
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <h2 className="mb-4 font-display text-xl font-semibold text-ink">
-            Invite people
-          </h2>
-          <InviteCard
-            groupId={id}
-            inviteToken={detail.invite_token}
-            existingMemberIds={detail.members.map((m) => m.user_id)}
-            onMemberAdded={refetchAll}
-          />
-        </div>
-      </section>
-
-      {isOwner && <DangerZone onDelete={onDeleteGroup} />}
     </div>
   );
 }

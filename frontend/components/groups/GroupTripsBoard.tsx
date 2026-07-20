@@ -14,12 +14,15 @@ export default function GroupTripsBoard({
   truncated,
   knownCount,
   unknownCount,
+  fullOnly = false,
 }: {
   trips: GroupTrip[];
   truncated: boolean;
   knownCount: number;
   unknownCount: number;
+  fullOnly?: boolean;
 }) {
+  const shown = fullOnly ? trips.filter((t) => t.full_group) : trips;
   return (
     <div>
       <h2 className="font-display text-xl font-semibold text-ink">
@@ -38,13 +41,15 @@ export default function GroupTripsBoard({
         </p>
       )}
 
-      {trips.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="mt-4 text-sm text-ink-muted/80">
-          No upcoming trips found for this group&rsquo;s origins yet.
+          {fullOnly && trips.length > 0
+            ? "No trips where everyone's free yet."
+            : "No upcoming trips found for this group's origins yet."}
         </p>
       ) : (
         <ul className="mt-4 space-y-2">
-          {trips.map((t) => (
+          {shown.map((t) => (
             <li key={t.key}>
               <GroupTripRow trip={t} />
             </li>

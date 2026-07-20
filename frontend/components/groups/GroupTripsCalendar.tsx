@@ -11,7 +11,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { DateWindow, GroupTrip, Trip } from "@/types/api";
 import { useUniCalendar } from "@/lib/university/context";
-import Chip from "@/components/ui/Chip";
 import MonthBlock from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
@@ -24,6 +23,8 @@ const MONTHS = 6;
 interface GroupTripsCalendarProps {
   trips: GroupTrip[];
   sharedWindows: { start: string; end: string }[];
+  /** filter to full-group trips; controlled by the page toolbar chip */
+  fullOnly?: boolean;
 }
 
 /** date → trip count over the full (unfiltered) matched set, for the heat strip */
@@ -48,6 +49,7 @@ function buildDensity(trips: GroupTrip[]): Record<string, number> {
 export default function GroupTripsCalendar({
   trips,
   sharedWindows,
+  fullOnly = false,
 }: GroupTripsCalendarProps) {
   const isMobile = useIsMobile();
   // the viewer's own academic overlay (exams/breaks), same as /calendar
@@ -56,7 +58,6 @@ export default function GroupTripsCalendar({
   const today = useMemo(() => todayStr(), []);
   const months = useMemo(() => monthSpan(today, MONTHS), [today]);
 
-  const [fullOnly, setFullOnly] = useState(false);
   const [hovered, setHovered] = useState<{
     trip: Trip;
     el: HTMLElement;
@@ -71,7 +72,6 @@ export default function GroupTripsCalendar({
 
   const density = useMemo(() => buildDensity(trips), [trips]);
 
-  const hasFullGroup = trips.some((t) => t.full_group);
   const shownTrips = useMemo(
     () => (fullOnly ? trips.filter((t) => t.full_group) : trips),
     [trips, fullOnly],
@@ -95,18 +95,6 @@ export default function GroupTripsCalendar({
 
   return (
     <div>
-      {hasFullGroup && (
-        <div className="mb-4">
-          <Chip
-            size="sm"
-            selected={fullOnly}
-            onClick={() => setFullOnly((v) => !v)}
-          >
-            Everyone&rsquo;s free only
-          </Chip>
-        </div>
-      )}
-
       <div className="space-y-5">
         {months.map((spec, i) =>
           isMobile ? (
