@@ -108,6 +108,13 @@ export function clampDayInMonth(
   return parseLocalDate(date).getDate();
 }
 
+/** Whole days from `a` to `b` (b − a), both YYYY-MM-DD, local-safe. */
+export function diffDays(a: string, b: string): number {
+  return Math.round(
+    (parseLocalDate(b).getTime() - parseLocalDate(a).getTime()) / 86_400_000,
+  );
+}
+
 /** Does the [out,ret] inclusive interval intersect this month at all? */
 export function spansMonth(
   out: string,

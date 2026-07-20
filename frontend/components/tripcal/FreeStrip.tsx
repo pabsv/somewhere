@@ -13,6 +13,11 @@ interface FreeStripProps {
   spec: MonthSpec;
   /** the user's availability windows (unclipped; we clip to this month here) */
   windows: DateWindow[];
+  /**
+   * Total day-columns of the month grid (spec.days + ghost spill columns).
+   * Keeps the strip aligned with the bar grid; the spill cells stay empty.
+   */
+  totalCols?: number;
 }
 
 interface Segment {
@@ -55,8 +60,8 @@ function edgeLabel(w: DateWindow): string {
  * "→10" (back by), the same idiom YearPaint uses in Settings.
  * Renders nothing when no window touches this month.
  */
-export default function FreeStrip({ spec, windows }: FreeStripProps) {
-  const cols = spec.days;
+export default function FreeStrip({ spec, windows, totalCols }: FreeStripProps) {
+  const cols = totalCols ?? spec.days;
 
   const { segments, tags } = useMemo(() => {
     const segments: Segment[] = [];
