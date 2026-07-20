@@ -58,7 +58,7 @@ interface MonthBlockProps {
    * whose return crosses into it. Rendered as ghost bars over a left "fog"
    * lead-in zone — the mirror of the right spillover — so a boundary-crossing
    * flight reads consistently from both months. Same flights, same price order,
-   * same skin; capped at SPILL_MAX days of lead-in (older crossings are shown
+   * same skin; capped at PAD days of lead-in (older crossings are shown
    * only in their home month). Defaults to none.
    */
   inbound?: Trip[];
@@ -100,14 +100,14 @@ interface MonthBlockProps {
 const MAX_LANES = 6;
 const LANE_H = 28; // px per lane row incl. gap
 
-// Max ghost "spillover" day-columns added at each month edge so a
-// month-crossing bar can run its full length inside one row. The zone renders
-// foggy (dim axis numbers + translucent wash) to read as the neighbouring
-// month. Right edge = next month's first days (a departing bar's tail); left
-// edge = previous month's last days (a returning bar's head). A crossing beyond
-// SPILL_MAX days still clips and falls back to the "→N MON" chip / a rounded-off
-// left edge.
-const SPILL_MAX = 7;
+// Fixed ghost "spillover" day-columns at EACH month edge — always PAD, so every
+// month block has the identical structure (PAD fog · days · PAD fog) and lines
+// up cleanly; unused fog cells just stay empty. The zone renders foggy (dim axis
+// numbers + a light translucent wash) to read as the neighbouring month. Right
+// edge = next month's first days (a departing bar's tail); left edge = previous
+// month's last days (a returning bar's head). A crossing beyond PAD days still
+// clips and falls back to the "→N MON" chip / a rounded-off left edge.
+const PAD = 3;
 
 const MONTHS_SHORT = [
   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -145,13 +145,13 @@ export default function MonthBlock({
   // MonthBlock (personal + group calendar) gets the toggle for free.
   const [expanded, setExpanded] = useState(false);
 
-  // Inbound crossings that fit the SPILL_MAX lead-in (older ones live only in
+  // Inbound crossings that fit the PAD lead-in (older ones live only in
   // their home month). Days-before = how far the outbound predates this month.
   const inboundFit = useMemo(
     () =>
       inbound
         .map((t) => ({ t, before: diffDays(t.outbound_date, spec.startStr) }))
-        .filter(({ before }) => before > 0 && before <= SPILL_MAX),
+        .filter(({ before }) => before > 0 && before <= PAD),
     [inbound, spec],
   );
 
@@ -186,25 +186,11 @@ export default function MonthBlock({
     ),
   );
 
-  // ─── Left "fog" lead-in columns (previous month's last days) ──────────────
-  // Widened only as far as the placed inbound ghosts reach, capped at SPILL_MAX.
-  const lead = useMemo(
-    () => placedInbound.reduce((l, { before }) => Math.max(l, before), 0),
-    [placedInbound],
-  );
-
-  // ─── Right "fog" spillover columns (next month's first days) ──────────────
-  // Only as many as the placed bars actually need, capped at SPILL_MAX; 0 when
-  // nothing crosses the boundary (grid identical to the plain month).
-  const spill = useMemo(() => {
-    let s = 0;
-    for (const t of placedTrips) {
-      const ret = selections?.get(t.key)?.return_date ?? t.return_date;
-      if (ret > spec.endStr)
-        s = Math.max(s, Math.min(SPILL_MAX, diffDays(spec.endStr, ret)));
-    }
-    return s;
-  }, [placedTrips, selections, spec]);
+  // ─── Fixed "fog" columns each side (prev/next month's edge days) ──────────
+  // Constant PAD both sides so every month block has the same shape and aligns;
+  // fog cells with no crossing bar just render empty.
+  const lead = PAD;
+  const spill = PAD;
   const totalCols = lead + cols + spill;
 
   /** Shift an in-month 1-based day column into the grid (past the left fog). */
@@ -504,7 +490,7 @@ export default function MonthBlock({
         {/* fog over the left lead-in — returning bars run under it, see-through */}
         {lead > 0 && (
           <div
-            className="pointer-events-none absolute inset-y-0 left-0 z-30 border-r border-dashed border-line bg-card/60"
+            className="pointer-events-none absolute inset-y-0 left-0 z-30 border-r border-dashed border-line bg-card/35"
             style={{ width: `${(lead / totalCols) * 100}%` }}
             aria-hidden="true"
           >
@@ -517,7 +503,7 @@ export default function MonthBlock({
         {/* fog over the right spill zone — bars run under it and read see-through */}
         {spill > 0 && (
           <div
-            className="pointer-events-none absolute inset-y-0 right-0 z-30 border-l border-dashed border-line bg-card/60"
+            className="pointer-events-none absolute inset-y-0 right-0 z-30 border-l border-dashed border-line bg-card/35"
             style={{ left: `${((lead + cols) / totalCols) * 100}%` }}
             aria-hidden="true"
           >
@@ -567,7 +553,7 @@ export default function MonthBlock({
 
           {/* Inbound ghosts: previous-month departures returning into this
               month, rendered over the left fog. Head starts in the fog (or
-              clips at the fog edge when it predates SPILL_MAX); tail runs into
+              clips at the fog edge when it predates PAD); tail runs into
               the real days so the label reads crisp — the mirror of the right
               spillover. No stretch/selection (the interaction lives in the
               trip's home month). */}

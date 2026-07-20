@@ -282,7 +282,7 @@ export default function CalendarPage() {
 
   // Boundary crossings for each month's left "fog" lead-in: trips departing
   // before the month whose return lands inside it. MonthBlock caps the lead-in
-  // to SPILL_MAX; these are the same flights the previous month spills right.
+  // to PAD; these are the same flights the previous month spills right.
   const inboundByMonth = useMemo(() => {
     return months.map((spec) =>
       shownTrips.filter(
