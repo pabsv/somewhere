@@ -163,7 +163,11 @@ export default function GroupDetailPage() {
   const hasFullGroup = trips.trips.some((t) => t.full_group);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+    <div
+      className={`mx-auto px-4 py-8 transition-[max-width] duration-300 sm:px-6 sm:py-10 ${
+        infoOpen ? "max-w-[94rem]" : "max-w-6xl"
+      }`}
+    >
       <Link
         href="/groups"
         className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink"
@@ -229,13 +233,15 @@ export default function GroupDetailPage() {
                 truncated={trips.truncated}
                 knownCount={trips.known_count}
                 unknownCount={trips.unknown_count}
-                fullOnly={fullOnly}
+                fullOnly={hasFullGroup && fullOnly}
               />
             ) : (
               <GroupTripsCalendar
                 trips={trips.trips}
                 sharedWindows={trips.shared_windows}
-                fullOnly={fullOnly}
+                availHeat={trips.avail_heat}
+                memberCount={trips.known_count}
+                fullOnly={hasFullGroup && fullOnly}
               />
             )}
           </div>
