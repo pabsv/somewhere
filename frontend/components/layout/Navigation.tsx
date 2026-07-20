@@ -67,16 +67,6 @@ function UsersIcon({ className }: { className?: string }) {
   );
 }
 
-function GroupsIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <circle cx="9" cy="9" r="5" />
-      <circle cx="15" cy="9" r="5" />
-      <circle cx="12" cy="15" r="5" />
-    </svg>
-  );
-}
-
 /**
  * Profile menu — avatar/name button top-right; dropdown holds the
  * account-scoped destinations (Settings, Friends) plus Sign out. Closes on
@@ -150,14 +140,6 @@ function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
             <SlidersIcon className="h-4.5 w-4.5" />
             Settings
           </Link>
-          <Link href="/friends" role="menuitem" className={itemClass}>
-            <UsersIcon className="h-4.5 w-4.5" />
-            Friends
-          </Link>
-          <Link href="/groups" role="menuitem" className={itemClass}>
-            <GroupsIcon className="h-4.5 w-4.5" />
-            Groups
-          </Link>
           <div aria-hidden="true" className="mx-4 my-1.5 border-t border-line" />
           <form action="/api/auth/signout" method="post">
             <button type="submit" role="menuitem" className={`${itemClass} w-full`}>
@@ -173,10 +155,15 @@ function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
 export default function Navigation({ user }: NavigationProps) {
   const pathname = usePathname();
 
+  // Friends (which now also hosts Groups) is account-scoped — only surfaced
+  // once signed in. Admin appends after it for admins.
+  const signedInLinks: NavLink[] = user
+    ? [...LINKS, { href: "/friends", label: "Friends", icon: UsersIcon }]
+    : LINKS;
   const links: NavLink[] =
     user?.role === "admin"
-      ? [...LINKS, { href: "/admin", label: "Admin", icon: ShieldIcon }]
-      : LINKS;
+      ? [...signedInLinks, { href: "/admin", label: "Admin", icon: ShieldIcon }]
+      : signedInLinks;
 
   return (
     <>
