@@ -970,6 +970,8 @@ function curateBars(trips: Trip[]): Trip[] {
 export interface GroupTripsData {
   trips: GroupTrip[];
   shared_windows: { start: string; end: string }[];
+  /** date (YYYY-MM-DD) → number of known members free that day (heat map) */
+  avail_heat: Record<string, number>;
   known_count: number;
   unknown_count: number;
   truncated: boolean;
@@ -1165,6 +1167,41 @@ function intersectAllMemberWindows(
   return clipRuns(runs, lo, hi);
 }
 
+/** YYYY-MM-DD one calendar day after `date` (UTC-safe). */
+function nextDay(date: string): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Per-day availability heat for the group calendar: date (YYYY-MM-DD) → number
+ * of KNOWN members free that day. Date-level only — edge hours are ignored
+ * here (this is a coarse "how many people could go" wash, not the hour-matched
+ * trip filter). Each member counts at most once per day even across
+ * overlapping windows, so counts run 0..members and normalise cleanly against
+ * known_count. Only days with >=1 free member are emitted (0 = white).
+ */
+function buildAvailHeat(
+  perMemberWindows: AvailWindow[][],
+  lo: string,
+  hi: string,
+): Record<string, number> {
+  const heat: Record<string, number> = {};
+  for (const windows of perMemberWindows) {
+    const days = new Set<string>();
+    for (const w of windows) {
+      // ISO dates compare lexicographically, so the clamp doubles as the
+      // in-range test; s > e (window fully outside [lo,hi]) skips the loop.
+      const s = w.start < lo ? lo : w.start;
+      const e = w.end > hi ? hi : w.end;
+      for (let d = s; d <= e; d = nextDay(d)) days.add(d);
+    }
+    for (const d of days) heat[d] = (heat[d] ?? 0) + 1;
+  }
+  return heat;
+}
+
 /**
  * Group trip matching: fan loadUserAvailability over every member, then rank
  * upcoming trips by how many KNOWN members (>=1 availability window) fit
@@ -1245,9 +1282,19 @@ export async function getGroupTripsData(
         ).map((r) => ({ start: r.start, end: r.end }))
       : [];
 
+  // Graded heat (date → free-member count) for the calendar underlay — a
+  // superset of shared_windows: shows where ANYONE is free, darkest where
+  // everyone is.
+  const availHeat = buildAvailHeat(
+    known.map((m) => m.avail.windows),
+    start,
+    end,
+  );
+
   return {
     trips: curated,
     shared_windows: sharedWindows,
+    avail_heat: availHeat,
     known_count: known.length,
     unknown_count: unknownCount,
     truncated,

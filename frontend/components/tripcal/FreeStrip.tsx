@@ -14,10 +14,12 @@ interface FreeStripProps {
   /** the user's availability windows (unclipped; we clip to this month here) */
   windows: DateWindow[];
   /**
-   * Total day-columns of the month grid (spec.days + ghost spill columns).
-   * Keeps the strip aligned with the bar grid; the spill cells stay empty.
+   * Total day-columns of the month grid (left fog + spec.days + right spill).
+   * Keeps the strip aligned with the bar grid; the fog cells stay empty.
    */
   totalCols?: number;
+  /** left fog lead-in columns to skip before the month's own days (default 0). */
+  lead?: number;
 }
 
 interface Segment {
@@ -60,7 +62,12 @@ function edgeLabel(w: DateWindow): string {
  * "→10" (back by), the same idiom YearPaint uses in Settings.
  * Renders nothing when no window touches this month.
  */
-export default function FreeStrip({ spec, windows, totalCols }: FreeStripProps) {
+export default function FreeStrip({
+  spec,
+  windows,
+  totalCols,
+  lead = 0,
+}: FreeStripProps) {
   const cols = totalCols ?? spec.days;
 
   const { segments, tags } = useMemo(() => {
@@ -117,7 +124,7 @@ export default function FreeStrip({ spec, windows, totalCols }: FreeStripProps) 
             <span
               key={i}
               className="tnum whitespace-nowrap text-center font-mono text-[8px] leading-none text-steal"
-              style={{ gridColumn: t.col }}
+              style={{ gridColumn: t.col + lead }}
             >
               {t.label}
             </span>
@@ -138,7 +145,7 @@ export default function FreeStrip({ spec, windows, totalCols }: FreeStripProps) 
             title={seg.title}
             className="h-2 rounded-full bg-steal"
             style={{
-              gridColumn: `${seg.start} / span ${Math.max(1, seg.end - seg.start + 1)}`,
+              gridColumn: `${seg.start + lead} / span ${Math.max(1, seg.end - seg.start + 1)}`,
             }}
           />
         ))}

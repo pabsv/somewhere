@@ -18,11 +18,15 @@ import TripTooltip from "@/components/tripcal/TripTooltip";
 import { useIsMobile } from "@/components/tripcal/useIsMobile";
 import { monthSpan, todayStr } from "@/components/tripcal/calendarMath";
 
-const MONTHS = 6;
+const MONTHS = 10;
 
 interface GroupTripsCalendarProps {
   trips: GroupTrip[];
   sharedWindows: { start: string; end: string }[];
+  /** date → count of known members free that day; drives the green heat map */
+  availHeat?: Record<string, number>;
+  /** known-member count = heat normaliser (count/memberCount → darkness) */
+  memberCount?: number;
   /** filter to full-group trips; controlled by the page toolbar chip */
   fullOnly?: boolean;
 }
@@ -49,6 +53,8 @@ function buildDensity(trips: GroupTrip[]): Record<string, number> {
 export default function GroupTripsCalendar({
   trips,
   sharedWindows,
+  availHeat,
+  memberCount = 0,
   fullOnly = false,
 }: GroupTripsCalendarProps) {
   const isMobile = useIsMobile();
@@ -88,6 +94,19 @@ export default function GroupTripsCalendar({
     [shownTrips, months],
   );
 
+  // Previous-month departures returning into each month — the left "fog"
+  // lead-in ghosts (mirror of the right spillover). MonthBlock caps the depth.
+  const inboundByMonth = useMemo(
+    () =>
+      months.map((spec) =>
+        shownTrips.filter(
+          (t) =>
+            t.outbound_date < spec.startStr && t.return_date >= spec.startStr,
+        ),
+      ),
+    [shownTrips, months],
+  );
+
   const openPopover = useCallback((t: Trip) => {
     setHovered(null);
     setPopoverTrip(t);
@@ -110,8 +129,11 @@ export default function GroupTripsCalendar({
               key={spec.label}
               spec={spec}
               trips={tripsByMonth[i]}
+              inbound={inboundByMonth[i]}
               density={density}
               windows={windows}
+              availHeat={availHeat}
+              heatMax={memberCount}
               uniPeriods={uniPeriods}
               today={today}
               onBarHover={(trip, el) =>

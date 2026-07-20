@@ -72,9 +72,9 @@ TIER_B_HOURS = 72    # every 3 days
 TIER_C_HOURS = 168   # weekly
 
 # Per-route scrape parameters (used by pool scheduler).
-SCRAPE_WINDOW_DAYS = 180             # how far ahead to look (~6 months — MVP target)
+SCRAPE_WINDOW_DAYS = 295             # how far ahead to look (~10 months — matches the 10-month calendar view)
 SCRAPE_MIN_NIGHTS = 2                # shortest trip to consider
-SCRAPE_MAX_NIGHTS = 10               # longest trip (WINDOW_DAYS + MAX_NIGHTS must stay < ~300 — fli limit)
+SCRAPE_MAX_NIGHTS = 10               # longest trip (WINDOW_DAYS + MAX_NIGHTS must stay <= 305 — Google Flights' hard fare horizon; 295+10=305 exactly)
 SCRAPE_MAX_PER_OUT_DATE = 2          # Phase-2 diversity: max detailed pairs sharing one departure date
 SCRAPE_TOP_N_CHEAP_DATES = 10        # Phase-2 detail fetches per route per cycle
 

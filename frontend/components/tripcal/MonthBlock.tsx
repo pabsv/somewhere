@@ -10,6 +10,7 @@ import DensityStrip from "./DensityStrip";
 import FreeStrip from "./FreeStrip";
 import {
   type MonthSpec,
+  addDays,
   clampDayInMonth,
   diffDays,
   isWeekend,
@@ -52,10 +53,28 @@ interface MonthBlockProps {
   spec: MonthSpec;
   /** trips whose interval intersects this month (pre-filtered by the page) */
   trips: Trip[];
+  /**
+   * Trips that BELONG to the previous month (outbound before this month) but
+   * whose return crosses into it. Rendered as ghost bars over a left "fog"
+   * lead-in zone — the mirror of the right spillover — so a boundary-crossing
+   * flight reads consistently from both months. Same flights, same price order,
+   * same skin; capped at SPILL_MAX days of lead-in (older crossings are shown
+   * only in their home month). Defaults to none.
+   */
+  inbound?: Trip[];
   /** date → count over the unfiltered match, for the heat strip */
   density: Record<string, number>;
   /** availability windows to underlay (already day-clipped is not required) */
   windows: DateWindow[];
+  /**
+   * Per-day availability heat (date → free-member count). When present, the
+   * availability underlay renders as a graded green heat map (darker = more
+   * people free) instead of the uniform wash from `windows`. Used by the group
+   * calendar; the personal calendar omits it. Requires `heatMax` > 0.
+   */
+  availHeat?: Record<string, number>;
+  /** heat normaliser (known member count); count/heatMax → cell darkness */
+  heatMax?: number;
   /** draw the faint steal-green wash behind the bars (default true) */
   underlay?: boolean;
   /** render the slim steal-green FreeStrip above the day axis (default false) */
@@ -81,10 +100,13 @@ interface MonthBlockProps {
 const MAX_LANES = 6;
 const LANE_H = 28; // px per lane row incl. gap
 
-// Max ghost "spillover" day-columns appended after the month's last day so a
+// Max ghost "spillover" day-columns added at each month edge so a
 // month-crossing bar can run its full length inside one row. The zone renders
-// foggy (dim axis numbers + translucent wash) to read as "next month". A trip
-// returning beyond the spill still clips and falls back to the "→N MON" chip.
+// foggy (dim axis numbers + translucent wash) to read as the neighbouring
+// month. Right edge = next month's first days (a departing bar's tail); left
+// edge = previous month's last days (a returning bar's head). A crossing beyond
+// SPILL_MAX days still clips and falls back to the "→N MON" chip / a rounded-off
+// left edge.
 const SPILL_MAX = 7;
 
 const MONTHS_SHORT = [
@@ -102,8 +124,11 @@ const MONTHS_SHORT = [
 export default function MonthBlock({
   spec,
   trips,
+  inbound = [],
   density,
   windows,
+  availHeat,
+  heatMax = 0,
   underlay = true,
   showFreeStrip = false,
   uniPeriods,
@@ -120,11 +145,23 @@ export default function MonthBlock({
   // MonthBlock (personal + group calendar) gets the toggle for free.
   const [expanded, setExpanded] = useState(false);
 
+  // Inbound crossings that fit the SPILL_MAX lead-in (older ones live only in
+  // their home month). Days-before = how far the outbound predates this month.
+  const inboundFit = useMemo(
+    () =>
+      inbound
+        .map((t) => ({ t, before: diffDays(t.outbound_date, spec.startStr) }))
+        .filter(({ before }) => before > 0 && before <= SPILL_MAX),
+    [inbound, spec],
+  );
+
   // ─── Lane assignment (price asc, greedy ≤6 unless expanded) ───────────────
+  // Inbound ghosts share the native lane pool so a returning bar and a native
+  // bar never overlap in the same lane; price order keeps it deterministic.
   const { lanes, overflow } = useMemo(
     () =>
       assignLanes(
-        trips.map((t) => ({
+        [...inboundFit.map(({ t }) => t), ...trips].map((t) => ({
           key: t.key,
           outbound_date: t.outbound_date,
           return_date: t.return_date,
@@ -132,16 +169,31 @@ export default function MonthBlock({
         })),
         expanded ? Number.POSITIVE_INFINITY : MAX_LANES,
       ),
-    [trips, expanded],
+    [inboundFit, trips, expanded],
   );
 
+  const nativeKeys = useMemo(() => new Set(trips.map((t) => t.key)), [trips]);
   const placedTrips = trips.filter((t) => lanes.has(t.key));
+  const placedInbound = inboundFit.filter(({ t }) => lanes.has(t.key));
+  // "N shown" + "+N more" account for native bars only; a dropped inbound ghost
+  // is still visible in its home month, so it never inflates this month's count.
+  const nativeOverflow = overflow.filter((k) => nativeKeys.has(k));
   const laneCount = Math.max(
     1,
-    placedTrips.reduce((m, t) => Math.max(m, (lanes.get(t.key) ?? 0) + 1), 0),
+    [...placedTrips, ...placedInbound.map(({ t }) => t)].reduce(
+      (m, t) => Math.max(m, (lanes.get(t.key) ?? 0) + 1),
+      0,
+    ),
   );
 
-  // ─── Ghost spillover columns (next month's first days) ────────────────────
+  // ─── Left "fog" lead-in columns (previous month's last days) ──────────────
+  // Widened only as far as the placed inbound ghosts reach, capped at SPILL_MAX.
+  const lead = useMemo(
+    () => placedInbound.reduce((l, { before }) => Math.max(l, before), 0),
+    [placedInbound],
+  );
+
+  // ─── Right "fog" spillover columns (next month's first days) ──────────────
   // Only as many as the placed bars actually need, capped at SPILL_MAX; 0 when
   // nothing crosses the boundary (grid identical to the plain month).
   const spill = useMemo(() => {
@@ -153,13 +205,16 @@ export default function MonthBlock({
     }
     return s;
   }, [placedTrips, selections, spec]);
-  const totalCols = cols + spill;
+  const totalCols = lead + cols + spill;
 
-  /** End column for a return date — runs into the spill zone when it fits. */
+  /** Shift an in-month 1-based day column into the grid (past the left fog). */
+  const rc = (dayCol: number) => dayCol + lead;
+
+  /** End column for a return date — runs into the right spill zone when it fits. */
   const endColFor = (ret: string) =>
     ret <= spec.endStr
-      ? clampDayInMonth(ret, spec)
-      : cols + Math.min(spill, diffDays(spec.endStr, ret));
+      ? rc(clampDayInMonth(ret, spec))
+      : lead + cols + Math.min(spill, diffDays(spec.endStr, ret));
 
   // today marker column (only if today falls inside this month)
   const todayCol =
@@ -193,9 +248,14 @@ export default function MonthBlock({
     [uniPeriods, spec],
   );
 
-  // Axis cells: the month's days, then the spill zone's next-month days (dim).
+  // Axis cells: the left fog (previous month's last days, dim), the month's
+  // days, then the right spill zone's next-month days (dim).
   const dayNumbers = Array.from({ length: cols }, (_, i) => i + 1);
   const spillNumbers = Array.from({ length: spill }, (_, i) => i + 1);
+  const leadDates = useMemo(
+    () => Array.from({ length: lead }, (_, i) => addDays(spec.startStr, i - lead)),
+    [lead, spec],
+  );
 
   // ─── Trip-stretch bubble (hovered bar only) ────────────────────────────────
   // The full-length bubble uses window-local percentage geometry, so it only
@@ -210,7 +270,7 @@ export default function MonthBlock({
     if (stretch.winStart < spec.startStr || stretch.winEnd > spec.endStr)
       return null;
     const cells: StretchCell[] = stretch.cells.map((c) => ({
-      dayCol: clampDayInMonth(c.date, spec),
+      dayCol: rc(clampDayInMonth(c.date, spec)),
       side: c.side,
       label: c.label,
       active: c.active,
@@ -219,13 +279,14 @@ export default function MonthBlock({
     return {
       trip: base,
       lane,
-      winStartCol: clampDayInMonth(stretch.winStart, spec),
-      winEndCol: clampDayInMonth(stretch.winEnd, spec),
-      barStartCol: clampDayInMonth(stretch.selOut, spec),
-      barEndCol: clampDayInMonth(stretch.selRet, spec),
+      winStartCol: rc(clampDayInMonth(stretch.winStart, spec)),
+      winEndCol: rc(clampDayInMonth(stretch.winEnd, spec)),
+      barStartCol: rc(clampDayInMonth(stretch.selOut, spec)),
+      barEndCol: rc(clampDayInMonth(stretch.selRet, spec)),
       cells,
     };
-  }, [stretch, lanes, spec, placedTrips]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stretch, lanes, spec, placedTrips, lead]);
 
   return (
     <section className="rounded-card border border-line bg-card p-4 shadow-card">
@@ -237,7 +298,7 @@ export default function MonthBlock({
           <span className="tnum font-mono text-[11px] text-ink-muted">
             {placedTrips.length} shown
           </span>
-          {(overflow.length > 0 || expanded) && (
+          {(nativeOverflow.length > 0 || expanded) && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -266,14 +327,35 @@ export default function MonthBlock({
 
       {/* ─── Availability free-strip (steal-green, above the day axis) ─────── */}
       {showFreeStrip && (
-        <FreeStrip spec={spec} windows={windows} totalCols={totalCols} />
+        <FreeStrip
+          spec={spec}
+          windows={windows}
+          totalCols={totalCols}
+          lead={lead}
+        />
       )}
 
-      {/* ─── Day-number axis (+ dim next-month days over the spill zone) ──── */}
+      {/* ─── Day-number axis (dim prev-month days | month | dim next-month) ── */}
       <div
         className="mb-1 grid gap-px"
         style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
       >
+        {leadDates.map((ds) => {
+          const y = Number(ds.slice(0, 4));
+          const m = Number(ds.slice(5, 7)) - 1;
+          const day = Number(ds.slice(8, 10));
+          return (
+            <div
+              key={`l${ds}`}
+              className="tnum text-center font-mono text-[9px] leading-none text-ink-muted/40"
+            >
+              <span className="block text-[8px] leading-none opacity-70">
+                {weekdayLetter(y, m, day)}
+              </span>
+              <span className="mt-0.5 block">{day}</span>
+            </div>
+          );
+        })}
         {dayNumbers.map((d) => {
           const weekend = isWeekend(spec.year, spec.month, d);
           const isToday = todayCol === d;
@@ -316,6 +398,9 @@ export default function MonthBlock({
           style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
           aria-hidden="true"
         >
+          {leadDates.map((ds) => (
+            <div key={`l${ds}`} />
+          ))}
           {dayNumbers.map((d) => (
             <div
               key={d}
@@ -338,7 +423,7 @@ export default function MonthBlock({
                 key={i}
                 className="rounded-[2px]"
                 style={{
-                  gridColumn: `${seg.start} / span ${Math.max(1, seg.end - seg.start + 1)}`,
+                  gridColumn: `${rc(seg.start)} / span ${Math.max(1, seg.end - seg.start + 1)}`,
                   ...(seg.kind === "exam"
                     ? {
                         backgroundImage:
@@ -354,23 +439,55 @@ export default function MonthBlock({
           </div>
         )}
 
-        {/* availability underlay (steal-green soft fill) */}
-        {underlay && availSegments.length > 0 && (
+        {/* availability underlay — graded green heat map (group calendar:
+            darker = more members free, white = nobody) when availHeat is
+            supplied, otherwise the uniform steal-green wash from `windows`.
+            Kept subtle (5–28% steal-green) so it reads behind the fares. */}
+        {underlay && availHeat && heatMax > 0 ? (
           <div
             className="pointer-events-none absolute inset-0 grid gap-px"
             style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
             aria-hidden="true"
           >
-            {availSegments.map((seg, i) => (
-              <div
-                key={i}
-                className="rounded-[2px] bg-steal/10"
-                style={{
-                  gridColumn: `${seg.start} / span ${Math.max(1, seg.end - seg.start + 1)}`,
-                }}
-              />
+            {leadDates.map((ds) => (
+              <div key={`l${ds}`} />
             ))}
+            {dayNumbers.map((d) => {
+              const key = `${spec.year}-${String(spec.month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              const count = availHeat[key] ?? 0;
+              if (count <= 0) return <div key={d} />;
+              const frac = Math.min(1, count / heatMax);
+              const pct = Math.round(5 + 23 * frac); // 5%→28% steal-green ramp
+              return (
+                <div
+                  key={d}
+                  className="rounded-[2px]"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--color-steal) ${pct}%, transparent)`,
+                  }}
+                />
+              );
+            })}
           </div>
+        ) : (
+          underlay &&
+          availSegments.length > 0 && (
+            <div
+              className="pointer-events-none absolute inset-0 grid gap-px"
+              style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
+              aria-hidden="true"
+            >
+              {availSegments.map((seg, i) => (
+                <div
+                  key={i}
+                  className="rounded-[2px] bg-steal/10"
+                  style={{
+                    gridColumn: `${rc(seg.start)} / span ${Math.max(1, seg.end - seg.start + 1)}`,
+                  }}
+                />
+              ))}
+            </div>
+          )
         )}
 
         {/* today vertical marker */}
@@ -378,17 +495,30 @@ export default function MonthBlock({
           <div
             className="pointer-events-none absolute inset-y-0 z-20 w-px bg-ink/40"
             style={{
-              left: `calc(${((todayCol - 0.5) / totalCols) * 100}%)`,
+              left: `calc(${((rc(todayCol) - 0.5) / totalCols) * 100}%)`,
             }}
             aria-hidden="true"
           />
         )}
 
-        {/* fog over the spill zone — bars run under it and read see-through */}
+        {/* fog over the left lead-in — returning bars run under it, see-through */}
+        {lead > 0 && (
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-30 border-r border-dashed border-line bg-card/60"
+            style={{ width: `${(lead / totalCols) * 100}%` }}
+            aria-hidden="true"
+          >
+            <span className="absolute -top-0.5 right-1 font-mono text-[8px] uppercase tracking-widest text-ink-muted/60">
+              {MONTHS_SHORT[(spec.month + 11) % 12]}
+            </span>
+          </div>
+        )}
+
+        {/* fog over the right spill zone — bars run under it and read see-through */}
         {spill > 0 && (
           <div
             className="pointer-events-none absolute inset-y-0 right-0 z-30 border-l border-dashed border-line bg-card/60"
-            style={{ left: `${(cols / totalCols) * 100}%` }}
+            style={{ left: `${((lead + cols) / totalCols) * 100}%` }}
             aria-hidden="true"
           >
             <span className="absolute -top-0.5 left-1 font-mono text-[8px] uppercase tracking-widest text-ink-muted/60">
@@ -421,7 +551,7 @@ export default function MonthBlock({
               <TripBar
                 key={trip.key}
                 trip={shown}
-                startCol={clampDayInMonth(out, spec)}
+                startCol={rc(clampDayInMonth(out, spec))}
                 endCol={endColFor(ret)}
                 lane={lanes.get(trip.key) ?? 0}
                 clippedStart={out < spec.startStr}
@@ -431,6 +561,34 @@ export default function MonthBlock({
                 stretchDelta={sel ? sel.deltaPrice : null}
                 onHover={(t, el) => onBarHover(t ? trip : null, el)}
                 onClick={() => onBarClick(trip)}
+              />
+            );
+          })}
+
+          {/* Inbound ghosts: previous-month departures returning into this
+              month, rendered over the left fog. Head starts in the fog (or
+              clips at the fog edge when it predates SPILL_MAX); tail runs into
+              the real days so the label reads crisp — the mirror of the right
+              spillover. No stretch/selection (the interaction lives in the
+              trip's home month). */}
+          {placedInbound.map(({ t, before }) => {
+            const clippedS = before > lead;
+            const startCol = clippedS ? 1 : lead - before + 1;
+            const clippedE = t.return_date > spec.endStr;
+            const endCol = clippedE
+              ? lead + cols
+              : rc(clampDayInMonth(t.return_date, spec));
+            return (
+              <TripBar
+                key={`in-${t.key}`}
+                trip={t}
+                startCol={startCol}
+                endCol={endCol}
+                lane={lanes.get(t.key) ?? 0}
+                clippedStart={clippedS}
+                clippedEnd={clippedE}
+                onHover={(tr, el) => onBarHover(tr ? t : null, el)}
+                onClick={() => onBarClick(t)}
               />
             );
           })}
@@ -459,9 +617,10 @@ export default function MonthBlock({
       <DensityStrip
         spec={spec}
         density={density}
-        overflowCount={overflow.length}
+        overflowCount={nativeOverflow.length}
         onExpand={() => setExpanded(true)}
         totalCols={totalCols}
+        lead={lead}
       />
     </section>
   );

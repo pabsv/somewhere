@@ -12,10 +12,12 @@ interface DensityStripProps {
   /** expand the month (show all bars); when absent the "+N more" is passive */
   onExpand?: () => void;
   /**
-   * Total day-columns of the month grid (spec.days + ghost spill columns).
-   * Keeps the strip aligned with the bar grid; the spill cells stay empty.
+   * Total day-columns of the month grid (left fog + spec.days + right spill).
+   * Keeps the strip aligned with the bar grid; the fog cells stay empty.
    */
   totalCols?: number;
+  /** left fog lead-in columns to skip before the month's own days (default 0). */
+  lead?: number;
 }
 
 /**
@@ -30,6 +32,7 @@ export default function DensityStrip({
   overflowCount,
   onExpand,
   totalCols,
+  lead = 0,
 }: DensityStripProps) {
   const days = Array.from({ length: spec.days }, (_, i) => {
     const day = dayStr(spec.year, spec.month, i + 1);
@@ -64,6 +67,9 @@ export default function DensityStrip({
           gridTemplateColumns: `repeat(${totalCols ?? spec.days}, minmax(0, 1fr))`,
         }}
       >
+        {Array.from({ length: lead }, (_, i) => (
+          <div key={`l${i}`} />
+        ))}
         {days.map(({ day, count }) => {
           // scale opacity 0.08..1 so any non-zero day is visible
           const opacity =

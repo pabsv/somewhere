@@ -666,6 +666,8 @@ export type SharedWindow = z.infer<typeof SharedWindowSchema>;
 export const GroupTripsResponseSchema = z.object({
   trips: z.array(GroupTripSchema),
   shared_windows: z.array(SharedWindowSchema),
+  /** date → count of known members free that day (calendar heat map) */
+  avail_heat: z.record(DateStringSchema, z.number()),
   known_count: z.number(),
   unknown_count: z.number(),
   truncated: z.boolean(),

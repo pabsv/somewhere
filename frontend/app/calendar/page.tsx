@@ -40,7 +40,7 @@ import {
   addMonths,
 } from "@/components/tripcal/calendarMath";
 
-const MONTHS = 6;
+const MONTHS = 10;
 
 /**
  * Dress an open-jaw combo as a CalTrip so MonthBlock/TripBar can render it.
@@ -280,6 +280,18 @@ export default function CalendarPage() {
     );
   }, [shownTrips, months]);
 
+  // Boundary crossings for each month's left "fog" lead-in: trips departing
+  // before the month whose return lands inside it. MonthBlock caps the lead-in
+  // to SPILL_MAX; these are the same flights the previous month spills right.
+  const inboundByMonth = useMemo(() => {
+    return months.map((spec) =>
+      shownTrips.filter(
+        (t) =>
+          t.outbound_date < spec.startStr && t.return_date >= spec.startStr,
+      ),
+    );
+  }, [shownTrips, months]);
+
   const totalShown = shownTrips.length;
   const isCold = !loading && !error && trips != null && totalShown === 0;
 
@@ -461,7 +473,7 @@ export default function CalendarPage() {
           When could you go?
         </h1>
         <p className="mt-2 max-w-xl text-base text-ink-muted">
-          Six months of fares from your airports, laid out on the board. Hover a
+          Ten months of fares from your airports, laid out on the board. Hover a
           bar for details, click it to book.
         </p>
       </header>
@@ -577,6 +589,7 @@ export default function CalendarPage() {
                 key={spec.label}
                 spec={spec}
                 trips={tripsByMonth[i]}
+                inbound={inboundByMonth[i]}
                 density={density}
                 windows={hasWindows ? windows : []}
                 underlay={!onlyFree}
