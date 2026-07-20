@@ -7,11 +7,17 @@ export default function CollapsibleSection({
   title,
   storageKey,
   defaultOpen = true,
+  className,
+  titleClassName,
   children,
 }: {
   title: string;
   storageKey: string;
   defaultOpen?: boolean;
+  /** Override the outer card shell (border/tone). Falls back to the neutral card. */
+  className?: string;
+  /** Override the heading colour (e.g. alert tone for a danger zone). */
+  titleClassName?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -29,14 +35,26 @@ export default function CollapsibleSection({
   }, [open, hydrated, storageKey]);
 
   return (
-    <div className="rounded-(--radius-card) border border-line bg-card shadow-(--shadow-card)">
+    <div
+      className={
+        className ??
+        "rounded-(--radius-card) border border-line bg-card shadow-(--shadow-card)"
+      }
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-6"
       >
-        <h2 className="font-display text-xl font-semibold text-ink">{title}</h2>
+        <h2
+          className={
+            titleClassName ??
+            "font-display text-xl font-semibold text-ink"
+          }
+        >
+          {title}
+        </h2>
         <svg
           viewBox="0 0 20 20"
           fill="none"

@@ -1,7 +1,7 @@
 "use client";
 
 import AcademicCard from "@/components/settings/AcademicCard";
-import CollapsibleSection from "@/components/settings/CollapsibleSection";
+import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import FavouritesCard from "@/components/settings/FavouritesCard";
 import PreferencesCard from "@/components/settings/PreferencesCard";
 import YearPaint from "@/components/settings/YearPaint";

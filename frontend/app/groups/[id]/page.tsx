@@ -16,6 +16,7 @@ import Button from "@/components/ui/Button";
 import GroupTripsBoard from "@/components/groups/GroupTripsBoard";
 import GroupTripsCalendar from "@/components/groups/GroupTripsCalendar";
 import Chip from "@/components/ui/Chip";
+import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import MembersCard from "@/components/groups/MembersCard";
 import InviteCard from "@/components/groups/InviteCard";
 import {
@@ -241,10 +242,12 @@ export default function GroupDetailPage() {
 
           {infoOpen && (
             <aside className="w-full shrink-0 space-y-6 lg:w-80">
-              <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card)">
-                <h2 className="mb-4 font-display text-lg font-semibold text-ink">
-                  Members
-                </h2>
+              {/* Each panel collapses independently; open/closed is remembered
+                  per user (keyed by user id) across visits and groups. */}
+              <CollapsibleSection
+                title="Members"
+                storageKey={`somewhere:group-info:members:${myUserId}`}
+              >
                 <MembersCard
                   members={detail.members}
                   myRole={detail.my_role}
@@ -252,21 +255,31 @@ export default function GroupDetailPage() {
                   onRemove={onRemoveMember}
                   onLeave={onLeaveGroup}
                 />
-              </div>
+              </CollapsibleSection>
 
-              <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card)">
-                <h2 className="mb-4 font-display text-lg font-semibold text-ink">
-                  Invite people
-                </h2>
+              <CollapsibleSection
+                title="Invite people"
+                storageKey={`somewhere:group-info:invite:${myUserId}`}
+              >
                 <InviteCard
                   groupId={id}
                   inviteToken={detail.invite_token}
                   existingMemberIds={detail.members.map((m) => m.user_id)}
                   onMemberAdded={refetchAll}
                 />
-              </div>
+              </CollapsibleSection>
 
-              {isOwner && <DangerZone onDelete={onDeleteGroup} />}
+              {isOwner && (
+                <CollapsibleSection
+                  title="Danger zone"
+                  storageKey={`somewhere:group-info:danger:${myUserId}`}
+                  defaultOpen={false}
+                  className="rounded-(--radius-card) border border-alert/30 bg-card shadow-(--shadow-card)"
+                  titleClassName="font-display text-xl font-semibold text-alert"
+                >
+                  <DangerZone onDelete={onDeleteGroup} />
+                </CollapsibleSection>
+              )}
             </aside>
           )}
         </div>
@@ -365,53 +378,48 @@ function DangerZone({ onDelete }: { onDelete: () => Promise<void> }) {
   };
 
   return (
-    <section className="mt-2">
-      <h2 className="font-display text-xl font-semibold text-alert">
-        Danger zone
-      </h2>
-      <div className="mt-4 rounded-(--radius-card) border border-alert/30 bg-card p-5 shadow-(--shadow-card) sm:p-6">
-        <p className="text-sm text-ink-muted">
-          Deleting this group removes it for every member. This can&rsquo;t
-          be undone.
-        </p>
-        <div className="mt-3">
-          {confirming ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={del}
-                className="rounded-(--radius-tag) bg-alert text-paper hover:opacity-90"
-              >
-                {busy ? "Deleting…" : "Confirm delete group?"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => setConfirming(false)}
-                className="rounded-(--radius-tag) border-line text-ink-muted hover:bg-transparent hover:text-ink"
-              >
-                Keep
-              </Button>
-            </div>
-          ) : (
+    <div>
+      <p className="text-sm text-ink-muted">
+        Deleting this group removes it for every member. This can&rsquo;t be
+        undone.
+      </p>
+      <div className="mt-3">
+        {confirming ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={del}
+              className="rounded-(--radius-tag) bg-alert text-paper hover:opacity-90"
+            >
+              {busy ? "Deleting…" : "Confirm delete group?"}
+            </Button>
             <Button
               type="button"
               size="sm"
               variant="secondary"
-              onClick={() => setConfirming(true)}
-              className="rounded-(--radius-tag) border-alert/50 text-alert hover:bg-transparent hover:text-alert"
+              disabled={busy}
+              onClick={() => setConfirming(false)}
+              className="rounded-(--radius-tag) border-line text-ink-muted hover:bg-transparent hover:text-ink"
             >
-              Delete group
+              Keep
             </Button>
-          )}
-        </div>
-        {error && <p className="mt-2 text-sm text-alert">{error}</p>}
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setConfirming(true)}
+            className="rounded-(--radius-tag) border-alert/50 text-alert hover:bg-transparent hover:text-alert"
+          >
+            Delete group
+          </Button>
+        )}
       </div>
-    </section>
+      {error && <p className="mt-2 text-sm text-alert">{error}</p>}
+    </div>
   );
 }
 
