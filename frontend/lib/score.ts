@@ -7,19 +7,44 @@
 //   delta_pct = (price - baseline) / baseline * 100        (negative = below typical)
 //   score: null baseline -> clamp(round((150 - price) / 1.5), 0, 100)
 //          else             clamp(round(50 - delta_pct * 2.5), 0, 100)
-//   deal_tier: "steal" if score >= 85 or price <= 35
-//              "deal"  if score >= 68
+//   deal_tier: absolute PRICE bands (not discount) —
+//              "steal" if price <= PRICE_BAND_STEAL (very cheap)
+//              "deal"  if price <= PRICE_BAND_DEAL  (cheap)
 //              "fair"  otherwise
+//   (score/delta_pct are still computed but no longer drive the tier —
+//    dormant, kept so discount-based tiers can be revived in one edit.)
 
 import type { DealTier } from "@/types/api";
 
-// ─── Tier thresholds (named constants — single source of truth) ──────────────
+// ─── Price bands (absolute EUR round-trip — the tier source of truth) ─────────
+// The app sells "very cheap flights to places", not "good discounts", so the
+// tier — and therefore every bar/chip/badge colour — keys off the absolute
+// round-trip price, not how far below the route baseline it sits.
 
-/** score >= this → "steal" */
+/** price <= this (EUR, round trip) → "steal" (very cheap → grab it) */
+export const PRICE_BAND_STEAL = 50;
+/** price <= this (EUR) → "deal" (cheap); above → "fair" */
+export const PRICE_BAND_DEAL = 100;
+
+/** Absolute-price tier for a round-trip fare. Single source of tier truth. */
+export function tierForPrice(price: number): DealTier {
+  return price <= PRICE_BAND_STEAL
+    ? "steal"
+    : price <= PRICE_BAND_DEAL
+      ? "deal"
+      : "fair";
+}
+
+// ─── Legacy discount-score thresholds (DORMANT) ──────────────────────────────
+// No longer drive the tier (bands do). Kept exported so score.test.ts imports
+// and any future discount-tier revival keep working. `score`/`delta_pct` are
+// still computed against these ideas but only for potential future use.
+
+/** DORMANT — was: score >= this → "steal" */
 export const STEAL_SCORE_THRESHOLD = 85;
-/** price <= this (EUR) → "steal" regardless of score */
+/** DORMANT — was: price <= this (EUR) → "steal" regardless of score */
 export const STEAL_PRICE_THRESHOLD = 35;
-/** score >= this (and not a steal) → "deal" */
+/** DORMANT — was: score >= this (and not a steal) → "deal" */
 export const DEAL_SCORE_THRESHOLD = 68;
 /**
  * price > this (EUR) → never "steal"/"deal", score capped at the midpoint.
@@ -50,7 +75,11 @@ export const CALENDAR_DEFAULT_MAX_PRICE = 200;
  */
 export const NEAR_AVAIL_MAX_PRICE = 50;
 
-/** True when a trip is cheap enough to surface as a ±1-day availability miss. */
+/**
+ * True when a trip is cheap enough to surface as a ±1-day availability miss.
+ * Now effectively price-only: "steal" ⟺ price <= PRICE_BAND_STEAL (50) ==
+ * NEAR_AVAIL_MAX_PRICE, so the tier clause is subsumed by the price clause.
+ */
 export function isNearAvailWorthy(tier: DealTier, price: number): boolean {
   return tier === "steal" || price <= NEAR_AVAIL_MAX_PRICE;
 }
@@ -116,30 +145,29 @@ function clamp(n: number, lo: number, hi: number): number {
 // per-user). The MAX_DEAL_PRICE sanity gate still applies: an expensive ticket
 // is never promoted, however far below its (possibly absurd) baseline it sits.
 
-/** favourite: score >= this → promote to "steal" */
-export const FAV_STEAL_SCORE_THRESHOLD = 75;
-/** favourite: price <= this (EUR) → promote to "steal" regardless of score */
-export const FAV_STEAL_PRICE_THRESHOLD = 50;
-/** favourite: score >= this → promote to "deal" */
-export const FAV_DEAL_SCORE_THRESHOLD = 55;
+/** favourite: price <= this (EUR) → promote to "steal" (one band greener) */
+export const FAV_PRICE_BAND_STEAL = 75;
+/** favourite: price <= this (EUR) → at least "deal" (one band greener) */
+export const FAV_PRICE_BAND_DEAL = 130;
 
 /**
- * Promote a trip's tier for a favourited city. Never demotes, never promotes an
- * over-MAX_DEAL_PRICE fare. Pass the trip's own score/price alongside its
- * already-computed tier.
+ * Promote a trip's tier for a favourited city — the relaxed price bands, so a
+ * favourite reads one band greener (a "home" city worth taking slightly
+ * pricier). Never demotes; never promotes an over-MAX_DEAL_PRICE fare. The
+ * `_score` param is unused (tier is price-based now) but kept so the existing
+ * call sites (CityCard, CityDetail, FavouritesStrip, calendar/page) need no
+ * change.
  */
 export function promoteFavouriteTier(
   tier: DealTier,
-  score: number,
+  _score: number,
   price: number,
 ): DealTier {
   if (price > MAX_DEAL_PRICE) return tier;
   if (tier === "steal") return tier;
-  if (score >= FAV_STEAL_SCORE_THRESHOLD || price <= FAV_STEAL_PRICE_THRESHOLD) {
-    return "steal";
-  }
+  if (price <= FAV_PRICE_BAND_STEAL) return "steal";
   if (tier === "deal") return tier;
-  if (score >= FAV_DEAL_SCORE_THRESHOLD) return "deal";
+  if (price <= FAV_PRICE_BAND_DEAL) return "deal";
   return tier;
 }
 
@@ -164,8 +192,9 @@ export function scoreTrip(price: number, baseline: number | null): TripScore {
     score = clamp(Math.round(SCORE_MIDPOINT - delta_pct * DELTA_WEIGHT), 0, 100);
   }
 
-  // Absolute sanity gate: an expensive ticket is never a deal, no matter how
-  // far below its (possibly absurd) baseline it sits.
+  // Absolute sanity gate: caps the (now display-dormant) `score` for absurd
+  // multi-leg fares. Tier-redundant since price > MAX_DEAL_PRICE > PRICE_BAND_DEAL
+  // is already "fair", but kept to keep `score` sane for any future revival.
   if (price > MAX_DEAL_PRICE) {
     return {
       score: Math.min(score, SCORE_MIDPOINT),
@@ -174,12 +203,8 @@ export function scoreTrip(price: number, baseline: number | null): TripScore {
     };
   }
 
-  const deal_tier: DealTier =
-    score >= STEAL_SCORE_THRESHOLD || price <= STEAL_PRICE_THRESHOLD
-      ? "steal"
-      : score >= DEAL_SCORE_THRESHOLD
-        ? "deal"
-        : "fair";
+  // Tier = absolute price band (not discount). See tierForPrice / PRICE_BAND_*.
+  const deal_tier = tierForPrice(price);
 
   return { score, delta_pct, deal_tier };
 }

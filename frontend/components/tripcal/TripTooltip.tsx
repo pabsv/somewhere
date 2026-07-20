@@ -18,10 +18,9 @@ interface TripTooltipProps {
 }
 
 /**
- * Lightweight hover tooltip: route, dates, nights, price, and "% below typical"
- * when the fare beats the route baseline (delta_pct < 0). Positioned just above
- * the hovered bar via fixed coordinates from the anchor's bounding box. The
- * stretch options now live on the bar itself (the full-length bubble, 2c).
+ * Lightweight hover tooltip: route, dates, nights, and price. Positioned just
+ * above the hovered bar via fixed coordinates from the anchor's bounding box.
+ * The stretch options now live on the bar itself (the full-length bubble, 2c).
  */
 export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -38,11 +37,6 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
     setPos({ left, top: top < 8 ? a.bottom + 8 : top });
     // reposition when the anchor (or its swapped dates) changes
   }, [anchor, trip.outbound_date, trip.return_date]);
-
-  const belowPct =
-    trip.delta_pct != null && trip.delta_pct < 0
-      ? Math.round(-trip.delta_pct)
-      : null;
 
   const dest = getDestination(trip.destination);
   const oj = trip.openjaw ?? null;
@@ -75,11 +69,6 @@ export default function TripTooltip({ trip, anchor }: TripTooltipProps) {
       </p>
       <p className="tnum mt-1 font-mono text-sm font-semibold text-ink">
         {formatPrice(trip.price)}
-        {belowPct != null && (
-          <span className="ml-2 text-xs font-medium text-steal">
-            {belowPct}% below typical
-          </span>
-        )}
         {oj && oj.vs_roundtrip != null && oj.vs_roundtrip > 0 && (
           <span className="ml-2 text-xs font-medium text-steal">
             €{Math.round(oj.vs_roundtrip)} under round trip

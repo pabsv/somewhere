@@ -18,9 +18,9 @@ interface CityCardProps {
 
 /**
  * One destination in the Explore grid. City name (display), country + IATA tag
- * (mono yellow), the best fare as a tier-colored FareTag, a "% below typical"
- * line in steal-green when the best fare beats the route baseline, and the trip
- * count. The whole card links to /city/[code], preserving the origin filter.
+ * (mono yellow), the cheapest fare as a price-band-colored FareTag, the origin,
+ * and the trip count. The whole card links to /city/[code], preserving the
+ * origin filter.
  */
 export default function CityCard({
   city,
@@ -38,10 +38,6 @@ export default function CityCard({
   const displayTier = favourited
     ? promoteFavouriteTier(best.deal_tier, best.score, best.price)
     : best.deal_tier;
-  const belowPct =
-    best.delta_pct != null && best.delta_pct < 0
-      ? Math.round(-best.delta_pct)
-      : null;
 
   const href = query ? `/city/${city.code}?${query}` : `/city/${city.code}`;
 
@@ -80,15 +76,9 @@ export default function CityCard({
 
       <div className="mt-3 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          {belowPct != null ? (
-            <p className="tnum truncate font-mono text-xs font-medium text-steal">
-              {belowPct}% below typical
-            </p>
-          ) : (
-            <p className="truncate font-mono text-xs text-ink-muted/70">
-              from {best.origin}
-            </p>
-          )}
+          <p className="truncate font-mono text-xs text-ink-muted/70">
+            from {best.origin}
+          </p>
           {openjaw && (
             <p
               className="tnum mt-0.5 truncate font-mono text-xs font-medium text-steal"

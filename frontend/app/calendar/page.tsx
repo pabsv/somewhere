@@ -8,7 +8,7 @@ import { getTrips, getOpenJaw, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
-import { promoteFavouriteTier } from "@/lib/score";
+import { promoteFavouriteTier, tierForPrice } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock, {
@@ -44,8 +44,9 @@ const MONTHS = 6;
 
 /**
  * Dress an open-jaw combo as a CalTrip so MonthBlock/TripBar can render it.
- * Tier: "deal" when it beats the stored round trip, "fair" when it fills a
- * date hole. score 0 keeps combos below scored round trips in lane packing.
+ * Tier: absolute price band on the combo total (tierForPrice) so combos colour
+ * by cheapness like every other bar. score 0 keeps combos below scored round
+ * trips in lane packing.
  */
 function toCalTrip(oj: OpenJawTrip): CalTrip {
   const emptyLeg = { dep: "", arr: "", duration: "", stops: 0 };
@@ -63,7 +64,7 @@ function toCalTrip(oj: OpenJawTrip): CalTrip {
     is_direct: false,
     score: 0,
     delta_pct: null,
-    deal_tier: oj.vs_roundtrip != null && oj.vs_roundtrip > 0 ? "deal" : "fair",
+    deal_tier: tierForPrice(oj.total_price),
     outbound: emptyLeg,
     ret: emptyLeg,
     price_points: [],

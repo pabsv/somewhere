@@ -114,9 +114,9 @@ function LegRow({
 
 /**
  * Click-through trip detail in a side Sheet: full itinerary, the fare with its
- * tier badge and "% below typical" anchor, a price sparkline from
- * trip.price_points, a Google Flights deep link (new tab), and a
- * "More trips to {city} →" link to /city/[code] (preserving ?from=).
+ * price-band badge, the airlines, a price sparkline from trip.price_points, a
+ * Google Flights deep link (new tab), and a "More trips to {city} →" link to
+ * /city/[code] (preserving ?from=).
  */
 export default function TripPopover({
   trip,
@@ -145,10 +145,6 @@ export default function TripPopover({
       {city}
     </>
   ) : undefined;
-  const belowPct =
-    trip?.delta_pct != null && trip.delta_pct < 0
-      ? Math.round(-trip.delta_pct)
-      : null;
   const cityHref = trip
     ? fromQuery
       ? `/city/${trip.destination}?${fromQuery}`
@@ -268,20 +264,11 @@ export default function TripPopover({
             </>
           )}
 
-          {/* ─── Anchor + sparkline ───────────────────────────────────── */}
+          {/* ─── Airlines + sparkline ─────────────────────────────────── */}
           {!oj && (
           <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-paper px-3 py-2.5">
             <div className="min-w-0">
-              {belowPct != null ? (
-                <p className="tnum font-mono text-sm font-medium text-steal">
-                  {belowPct}% below typical
-                </p>
-              ) : (
-                <p className="font-mono text-xs text-ink-muted">
-                  around the typical fare for this route
-                </p>
-              )}
-              <p className="tnum mt-0.5 font-mono text-[11px] text-ink-muted">
+              <p className="tnum font-mono text-[11px] text-ink-muted">
                 {trip.airlines.length > 0 ? trip.airlines.join(", ") : "—"}
               </p>
             </div>

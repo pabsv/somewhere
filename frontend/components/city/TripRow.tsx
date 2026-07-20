@@ -1,7 +1,7 @@
 // ─── TripRow — one upcoming trip on the City detail (Track E) ────────────────
 // origin→dest mono IATA codes · date range · nights · airlines · direct/stops
-// Badge · FareTag (tier-colored price) · "% below typical" (steal-green) ·
-// price sparkline · Google Flights link. Subtle hover lift. Spec §D Trip + §F.
+// Badge · FareTag (price-band-colored price) · price sparkline · Google Flights
+// link. Subtle hover lift. Spec §D Trip + §F.
 
 import type { Trip } from "@/types/api";
 import Badge from "@/components/ui/Badge";
@@ -22,10 +22,6 @@ function nightsBetween(out: string, ret: string): number {
 
 export default function TripRow({ trip }: TripRowProps) {
   const nights = nightsBetween(trip.outbound_date, trip.return_date);
-  const belowPct =
-    trip.delta_pct != null && trip.delta_pct < 0
-      ? Math.round(-trip.delta_pct)
-      : null;
   const stopsLabel = trip.is_direct
     ? "Direct"
     : `${trip.outbound.stops} stop${trip.outbound.stops === 1 ? "" : "s"}`;
@@ -64,18 +60,11 @@ export default function TripRow({ trip }: TripRowProps) {
       </div>
 
       {/* Price column */}
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          {trip.price_points.length > 1 ? (
-            <Spark points={trip.price_points} />
-          ) : null}
-          <FareTag price={trip.price} tier={trip.deal_tier} size="md" />
-        </div>
-        {belowPct != null ? (
-          <span className="tnum font-mono text-xs font-medium text-steal">
-            {belowPct}% below typical
-          </span>
+      <div className="flex shrink-0 items-center gap-2">
+        {trip.price_points.length > 1 ? (
+          <Spark points={trip.price_points} />
         ) : null}
+        <FareTag price={trip.price} tier={trip.deal_tier} size="md" />
       </div>
     </a>
   );

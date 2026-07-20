@@ -319,10 +319,11 @@ export async function getCitiesData(
     acc.tripCount += group.count;
     if (candidate.price < acc.minPrice) acc.minPrice = candidate.price;
 
-    // Best = highest score; tie-break on lower price.
+    // Best = cheapest; tie-break on higher score. The shown fare per city is
+    // the absolute cheapest — matching the price-first mental model.
     const better =
-      candidate.score > acc.best.score ||
-      (candidate.score === acc.best.score && candidate.price < acc.best.price);
+      candidate.price < acc.best.price ||
+      (candidate.price === acc.best.price && candidate.score > acc.best.score);
     if (better) acc.best = candidate;
   }
 
@@ -362,8 +363,9 @@ export async function getCitiesData(
     });
   }
 
+  // Cheapest-first: absolute price is the ranking, score only breaks ties.
   cities.sort(
-    (a, b) => b.best.score - a.best.score || a.min_price - b.min_price,
+    (a, b) => a.min_price - b.min_price || a.best.price - b.best.price,
   );
 
   return cities;
@@ -406,8 +408,9 @@ export async function getCityData(
   const baselines = await getBaselines();
 
   const scored = scoreFlights(docs, baselines);
+  // Cheapest-first: absolute price is the ranking, score only breaks ties.
   const trips = dedupeTrips(scored).sort(
-    (a, b) => b.score - a.score || a.price - b.price,
+    (a, b) => a.price - b.price || b.score - a.score,
   );
 
   // Baseline of the best origin route, else the min p50 across selected origins.
@@ -427,7 +430,7 @@ export async function getCityData(
   // Build the CitySummary header from the surviving trips.
   let city: CitySummary;
   if (trips.length > 0) {
-    const best = trips[0]; // already sorted best-first
+    const best = trips[0]; // already sorted cheapest-first
     let minPrice = Infinity;
     for (const t of trips) if (t.price < minPrice) minPrice = t.price;
 
