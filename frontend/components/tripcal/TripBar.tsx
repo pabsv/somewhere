@@ -2,6 +2,8 @@
 
 import type { CalTrip, Trip } from "@/types/api";
 import { formatDelta, formatPrice } from "@/lib/format";
+import { getDestination } from "@/data/destinations.gen";
+import CountryFlag from "@/components/ui/CountryFlag";
 
 interface TripBarProps {
   trip: CalTrip;
@@ -64,6 +66,7 @@ export default function TripBar({
   onClick,
 }: TripBarProps) {
   const span = Math.max(1, endCol - startCol + 1);
+  const country = getDestination(trip.destination)?.country;
   const stretchMark =
     stretchDelta != null ? ` ·${formatDelta(stretchDelta)}` : null;
 
@@ -121,6 +124,7 @@ export default function TripBar({
         }`}
       >
         <span className="tnum truncate font-mono text-[11px] font-semibold uppercase tracking-wide">
+          <CountryFlag code={country} className="mr-1" />
           {trip.destination}
           {ojMark && <span className="opacity-70">{ojMark}</span>}{" "}
           {formatPrice(trip.price)}

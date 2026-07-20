@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { Trip } from "@/types/api";
 import { periodsInRange, type UniPeriod } from "@/lib/university/tue";
 import FareTag from "@/components/ui/FareTag";
+import CountryFlag from "@/components/ui/CountryFlag";
 import { getDestination } from "@/data/destinations.gen";
 import { formatDateShort, formatRange, nightsLabel } from "@/lib/format";
 import { type MonthSpec, dayStr } from "./calendarMath";
@@ -109,8 +110,8 @@ export default function AgendaMonth({
               </p>
               <ul className="space-y-2">
                 {week.trips.map((trip) => {
-                  const city =
-                    getDestination(trip.destination)?.name ?? trip.city;
+                  const dest = getDestination(trip.destination);
+                  const city = dest?.name ?? trip.city;
                   return (
                     <li key={trip.key}>
                       <button
@@ -124,6 +125,7 @@ export default function AgendaMonth({
                       >
                         <div className="min-w-0">
                           <p className="truncate font-display text-sm font-semibold text-ink">
+                            <CountryFlag code={dest?.country} className="mr-1" />
                             {city}
                           </p>
                           <p className="tnum mt-0.5 truncate font-mono text-[11px] text-ink-muted">
