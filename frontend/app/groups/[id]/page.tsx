@@ -163,11 +163,7 @@ export default function GroupDetailPage() {
   const hasFullGroup = trips.trips.some((t) => t.full_group);
 
   return (
-    <div
-      className={`mx-auto px-4 py-8 transition-[max-width] duration-300 sm:px-6 sm:py-10 ${
-        infoOpen ? "max-w-[94rem]" : "max-w-6xl"
-      }`}
-    >
+    <div className="mx-auto max-w-[86rem] px-4 py-8 sm:px-6 sm:py-10">
       <Link
         href="/groups"
         className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink"
@@ -225,8 +221,8 @@ export default function GroupDetailPage() {
 
         {/* Un-boxed calendar (matches the main /calendar look) beside a
             collapsible right-hand group-info panel. */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-6 min-[1400px]:flex-row min-[1400px]:items-start min-[1400px]:justify-center">
+          <div className="w-full min-w-0 min-[1400px]:w-[64rem] min-[1400px]:shrink-0">
             {tripsView === "list" ? (
               <GroupTripsBoard
                 trips={trips.trips}
@@ -247,7 +243,7 @@ export default function GroupDetailPage() {
           </div>
 
           {infoOpen && (
-            <aside className="w-full shrink-0 space-y-6 lg:w-80">
+            <aside className="w-full shrink-0 space-y-6 min-[1400px]:w-80">
               {/* Each panel collapses independently; open/closed is remembered
                   per user (keyed by user id) across visits and groups. */}
               <CollapsibleSection
