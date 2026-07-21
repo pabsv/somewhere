@@ -3,10 +3,17 @@
 // shape. Google Flights is the primary fallback (fli source); the Azair
 // builder stays available for the "browse alternatives" flow — flight docs
 // no longer carry azair_link (spec section B), so it's always built here.
+//
+// Every Google link is a `tfs` protobuf deep link (lib/googleFlightsTfs.ts) —
+// exact airports, dates and currency rather than a fuzzy text query.
 
 import type { Trip } from "@/types/api";
 import { getDestination } from "@/data/destinations.gen";
 import { ORIGINS } from "@/data/airports.gen";
+import {
+  buildGoogleFlightsTfsUrl,
+  TFS_ROUND_TRIP,
+} from "@/lib/googleFlightsTfs";
 
 /** Minimum trip fields the builders need — full Trip satisfies it. */
 export type SearchableTrip = Pick<
@@ -74,34 +81,39 @@ export function buildAzairSearchUrl(trip: SearchableTrip): string {
 }
 
 // ─── Google Flights: exact-date search URL ───────────────────────────────────
+// `tfs` deep link (lib/googleFlightsTfs.ts): the search lands prefilled with
+// these exact airports + dates in EUR, instead of relying on Google's parser to
+// read a `?q=Flights+to+…` sentence.
 export function buildGoogleFlightsSearchUrl(trip: SearchableTrip): string {
-  return (
-    `https://www.google.com/travel/flights?q=` +
-    `Flights+to+${trip.destination}+from+${trip.origin}` +
-    `+on+${trip.outbound_date}+returning+${trip.return_date}`
-  );
-}
-
-// ─── Google Flights: one-way search URL ──────────────────────────────────────
-// An open-jaw combo is two separate tickets, so it gets TWO of these links —
-// one per leg. Text-query form, same as the round-trip builder above.
-export function buildGoogleFlightsOneWayUrl(
-  origin: string,
-  dest: string,
-  date: string,
-): string {
-  return (
-    `https://www.google.com/travel/flights?q=` +
-    `One+way+flights+to+${dest}+from+${origin}+on+${date}`
+  return buildGoogleFlightsTfsUrl(
+    [
+      {
+        origin: trip.origin,
+        destination: trip.destination,
+        date: trip.outbound_date,
+      },
+      {
+        origin: trip.destination,
+        destination: trip.origin,
+        date: trip.return_date,
+      },
+    ],
+    TFS_ROUND_TRIP,
   );
 }
 
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 /**
- * Best outbound link for a trip: the scraper-provided deep link when present,
- * otherwise a Google Flights search built from the trip's route + dates.
+ * Best outbound link for a trip.
+ *
+ * `trip.search_link` (stored by the scraper, `_build_google_flights_url` in
+ * scraper-fli/scraper.py) is deliberately IGNORED: it is the same fuzzy
+ * `?q=Flights+to+X+from+Y+on+…` text query this file used to build, which the
+ * `tfs` deep link strictly supersedes — exact airports, exact dates, EUR. The
+ * field stays on the Trip shape (Mongo + Zod) so nothing downstream breaks; if
+ * the scraper ever stores a real per-fare booking URL, restore the preference
+ * here.
  */
 export function getSearchUrl(trip: SearchableTrip): string {
-  if (trip.search_link) return trip.search_link;
   return buildGoogleFlightsSearchUrl(trip);
 }
