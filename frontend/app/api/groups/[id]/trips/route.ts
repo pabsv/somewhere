@@ -48,7 +48,13 @@ export async function GET(
       ? parseOrigins(fromParam)
       : await memberOriginsUnion(memberIds);
 
-    const data = await getGroupTripsData(memberIds, origins);
+    // The crew's shared favourites ride along on the group doc we already
+    // fetched — zero extra queries.
+    const data = await getGroupTripsData(
+      memberIds,
+      origins,
+      group.favourites ?? [],
+    );
 
     const body = GroupTripsResponseSchema.parse(data);
     return NextResponse.json(body);

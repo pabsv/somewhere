@@ -3,7 +3,14 @@
 import FlapText from "./FlapText";
 import FareTag from "@/components/ui/FareTag";
 import Badge from "@/components/ui/Badge";
+import CountryFlag from "@/components/ui/CountryFlag";
 import type { DealTier } from "@/components/ui/FareTag";
+import { ORIGINS } from "@/data/airports.gen";
+import { getDestination } from "@/data/destinations.gen";
+
+function originCountry(code: string): string | undefined {
+  return ORIGINS.find((o) => o.code === code)?.country;
+}
 
 export interface DepartureRow {
   origin: string;
@@ -43,6 +50,12 @@ export default function DepartureBoard({
         <h2 className="font-mono text-xs tracking-widest text-paper">
           DEPARTURES — BEST FARES RIGHT NOW
         </h2>
+        {/* Width is tuned so the label centers over the fare + tier-badge
+            cluster of the rows below (they live in a different grid, so the
+            columns can't align themselves). */}
+        <span className="ml-auto shrink-0 font-mono text-[10px] tracking-widest text-paper/60 sm:w-[7.875rem] sm:text-center sm:text-xs">
+          ROUND TRIP
+        </span>
       </div>
 
       {rows.length === 0 ? (
@@ -57,8 +70,18 @@ export default function DepartureBoard({
               className="grid animate-row-in grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-white/5 px-4 py-3 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_3.5rem] sm:gap-x-5 sm:px-5"
               style={{ animationDelay: `${i * 70}ms` }}
             >
-              <FlapText text={`${row.origin}→${row.destination}`} size="md" />
-              <span className="truncate font-display text-lg text-paper">
+              {/* Phone: flags flank the codes and the city name is dropped —
+                  the full name never fit at 375px anyway. */}
+              <span className="flex items-center gap-2">
+                <span className="text-xl leading-none sm:hidden">
+                  <CountryFlag code={originCountry(row.origin)} />
+                </span>
+                <FlapText text={`${row.origin}→${row.destination}`} size="md" />
+                <span className="text-xl leading-none sm:hidden">
+                  <CountryFlag code={getDestination(row.destination)?.country} />
+                </span>
+              </span>
+              <span className="hidden truncate font-display text-lg text-paper sm:block">
                 {row.city}
               </span>
               <span className="tnum hidden font-mono text-sm text-paper/70 sm:block">
@@ -67,7 +90,12 @@ export default function DepartureBoard({
               <span className="tnum hidden whitespace-nowrap font-mono text-sm text-paper/50 sm:block">
                 {row.nights} NTS
               </span>
-              <FareTag price={row.price} tier={row.tier} size="md" />
+              <FareTag
+                price={row.price}
+                tier={row.tier}
+                size="md"
+                className="col-start-3 justify-self-end sm:col-start-auto sm:justify-self-auto"
+              />
               <span className="hidden justify-self-start sm:inline-flex">
                 {row.tier !== "fair" && <Badge variant={row.tier} />}
               </span>
@@ -92,9 +120,12 @@ export function BoardSkeleton() {
         <span className="font-mono text-xs tracking-widest text-paper/60">
           DEPARTURES — WARMING UP
         </span>
+        <span className="ml-auto shrink-0 font-mono text-[10px] tracking-widest text-paper/40 sm:w-[7.875rem] sm:text-center sm:text-xs">
+          ROUND TRIP
+        </span>
       </div>
       <ul>
-        {Array.from({ length: 5 }, (_, i) => (
+        {Array.from({ length: 6 }, (_, i) => (
           <li
             key={i}
             className="flex items-center justify-between gap-4 border-b border-white/5 px-4 py-3.5 last:border-b-0 sm:px-5"

@@ -8,6 +8,7 @@ import type { GroupTrip } from "@/types/api";
 import Badge from "@/components/ui/Badge";
 import FareTag from "@/components/ui/FareTag";
 import { formatRange } from "@/lib/format";
+import { FAV_GLYPH, favRing } from "@/components/tripcal/favouriteSkin";
 
 export default function GroupTripsBoard({
   trips,
@@ -15,14 +16,21 @@ export default function GroupTripsBoard({
   knownCount,
   unknownCount,
   fullOnly = false,
+  favourites,
+  favOnly = false,
 }: {
   trips: GroupTrip[];
   truncated: boolean;
   knownCount: number;
   unknownCount: number;
   fullOnly?: boolean;
+  /** the crew's shared favourites (uppercase IATA) */
+  favourites?: string[];
+  favOnly?: boolean;
 }) {
-  const shown = fullOnly ? trips.filter((t) => t.full_group) : trips;
+  const favSet = new Set(favourites ?? []);
+  let shown = fullOnly ? trips.filter((t) => t.full_group) : trips;
+  if (favOnly) shown = shown.filter((t) => favSet.has(t.destination));
   return (
     <div>
       <h2 className="font-display text-xl font-semibold text-ink">
@@ -51,7 +59,7 @@ export default function GroupTripsBoard({
         <ul className="mt-4 space-y-2">
           {shown.map((t) => (
             <li key={t.key}>
-              <GroupTripRow trip={t} />
+              <GroupTripRow trip={t} favourite={favSet.has(t.destination)} />
             </li>
           ))}
         </ul>
@@ -66,18 +74,30 @@ export default function GroupTripsBoard({
   );
 }
 
-function GroupTripRow({ trip }: { trip: GroupTrip }) {
+function GroupTripRow({
+  trip,
+  favourite = false,
+}: {
+  trip: GroupTrip;
+  favourite?: boolean;
+}) {
   const borderClass = trip.full_group
     ? "border border-line border-l-4 border-l-steal"
     : "border border-line";
 
-  const rowClass = `flex flex-wrap items-center gap-3 rounded-(--radius-card) ${borderClass} bg-card px-4 py-3 shadow-(--shadow-card)`;
+  // Same gold language as the calendar bars; the inset ring composes with the
+  // full-group left border instead of competing with it.
+  const rowClass = `flex flex-wrap items-center gap-3 rounded-(--radius-card) ${borderClass} ${favRing(
+    favourite,
+    trip.deal_tier,
+  )} bg-card px-4 py-3 shadow-(--shadow-card)`;
 
   const inner = (
     <>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate font-display text-base font-semibold text-ink">
+            {favourite && <span className="mr-1 text-fav">{FAV_GLYPH}</span>}
             {trip.city}
           </span>
           <span className="tnum shrink-0 font-mono text-xs uppercase tracking-wide text-ink-muted">

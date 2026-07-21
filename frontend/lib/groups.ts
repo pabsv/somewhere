@@ -41,11 +41,27 @@ export interface GroupDoc {
   created_at: Date;
   members: GroupMember[];
   invite: { token: string; created_by: string; created_at: Date };
+  /**
+   * The crew's shared favourite destinations (uppercase IATA). OPTIONAL: groups
+   * created before this feature have no such key, and creation inserts through
+   * an `as GroupDoc` cast, so a required field would type-check while never
+   * actually being written. Every read does `group.favourites ?? []` — no
+   * migration.
+   *
+   * Deliberately a flat string[] with no per-entry attribution: any member adds,
+   * any member removes (a replace-all PUT can't distinguish the two anyway).
+   */
+  favourites?: string[];
 }
 
 export const MAX_GROUP_MEMBERS = 12;
 export const MAX_GROUPS_PER_USER = 20;
 export const MAX_GROUP_NAME = 40;
+/**
+ * Cap on a group's shared favourites. Much smaller than the personal 500: a
+ * crew list is a shortlist people actually discuss, not a lifetime wishlist.
+ */
+export const MAX_GROUP_FAVOURITES = 100;
 
 /** Fresh multi-use invite token. Rotating an invite = overwrite, no expiry. */
 export function generateInviteToken(): string {
@@ -273,6 +289,9 @@ export async function loadGroupDetail(
         : String(group.created_at),
     members,
     invite_token: group.invite.token,
+    // Must be mirrored in GroupDetailResponseSchema — it's a plain z.object,
+    // so an unknown key is stripped silently rather than rejected.
+    favourites: group.favourites ?? [],
   });
 }
 

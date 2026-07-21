@@ -11,6 +11,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { DateWindow, GroupTrip, Trip } from "@/types/api";
 import { useUniCalendar } from "@/lib/university/context";
+import { FavouriteScopeProvider } from "@/lib/favourite-scope";
 import MonthBlock from "@/components/tripcal/MonthBlock";
 import AgendaMonth from "@/components/tripcal/AgendaMonth";
 import TripPopover from "@/components/tripcal/TripPopover";
@@ -29,6 +30,10 @@ interface GroupTripsCalendarProps {
   memberCount?: number;
   /** filter to full-group trips; controlled by the page toolbar chip */
   fullOnly?: boolean;
+  /** the crew's shared favourites (uppercase IATA) — drives the gold contour */
+  favourites?: string[];
+  /** filter to those favourites; controlled by the page toolbar chip */
+  favOnly?: boolean;
 }
 
 /** date → trip count over the full (unfiltered) matched set, for the heat strip */
@@ -56,6 +61,8 @@ export default function GroupTripsCalendar({
   availHeat,
   memberCount = 0,
   fullOnly = false,
+  favourites,
+  favOnly = false,
 }: GroupTripsCalendarProps) {
   const isMobile = useIsMobile();
   // the viewer's own academic overlay (exams/breaks), same as /calendar
@@ -78,10 +85,15 @@ export default function GroupTripsCalendar({
 
   const density = useMemo(() => buildDensity(trips), [trips]);
 
-  const shownTrips = useMemo(
-    () => (fullOnly ? trips.filter((t) => t.full_group) : trips),
-    [trips, fullOnly],
-  );
+  // The GROUP's list, deliberately not the viewer's own stars: a board a crew
+  // points at on a call only works if it looks the same to everyone.
+  const favSet = useMemo(() => new Set(favourites ?? []), [favourites]);
+
+  const shownTrips = useMemo(() => {
+    let out = fullOnly ? trips.filter((t) => t.full_group) : trips;
+    if (favOnly) out = out.filter((t) => favSet.has(t.destination));
+    return out;
+  }, [trips, fullOnly, favOnly, favSet]);
 
   const tripsByMonth = useMemo(
     () =>
@@ -113,7 +125,10 @@ export default function GroupTripsCalendar({
   }, []);
 
   return (
-    <div>
+    // Scope override: TripBar / AgendaMonth read their favourite set from
+    // context, which defaults to the VIEWER's personal stars. Here it must be
+    // the crew's list instead, so the gold contour is identical for everyone.
+    <FavouriteScopeProvider value={favSet}>
       <div className="space-y-5">
         {months.map((spec, i) =>
           isMobile ? (
@@ -154,6 +169,6 @@ export default function GroupTripsCalendar({
         fromQuery=""
         onClose={() => setPopoverTrip(null)}
       />
-    </div>
+    </FavouriteScopeProvider>
   );
 }

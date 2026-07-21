@@ -13,7 +13,7 @@ import { formatDateBoard } from "@/lib/format";
 /**
  * Landing page — the one-line pitch plus a live "best fares right now" board.
  * Purely promotional: the actual filtering/browsing lives on /explore. The
- * board mirrors Explore's hero (5 cheapest steals across all origins).
+ * board mirrors Explore's hero (6 cheapest steals across all origins).
  */
 export default function LandingPage() {
   const { status } = useSession();
@@ -29,7 +29,7 @@ export default function LandingPage() {
           res.cities
             .filter((c) => c.best.deal_tier === "steal")
             .sort((a, b) => a.best.price - b.best.price)
-            .slice(0, 5)
+            .slice(0, 6)
             .map((c) => ({
               origin: c.best.origin,
               destination: c.code,
@@ -82,17 +82,6 @@ export default function LandingPage() {
               <span aria-hidden="true">→</span>
             </Link>
           )}
-          <Link
-            href="/explore"
-            className={
-              signedIn
-                ? "inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
-                : "inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink-muted"
-            }
-          >
-            Explore deals
-            <span aria-hidden="true">→</span>
-          </Link>
         </div>
       </header>
 

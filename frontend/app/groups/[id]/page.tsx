@@ -19,6 +19,7 @@ import Chip from "@/components/ui/Chip";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import MembersCard from "@/components/groups/MembersCard";
 import InviteCard from "@/components/groups/InviteCard";
+import GroupFavouritesCard from "@/components/groups/GroupFavouritesCard";
 import {
   ApiError,
   deleteGroup,
@@ -42,6 +43,7 @@ export default function GroupDetailPage() {
   const [trips, setTrips] = useState<GroupTripsResponse | null>(null);
   const [tripsView, setTripsView] = useState<"list" | "calendar">("calendar");
   const [fullOnly, setFullOnly] = useState(true);
+  const [favOnly, setFavOnly] = useState(false);
   const [infoOpen, setInfoOpen] = useState(true);
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -90,6 +92,20 @@ export default function GroupDetailPage() {
     async (name: string) => {
       const d = await renameGroup(id, name);
       setDetail(d);
+    },
+    [id],
+  );
+
+  // Favourites change what the SERVER curates (a wider slice per starred city,
+  // plus promoted tiers), so unlike a rename this needs the trips refetched —
+  // adopting the PUT's echo alone would leave the board stale.
+  const onFavouritesChange = useCallback(
+    async (d: GroupDetailResponse) => {
+      setDetail(d);
+      // Removing the last favourite hides the chip, so drop the filter too —
+      // otherwise the board would sit empty with no visible way to clear it.
+      if (d.favourites.length === 0) setFavOnly(false);
+      setTrips(await getGroupTrips(id));
     },
     [id],
   );
@@ -161,6 +177,7 @@ export default function GroupDetailPage() {
   const isOwner = detail.my_role === "owner";
   const myUserId = session?.user?.id ?? "";
   const hasFullGroup = trips.trips.some((t) => t.full_group);
+  const groupFavourites = detail.favourites;
 
   return (
     <div className="mx-auto max-w-[86rem] px-4 py-8 sm:px-6 sm:py-10">
@@ -209,6 +226,16 @@ export default function GroupDetailPage() {
               Everyone&rsquo;s free only
             </Chip>
           )}
+          {groupFavourites.length > 0 && (
+            <Chip
+              size="sm"
+              selected={favOnly}
+              onClick={() => setFavOnly((v) => !v)}
+              title="Only the destinations this group has starred"
+            >
+              ★ Favourites ({groupFavourites.length})
+            </Chip>
+          )}
           <button
             type="button"
             onClick={() => setInfoOpen((v) => !v)}
@@ -230,6 +257,8 @@ export default function GroupDetailPage() {
                 knownCount={trips.known_count}
                 unknownCount={trips.unknown_count}
                 fullOnly={hasFullGroup && fullOnly}
+                favourites={groupFavourites}
+                favOnly={favOnly}
               />
             ) : (
               <GroupTripsCalendar
@@ -238,6 +267,8 @@ export default function GroupDetailPage() {
                 availHeat={trips.avail_heat}
                 memberCount={trips.known_count}
                 fullOnly={hasFullGroup && fullOnly}
+                favourites={groupFavourites}
+                favOnly={favOnly}
               />
             )}
           </div>
@@ -256,6 +287,17 @@ export default function GroupDetailPage() {
                   myUserId={myUserId}
                   onRemove={onRemoveMember}
                   onLeave={onLeaveGroup}
+                />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Favourite destinations"
+                storageKey={`somewhere:group-info:favourites:${myUserId}`}
+              >
+                <GroupFavouritesCard
+                  groupId={id}
+                  favourites={groupFavourites}
+                  onChange={onFavouritesChange}
                 />
               </CollapsibleSection>
 

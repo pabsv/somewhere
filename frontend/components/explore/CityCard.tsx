@@ -12,8 +12,6 @@ interface CityCardProps {
   city: CitySummary;
   /** Current `?from=` query, forwarded so the city page keeps the origin filter. */
   query?: string;
-  /** false = user opted out of open-jaw (Preferences.allow_open_jaw). */
-  showOpenJaw?: boolean;
 }
 
 /**
@@ -22,16 +20,8 @@ interface CityCardProps {
  * and the trip count. The whole card links to /city/[code], preserving the
  * origin filter.
  */
-export default function CityCard({
-  city,
-  query,
-  showOpenJaw = true,
-}: CityCardProps) {
+export default function CityCard({ city, query }: CityCardProps) {
   const { best } = city;
-  // Open-jaw / twin-city hints: only present when the combo beats the cheapest
-  // stored round trip (the API attaches them under exactly that condition).
-  const openjaw = showOpenJaw ? (city.openjaw ?? null) : null;
-  const twin = showOpenJaw ? (city.twin ?? null) : null;
   const { signedIn, isSaved, toggle } = useSavedCities();
   const favourited = isSaved(city.code);
   // Favourites get relaxed tier coloring (a "deal" reads as a "steal", etc.).
@@ -79,28 +69,6 @@ export default function CityCard({
           <p className="truncate font-mono text-xs text-ink-muted/70">
             from {best.origin}
           </p>
-          {openjaw && (
-            <p
-              className="tnum mt-0.5 truncate font-mono text-xs font-medium text-steal"
-              title={`Two one-way tickets: ${openjaw.out_origin} → ${city.code} + ${city.code} → ${openjaw.back_origin} — cheaper than any stored round trip`}
-            >
-              ⇄ mix &amp; match €{Math.round(openjaw.total_price)}
-              {!openjaw.same_origin && (
-                <span className="text-ink-muted">
-                  {" "}
-                  {openjaw.out_origin} out · {openjaw.back_origin} back
-                </span>
-              )}
-            </p>
-          )}
-          {twin && (
-            <p
-              className="tnum mt-0.5 truncate font-mono text-xs font-medium text-steal"
-              title={`Twin city: fly into ${city.code}, ~${twin.hours}h overland, fly home from ${twin.other} — the whole two-city trip beats any stored round trip here`}
-            >
-              +{twin.other} twin city €{Math.round(twin.total_price)}
-            </p>
-          )}
         </div>
         <span className="tnum shrink-0 whitespace-nowrap font-mono text-xs text-ink-muted">
           {city.trip_count} {city.trip_count === 1 ? "trip" : "trips"}
