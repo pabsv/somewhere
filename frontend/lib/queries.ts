@@ -877,7 +877,7 @@ export async function getTripsData(
       }
       // ±1-day exception: a very cheap trip that hangs one day over a window's
       // edge still shows, flagged so the client renders it as "doesn't fit".
-      if (!isNearAvailWorthy(t.deal_tier, t.price)) continue;
+      if (!isNearAvailWorthy(t.deal_tier, t.price, t.destination)) continue;
       if (avail.minNights !== null && t.duration_days < avail.minNights)
         continue;
       if (avail.maxNights !== null && t.duration_days > avail.maxNights)

@@ -22,7 +22,11 @@ export function toTrip(
 ): Trip {
   const routeKey = `${doc.origin}-${doc.destination}`;
   const baseline = baselines.get(routeKey)?.p50 ?? null;
-  const { score, delta_pct, deal_tier } = scoreTrip(doc.price, baseline);
+  const { score, delta_pct, deal_tier } = scoreTrip(
+    doc.price,
+    baseline,
+    doc.destination,
+  );
 
   return {
     key: doc.flight_key,

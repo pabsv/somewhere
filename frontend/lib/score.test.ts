@@ -12,6 +12,11 @@ import assert from "node:assert/strict";
 import {
   scoreTrip,
   tierForPrice,
+  bandsForDest,
+  reachMultiplier,
+  promoteFavouriteTier,
+  isNearAvailWorthy,
+  DEFAULT_REACH,
   PRICE_BAND_STEAL,
   PRICE_BAND_DEAL,
   STEAL_SCORE_THRESHOLD,
@@ -34,6 +39,40 @@ assert.equal(tierForPrice(50), "steal");
 assert.equal(tierForPrice(51), "deal");
 assert.equal(tierForPrice(100), "deal");
 assert.equal(tierForPrice(101), "fair");
+
+// 1d. Reach multipliers: unknown/absent dest and core-Europe regions are 1.0;
+// far regions scale the bands up.
+assert.equal(reachMultiplier(undefined), DEFAULT_REACH);
+assert.equal(reachMultiplier("ZZZ"), DEFAULT_REACH); // not in the catalog
+assert.equal(reachMultiplier("BGY"), 1.0); // Italy
+assert.equal(reachMultiplier("BCN"), 1.1); // Iberia
+assert.equal(reachMultiplier("TNG"), 1.5); // N. Africa
+assert.equal(reachMultiplier("IST"), 1.5); // Türkiye
+assert.equal(reachMultiplier("TLV"), 1.9); // Levant
+assert.equal(reachMultiplier("DXB"), 2.6); // Gulf
+
+// 1e. Bands scale with reach.
+assert.deepEqual(bandsForDest("BGY"), { steal: 50, deal: 100 });
+assert.deepEqual(bandsForDest("TNG"), { steal: 75, deal: 150 });
+
+// 1f. The motivating case: €56 EIN→TNG is a steal (2 100 km, band €75) while
+// the same €56 to Bergamo (1 h hop, band €50) is only a deal.
+assert.equal(tierForPrice(56, "TNG"), "steal");
+assert.equal(tierForPrice(56, "BGY"), "deal");
+assert.equal(tierForPrice(76, "TNG"), "deal");
+assert.equal(tierForPrice(151, "TNG"), "fair");
+
+// 1g. scoreTrip threads dest through to the tier; omitting it keeps flat bands.
+assert.equal(scoreTrip(56, 120, "TNG").deal_tier, "steal");
+assert.equal(scoreTrip(56, 120).deal_tier, "deal");
+// The absolute MAX_DEAL_PRICE sanity gate still wins over any reach scaling.
+assert.equal(scoreTrip(401, 900, "DXB").deal_tier, "fair");
+
+// 1h. Favourite promotion and the near-miss cap use the same reach scaling.
+assert.equal(promoteFavouriteTier("deal", 0, 110, "TNG"), "steal"); // 75 × 1.5
+assert.equal(promoteFavouriteTier("deal", 0, 110, "BGY"), "deal"); // > 75
+assert.ok(isNearAvailWorthy("fair", 70, "TNG")); // 50 × 1.5 = 75
+assert.ok(!isNearAvailWorthy("fair", 70, "BGY"));
 
 // 2. Very cheap fare: €38 → steal (<= 50). score/delta still computed warm.
 {

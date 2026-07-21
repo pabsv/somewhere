@@ -98,7 +98,7 @@ export default function CityDetail({ code }: CityDetailProps) {
     if (!favourited) return trips;
     return trips.map((t) => ({
       ...t,
-      deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price),
+      deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price, t.destination),
     }));
   }, [data, favourited]);
 

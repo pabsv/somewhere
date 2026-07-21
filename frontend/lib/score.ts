@@ -15,24 +15,90 @@
 //    dormant, kept so discount-based tiers can be revived in one edit.)
 
 import type { DealTier } from "@/types/api";
+import { getDestination } from "@/data/destinations.gen";
 
 // ─── Price bands (absolute EUR round-trip — the tier source of truth) ─────────
 // The app sells "very cheap flights to places", not "good discounts", so the
 // tier — and therefore every bar/chip/badge colour — keys off the absolute
 // round-trip price, not how far below the route baseline it sits.
+//
+// …but a flat band treats €56 to Tangier and €56 to Bergamo as the same thing,
+// and they are not: one is 2 100 km to another continent, the other is a 1 h
+// hop. The bands are therefore scaled by the destination's REACH — how much
+// trip a euro buys — see REGION_REACH_MULTIPLIER below.
 
-/** price <= this (EUR, round trip) → "steal" (very cheap → grab it) */
+/** price <= this (EUR, round trip) → "steal" (very cheap → grab it) — at reach 1.0 */
 export const PRICE_BAND_STEAL = 50;
-/** price <= this (EUR) → "deal" (cheap); above → "fair" */
+/** price <= this (EUR) → "deal" (cheap); above → "fair" — at reach 1.0 */
 export const PRICE_BAND_DEAL = 100;
 
-/** Absolute-price tier for a round-trip fare. Single source of tier truth. */
-export function tierForPrice(price: number): DealTier {
-  return price <= PRICE_BAND_STEAL
-    ? "steal"
-    : price <= PRICE_BAND_DEAL
-      ? "deal"
-      : "fair";
+// ─── Region reach multipliers ────────────────────────────────────────────────
+// Multiplies BOTH bands (and the favourite/near-miss caps) for a destination.
+// It is a REACH measure — roughly how far/how different the trip is from the
+// NL/BE origin cluster — NOT the region's observed market price. Scaling by
+// observed price would silently reintroduce the discount framing this app
+// deliberately dropped ("cheap for Istanbul" is not the same as "cheap").
+//
+// Anchored on great-circle distance from Eindhoven, hand-rounded:
+//   ~500–1 100 km (Germany, France, UK, Central Europe, Italy)  → 1.0
+//   ~1 300–1 700 km (Iberia, Balkans, SE Europe, Nordics)       → 1.1–1.15
+//   ~2 100 km (Greece)                                          → 1.3
+//   ~2 100–3 300 km (Morocco/Tunisia/Egypt, Türkiye)            → 1.5
+//   ~3 200–3 500 km (Levant, Caucasus)                          → 1.9–2.0
+//   ~4 300–5 100 km (Cape Verde, Gulf)                          → 2.3–2.6
+//
+// Keys are the `region` strings in scraper/targets.py (→ destinations.gen.ts).
+// Any region absent here gets DEFAULT_REACH (1.0). Tune these numbers, not the
+// call sites. NOTE: this is the "we only fly this pool" approximation — once
+// the pool leaves this region set, replace the table with real per-airport
+// great-circle distance.
+export const REGION_REACH_MULTIPLIER: Readonly<Record<string, number>> = {
+  "Germany/Alps": 1.0,
+  France: 1.0,
+  "UK & Ireland": 1.0,
+  "Central Europe": 1.0,
+  Italy: 1.0,
+  Iberia: 1.1,
+  Balkans: 1.1,
+  Nordics: 1.1,
+  "SE Europe": 1.15,
+  Greece: 1.3,
+  "N. Africa": 1.5,
+  Türkiye: 1.5,
+  Levant: 1.9,
+  Caucasus: 2.0,
+  Atlantic: 2.3,
+  Gulf: 2.6,
+};
+
+/** Reach multiplier for a destination with no region entry (core Europe). */
+export const DEFAULT_REACH = 1.0;
+
+/**
+ * Reach multiplier for a destination IATA code. Unknown codes → DEFAULT_REACH,
+ * so an un-exported destination can never accidentally get a looser band.
+ */
+export function reachMultiplier(dest?: string): number {
+  if (!dest) return DEFAULT_REACH;
+  const region = getDestination(dest)?.region;
+  if (!region) return DEFAULT_REACH;
+  return REGION_REACH_MULTIPLIER[region] ?? DEFAULT_REACH;
+}
+
+/** The reach-scaled steal/deal band edges (EUR) for a destination. */
+export function bandsForDest(dest?: string): { steal: number; deal: number } {
+  const m = reachMultiplier(dest);
+  return { steal: PRICE_BAND_STEAL * m, deal: PRICE_BAND_DEAL * m };
+}
+
+/**
+ * Reach-scaled price tier for a round-trip fare. Single source of tier truth.
+ * `dest` is optional: omitting it keeps the flat €50/€100 bands, so any caller
+ * without a destination in hand behaves exactly as before.
+ */
+export function tierForPrice(price: number, dest?: string): DealTier {
+  const { steal, deal } = bandsForDest(dest);
+  return price <= steal ? "steal" : price <= deal ? "deal" : "fair";
 }
 
 // ─── Legacy discount-score thresholds (DORMANT) ──────────────────────────────
@@ -77,11 +143,16 @@ export const NEAR_AVAIL_MAX_PRICE = 50;
 
 /**
  * True when a trip is cheap enough to surface as a ±1-day availability miss.
- * Now effectively price-only: "steal" ⟺ price <= PRICE_BAND_STEAL (50) ==
- * NEAR_AVAIL_MAX_PRICE, so the tier clause is subsumed by the price clause.
+ * Effectively price-only: "steal" ⟺ price <= the destination's steal band ==
+ * NEAR_AVAIL_MAX_PRICE × reach, so the tier clause subsumes the price clause.
+ * `dest` optional — omitted keeps the flat €50 cap.
  */
-export function isNearAvailWorthy(tier: DealTier, price: number): boolean {
-  return tier === "steal" || price <= NEAR_AVAIL_MAX_PRICE;
+export function isNearAvailWorthy(
+  tier: DealTier,
+  price: number,
+  dest?: string,
+): boolean {
+  return tier === "steal" || price <= NEAR_AVAIL_MAX_PRICE * reachMultiplier(dest);
 }
 
 // ─── Ground-competitive destinations (train/Flixbus beats the flight) ────────
@@ -145,9 +216,9 @@ function clamp(n: number, lo: number, hi: number): number {
 // per-user). The MAX_DEAL_PRICE sanity gate still applies: an expensive ticket
 // is never promoted, however far below its (possibly absurd) baseline it sits.
 
-/** favourite: price <= this (EUR) → promote to "steal" (one band greener) */
+/** favourite: price <= this (EUR) → promote to "steal" (one band greener) — at reach 1.0 */
 export const FAV_PRICE_BAND_STEAL = 75;
-/** favourite: price <= this (EUR) → at least "deal" (one band greener) */
+/** favourite: price <= this (EUR) → at least "deal" (one band greener) — at reach 1.0 */
 export const FAV_PRICE_BAND_DEAL = 130;
 
 /**
@@ -156,18 +227,21 @@ export const FAV_PRICE_BAND_DEAL = 130;
  * pricier). Never demotes; never promotes an over-MAX_DEAL_PRICE fare. The
  * `_score` param is unused (tier is price-based now) but kept so the existing
  * call sites (CityCard, CityDetail, FavouritesStrip, calendar/page) need no
- * change.
+ * change. The favourite bands are reach-scaled by the same multiplier as the
+ * base bands, so a favourited Tangier relaxes from its own band, not Europe's.
  */
 export function promoteFavouriteTier(
   tier: DealTier,
   _score: number,
   price: number,
+  dest?: string,
 ): DealTier {
   if (price > MAX_DEAL_PRICE) return tier;
   if (tier === "steal") return tier;
-  if (price <= FAV_PRICE_BAND_STEAL) return "steal";
+  const m = reachMultiplier(dest);
+  if (price <= FAV_PRICE_BAND_STEAL * m) return "steal";
   if (tier === "deal") return tier;
-  if (price <= FAV_PRICE_BAND_DEAL) return "deal";
+  if (price <= FAV_PRICE_BAND_DEAL * m) return "deal";
   return tier;
 }
 
@@ -175,8 +249,13 @@ export function promoteFavouriteTier(
  * Score a trip price against its route baseline (price_p50_ewma).
  * `baseline` is null (or non-positive — treated as null to avoid division
  * blowups) when the route is cold; the fallback curve kicks in.
+ * `dest` (IATA) reach-scales the tier bands; omitting it keeps the flat bands.
  */
-export function scoreTrip(price: number, baseline: number | null): TripScore {
+export function scoreTrip(
+  price: number,
+  baseline: number | null,
+  dest?: string,
+): TripScore {
   let score: number;
   let delta_pct: number | null;
 
@@ -203,8 +282,8 @@ export function scoreTrip(price: number, baseline: number | null): TripScore {
     };
   }
 
-  // Tier = absolute price band (not discount). See tierForPrice / PRICE_BAND_*.
-  const deal_tier = tierForPrice(price);
+  // Tier = reach-scaled price band (not discount). See tierForPrice / bandsForDest.
+  const deal_tier = tierForPrice(price, dest);
 
   return { score, delta_pct, deal_tier };
 }

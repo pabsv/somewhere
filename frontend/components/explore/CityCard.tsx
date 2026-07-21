@@ -36,7 +36,7 @@ export default function CityCard({
   const favourited = isSaved(city.code);
   // Favourites get relaxed tier coloring (a "deal" reads as a "steal", etc.).
   const displayTier = favourited
-    ? promoteFavouriteTier(best.deal_tier, best.score, best.price)
+    ? promoteFavouriteTier(best.deal_tier, best.score, best.price, city.code)
     : best.deal_tier;
 
   const href = query ? `/city/${city.code}?${query}` : `/city/${city.code}`;

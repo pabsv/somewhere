@@ -105,6 +105,7 @@ export default function FavouritesStrip({ query }: FavouritesStripProps) {
                     city.best.deal_tier,
                     city.best.score,
                     city.best.price,
+                    city.code,
                   )}
                   size="sm"
                 />

@@ -44,9 +44,9 @@ const MONTHS = 10;
 
 /**
  * Dress an open-jaw combo as a CalTrip so MonthBlock/TripBar can render it.
- * Tier: absolute price band on the combo total (tierForPrice) so combos colour
- * by cheapness like every other bar. score 0 keeps combos below scored round
- * trips in lane packing.
+ * Tier: reach-scaled price band on the combo total (tierForPrice, keyed on the
+ * fly-in city) so combos colour by cheapness like every other bar. score 0
+ * keeps combos below scored round trips in lane packing.
  */
 function toCalTrip(oj: OpenJawTrip): CalTrip {
   const emptyLeg = { dep: "", arr: "", duration: "", stops: 0 };
@@ -64,7 +64,7 @@ function toCalTrip(oj: OpenJawTrip): CalTrip {
     is_direct: false,
     score: 0,
     delta_pct: null,
-    deal_tier: tierForPrice(oj.total_price),
+    deal_tier: tierForPrice(oj.total_price, oj.destination),
     outbound: emptyLeg,
     ret: emptyLeg,
     price_points: [],
@@ -259,7 +259,7 @@ export default function CalendarPage() {
     const scoped = savedOnly ? all.filter(isFavourite) : all;
     return scoped.map((t) =>
       isFavourite(t)
-        ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price) }
+        ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price, t.destination) }
         : t,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
