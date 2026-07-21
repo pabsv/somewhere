@@ -52,15 +52,25 @@ export default function LandingPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       {/* ─── Pitch ───────────────────────────────────────────────────────────── */}
-      <header className="max-w-2xl">
-        <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-6xl">
-          Open to go anywhere,
-          <br />
-          on any free day.
+      <header>
+        <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+          Open to go{" "}
+          <span className="whitespace-nowrap">
+            <span
+              aria-hidden="true"
+              className="mr-[0.26em] inline-block h-[0.55em] w-[0.7em] rounded-[0.1em] bg-brand align-middle [clip-path:polygon(0%_0%,72%_0%,100%_50%,72%_100%,0%_100%)]"
+            />
+            somewhere
+          </span>{" "}
+          cheap?
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-muted">
-          We&rsquo;ll find you cheap flights — wherever&rsquo;s cheapest,
-          whenever you&rsquo;re free.
+        <p className="mt-4 max-w-2xl text-lg text-ink-muted">
+          Your free days + our daily price watch = a trip you didn&rsquo;t
+          know you wanted.
+        </p>
+        <p className="mt-2 max-w-xl text-lg text-ink-muted">
+          Going with <strong className="font-semibold text-ink">friends</strong>?
+          We find the dates that work for all of you.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {!signedIn && (
