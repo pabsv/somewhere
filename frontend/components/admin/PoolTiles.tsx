@@ -78,10 +78,12 @@ function agoLabel(iso: string | null): string | null {
 }
 
 /**
- * One-way fare grid coverage (open-jaw Phase 6): the data behind every
- * Mix & match / Twin city surface. "Last write" going old is the "grids
- * stopped refreshing" alarm — the pool writes grids every few minutes when
- * healthy, so anything past 24h is flagged.
+ * One-way fare grid coverage: the data behind the calendar's trip-stretch
+ * bubble, whose `~` rows are priced as the sum of a route's two one-way grids.
+ * Since the multi-city rollback this card is the ONLY alarm that the grid
+ * writer died — nothing else fails loudly, the `~` rows just quietly stop
+ * appearing once the 21d TTL expires. The pool writes grids every few minutes
+ * when healthy, so anything past 24h is flagged.
  */
 function GridStatsCard({ grids }: { grids: AdminPoolSummary["grids"] }) {
   const newestMs = grids.newest_scraped_at
@@ -99,7 +101,7 @@ function GridStatsCard({ grids }: { grids: AdminPoolSummary["grids"] }) {
   return (
     <div className="col-span-2 rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card) sm:col-span-3 lg:col-span-6">
       <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-        One-way grids (mix &amp; match data)
+        One-way grids (stretch-bubble fare data)
       </span>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
         <GridStat label="Grids" value={grids.total} alert={grids.total === 0} />

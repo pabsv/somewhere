@@ -166,7 +166,7 @@ class FliScraper:
         Returns (flights, stats) where stats has {date_searches, flight_searches,
         flights_found, errors, api_calls, cheapest_price, oneway_grids}.
         oneway_grids carries the raw Phase-1 one-way fare grids (both
-        directions) so the caller can persist them for open-jaw combos —
+        directions) so the caller can persist them —
         [] when Phase 1 fell back to round-trip grids.
         """
         from datetime import date
@@ -187,7 +187,7 @@ class FliScraper:
         out_prices = self._search_dates_oneway(origin, destination, out_from, out_to, direct_only)
         ret_prices = self._search_dates_oneway(destination, origin, ret_from, ret_to, direct_only)
 
-        # Expose the raw one-way grids for persistence (open-jaw foundation).
+        # Expose the raw one-way grids for persistence.
         oneway_grids = []
         if out_prices:
             oneway_grids.append({"origin": origin, "destination": destination, "prices": out_prices})

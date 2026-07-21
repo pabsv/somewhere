@@ -106,7 +106,7 @@ class FlightService:
 
     def save_oneway_grids(self, grids: list[dict]) -> dict:
         """
-        Persist one-way leg fare grids (open-jaw foundation).
+        Persist one-way leg fare grids.
 
         Args:
             grids: [{"origin": "EIN", "destination": "BCN",

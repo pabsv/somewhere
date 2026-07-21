@@ -38,7 +38,7 @@ function toMs(v: unknown): number | null {
 }
 
 /**
- * One-way fare grid coverage (open-jaw Phase 6 observability). ~2,300 slim
+ * One-way fare grid coverage. ~2,300 slim
  * docs — a single projected fetch is fine. `stale_7d` = grids older than the
  * slowest tier cadence (168h): routes that should have refreshed but didn't.
  */

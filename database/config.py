@@ -43,7 +43,7 @@ COLLECTION_SCRAPE_TARGETS = "scrape_targets"   # pool-based scraping config
 COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observability
 COLLECTION_FRIENDSHIPS = "friendships"         # friend requests + accepted pairs (written by frontend)
 COLLECTION_GROUPS = "groups"          # travel groups + embedded invite tokens (written by frontend)
-COLLECTION_ONEWAY_FARES = "oneway_fares"       # one-way leg fare grids (open-jaw foundation)
+COLLECTION_ONEWAY_FARES = "oneway_fares"       # one-way leg fare grids (stretch-bubble fares)
 
 # TTL settings
 FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days

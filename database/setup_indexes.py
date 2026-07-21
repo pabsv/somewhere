@@ -208,14 +208,17 @@ def setup_scrape_run_indexes(db):
 
 
 def setup_oneway_fare_indexes(db):
-    """Create indexes for oneway_fares collection (open-jaw foundation)."""
+    """
+    Create indexes for the oneway_fares collection.
+
+    leg_key_unique serves BOTH the write path (it makes bulk_upsert_grids'
+    upsert race-safe) and the only read path, frontend/lib/fareGrids.ts, which
+    looks grids up by a `leg_key: {$in: [...]}` for the trip-stretch bubble.
+    """
     collection = db[COLLECTION_ONEWAY_FARES]
 
     indexes = [
         IndexModel([("leg_key", ASCENDING)], unique=True, name="leg_key_unique"),
-        # Future open-jaw read path: enumerate legs out of / back to an airport.
-        IndexModel([("origin", ASCENDING)], name="origin"),
-        IndexModel([("destination", ASCENDING)], name="destination"),
         # TTL: grids not refreshed (route disabled/removed) age out.
         IndexModel(
             [("scraped_at", ASCENDING)],

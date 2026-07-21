@@ -169,7 +169,7 @@ def scrape_one_route(
                 f"api={stats['api_calls']} dur={time.time()-t0:.1f}s"
             )
 
-        # Open-jaw foundation: persist one-way leg grids (best-effort, never
+        # Persist the one-way leg grids (best-effort, never
         # fatal). Skipped on --direct-only runs so direct-only prices can't
         # overwrite the normal grids.
         if not direct_only:
