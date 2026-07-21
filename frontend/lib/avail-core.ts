@@ -46,6 +46,15 @@ export function fitsAnyWindow(
   return false;
 }
 
+/**
+ * How far outside a free window a trip may hang and still be offered, in days
+ * TOTAL across both edges — the "± 2 days" chip. Two is the whole budget: a
+ * trip can leave two days early, come back two days late, or split one each
+ * way. Beyond that it stops being your trip with a day of slack and starts
+ * being a different trip.
+ */
+export const NEAR_AVAIL_MAX_SPILL_DAYS = 2;
+
 /** Whole days between two YYYY-MM-DD strings (b − a). */
 function dayDiff(a: string, b: string): number {
   return Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
@@ -64,7 +73,7 @@ export function nearMissWindow(
   windows: AvailWindow[],
   depHour: number | null = null,
   arrHour: number | null = null,
-  maxSpillDays = 1,
+  maxSpillDays = NEAR_AVAIL_MAX_SPILL_DAYS,
 ): { out_spill: number; ret_spill: number } | null {
   let best: { out_spill: number; ret_spill: number } | null = null;
   for (const w of windows) {

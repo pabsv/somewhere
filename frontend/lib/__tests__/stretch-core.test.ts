@@ -5,27 +5,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  STRETCH_MAX_DAYS,
   enumerateStretchCandidates,
   priceStretchCandidates,
   type ExactFare,
 } from "../stretch-core";
+import { nightsBetween } from "../format";
 
 const TODAY = "2026-08-01";
 const BASE = { out: "2026-08-14", ret: "2026-08-17" };
 
-test("no window → ±3 fallback both sides, no full candidate", () => {
+test("nightsBetween counts calendar days", () => {
+  assert.equal(nightsBetween("2026-07-20", "2026-07-23"), 3);
+  assert.equal(nightsBetween("2026-12-30", "2027-01-02"), 3); // year boundary
+});
+
+test("no window → ±STRETCH_MAX_DAYS fallback both sides, no full candidate", () => {
   const c = enumerateStretchCandidates(BASE, {}, TODAY);
   assert.deepEqual(
     c.map((x) => [x.out, x.ret, x.kind]),
     [
       ["2026-08-13", "2026-08-17", "earlier"],
       ["2026-08-12", "2026-08-17", "earlier"],
-      ["2026-08-11", "2026-08-17", "earlier"],
       ["2026-08-14", "2026-08-18", "later"],
       ["2026-08-14", "2026-08-19", "later"],
-      ["2026-08-14", "2026-08-20", "later"],
     ],
   );
+  // the fallback reach IS the constant — two days, matching the ± 2 days chip
+  assert.equal(STRETCH_MAX_DAYS, 2);
+  assert.equal(c.filter((x) => x.kind === "earlier").length, STRETCH_MAX_DAYS);
+  assert.equal(c.filter((x) => x.kind === "later").length, STRETCH_MAX_DAYS);
 });
 
 test("window clamps both sides and adds the full pair", () => {

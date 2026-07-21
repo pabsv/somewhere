@@ -1,9 +1,12 @@
 "use client";
 
 import type { CalTrip, Trip } from "@/types/api";
-import { formatDelta, formatPrice } from "@/lib/format";
+import { formatDelta, formatPrice, nearMissMark } from "@/lib/format";
 import { getDestination } from "@/data/destinations.gen";
 import CountryFlag from "@/components/ui/CountryFlag";
+import { useFavouriteSet } from "@/lib/favourite-scope";
+import { isFavouriteTrip } from "@/lib/favourites";
+import { FAV_GLYPH, FAV_GLYPH_TEXT, favRing } from "./favouriteSkin";
 
 interface TripBarProps {
   trip: CalTrip;
@@ -50,6 +53,29 @@ const NEAR_AVAIL_BAR =
   "bg-nearmiss/10 text-nearmiss-ink border border-dashed border-nearmiss";
 
 /**
+ * Bars this narrow (a 2-night trip spans 3 day columns, ~50px) can't hold
+ * "🇪🇸 VLC €56" — the price, the thing you actually scan for, is what gets
+ * truncated away. At or below this span the label sheds everything but the
+ * flag and the fare; the city and every marker are one hover away (tooltip).
+ */
+const COMPACT_MAX_SPAN = 3;
+
+/**
+ * Marks a bar whose city the user — or, on a group calendar, the crew — has
+ * starred. See components/tripcal/favouriteSkin for why the ring is an inset
+ * shadow rather than a border.
+ */
+function favouriteMark(trip: CalTrip, saved: ReadonlySet<string>) {
+  const isFav = isFavouriteTrip(trip, saved);
+  return {
+    isFav,
+    // Near-miss keeps its own dashed-amber skin; the ring rides on top of
+    // whichever fill actually renders, so pick the tier the bar is showing.
+    ring: favRing(isFav, trip.deal_tier),
+  };
+}
+
+/**
  * One trip rendered as a rounded pill spanning out→ret day columns, placed on
  * its lane row. Mono "BCN €39" label at the left end. Color by tier
  * (DESIGN_V1 §G). Hover surfaces the tooltip; click opens the popover.
@@ -66,29 +92,19 @@ export default function TripBar({
   onClick,
 }: TripBarProps) {
   const span = Math.max(1, endCol - startCol + 1);
+  const compact = span <= COMPACT_MAX_SPAN;
+  const favourites = useFavouriteSet();
+  const { isFav, ring } = favouriteMark(trip, favourites);
   const country = getDestination(trip.destination)?.country;
   const stretchMark =
     stretchDelta != null ? ` ·${formatDelta(stretchDelta)}` : null;
 
-  // Open-jaw marker: "+MAD" = twin-city trip flying home from another city;
-  // "→AMS" = returns into a different airport; "2×" = two singles instead of
-  // a return ticket. Plain trips carry no openjaw payload.
-  const ojMark = trip.openjaw
-    ? trip.openjaw.ground
-      ? `+${trip.openjaw.back.origin}`
-      : trip.openjaw.same_origin
-        ? "2×"
-        : `→${trip.openjaw.back.destination}`
-    : null;
-
   // Auto-extend badge: the calendar swapped in a longer variant at ~the same
   // fare because the extra days fit the user's free window.
-  // Near-miss marker: this bar spills 1 day outside the user's free window
-  // ("−1d" = leaves a day early, "+1d" = returns a day late).
+  // Near-miss marker: this bar spills up to 2 days outside the user's free
+  // window ("−2d" = leaves early, "+1d" = back late, "±1d" = a day each side).
   const na = trip.near_avail;
-  const naMark = na
-    ? ` ${na.out_spill > 0 ? `−${na.out_spill}d` : `+${na.ret_spill}d`}`
-    : null;
+  const naMark = na ? ` ${nearMissMark(na)}` : null;
 
   const ae = trip.auto_extended;
   const aeMark = ae
@@ -117,20 +133,31 @@ export default function TripBar({
             ? ` · auto-stretched +${ae.extra_nights} night${ae.extra_nights === 1 ? "" : "s"} for ${formatPrice(ae.delta_price)} more`
             : ""
         }`}
-        className={`group/bar flex h-6 w-full min-w-0 items-center overflow-hidden rounded-full px-1.5 text-left transition-transform duration-[120ms] ease-out-quart hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
-          trip.near_avail ? NEAR_AVAIL_BAR : TIER_BAR[trip.deal_tier]
-        } ${clippedStart ? "rounded-l-none" : ""} ${
-          clippedEnd ? "rounded-r-none" : ""
-        }`}
+        className={`group/bar flex h-6 w-full min-w-0 items-center overflow-hidden rounded-full text-left transition-transform duration-[120ms] ease-out-quart hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
+          compact ? "px-1" : "px-1.5"
+        } ${trip.near_avail ? NEAR_AVAIL_BAR : TIER_BAR[trip.deal_tier]} ${ring} ${
+          clippedStart ? "rounded-l-none" : ""
+        } ${clippedEnd ? "rounded-r-none" : ""}`}
       >
         <span className="tnum truncate font-mono text-[11px] font-semibold uppercase tracking-wide">
-          <CountryFlag code={country} className="mr-1" />
-          {trip.destination}
-          {ojMark && <span className="opacity-70">{ojMark}</span>}{" "}
-          {formatPrice(trip.price)}
-          {naMark && <span className="opacity-70">{naMark}</span>}
-          {aeMark && <span className="opacity-70">{aeMark}</span>}
-          {stretchMark && <span className="opacity-70">{stretchMark}</span>}
+          {/* Survives compact mode: when the label sheds the city and every
+              marker, "is this one mine?" is still worth one character. */}
+          {isFav && (
+            <span className={`mr-0.5 ${FAV_GLYPH_TEXT[trip.deal_tier]}`}>
+              {FAV_GLYPH}
+            </span>
+          )}
+          <CountryFlag code={country} className={compact ? "mr-0.5" : "mr-1"} />
+          {compact ? (
+            formatPrice(trip.price)
+          ) : (
+            <>
+              {trip.destination} {formatPrice(trip.price)}
+              {naMark && <span className="opacity-70">{naMark}</span>}
+              {aeMark && <span className="opacity-70">{aeMark}</span>}
+              {stretchMark && <span className="opacity-70">{stretchMark}</span>}
+            </>
+          )}
         </span>
       </button>
       {clippedEnd && (

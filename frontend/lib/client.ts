@@ -19,7 +19,6 @@ import type {
   GroupTripsResponse,
   JoinInfoResponse,
   JoinResult,
-  OpenJawResponse,
   Preferences,
   SavedCitiesResponse,
   TripsResponse,
@@ -118,32 +117,23 @@ export type TripsParams = {
   tier?: "steal" | "deal" | "fair";
   /** restrict to the signed-in user's availability windows */
   avail?: boolean;
+  /**
+   * Also return trips spilling up to NEAR_AVAIL_MAX_SPILL_DAYS over a free
+   * window's edges, flagged `near_avail` ("± 2 days" chip). No-op without
+   * `avail`.
+   */
+  near?: boolean;
+  /**
+   * Starred destination codes — these get a looser price cap and a reserved
+   * share of each month server-side. Send them SORTED: this object is
+   * stringified into the calendar's refetch key.
+   */
+  favs?: string[];
 };
 
 /** GET /api/trips */
 export function getTrips(params: TripsParams = {}): Promise<TripsResponse> {
   return request(`/api/trips${qs(params)}`);
-}
-
-export type OpenJawParams = {
-  /** destination IATA code; omit for the calendar sweep across all dests */
-  dest?: string;
-  from?: string[];
-  min_nights?: number;
-  max_nights?: number;
-  max_price?: number;
-  /** city mode only: origin-side combos (default), twin-city, or both merged */
-  mode?: "origin" | "multicity" | "all";
-  /** calendar mode only: inclusive range bounds (overlap semantics) */
-  start?: string;
-  end?: string;
-  /** restrict to the signed-in user's availability windows (date-level only) */
-  avail?: boolean;
-};
-
-/** GET /api/openjaw — open-jaw combos (one destination, or calendar sweep) */
-export function getOpenJaw(params: OpenJawParams): Promise<OpenJawResponse> {
-  return request(`/api/openjaw${qs(params)}`);
 }
 
 /** GET /api/trips/extensions — trip-stretch variants for one trip */
@@ -316,6 +306,21 @@ export function removeGroupMember(
 export function rotateGroupInvite(id: string): Promise<GroupDetailResponse> {
   return request(`/api/groups/${encodeURIComponent(id)}/invite`, {
     method: "POST",
+  });
+}
+
+/**
+ * PUT /api/groups/[id]/favourites — replace the crew's shared favourites.
+ * Any member may call this. Returns the full group detail like every other
+ * group mutation, so the caller replaces its state wholesale.
+ */
+export function putGroupFavourites(
+  id: string,
+  cities: string[],
+): Promise<GroupDetailResponse> {
+  return request(`/api/groups/${encodeURIComponent(id)}/favourites`, {
+    method: "PUT",
+    body: JSON.stringify({ cities }),
   });
 }
 

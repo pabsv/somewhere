@@ -133,16 +133,24 @@ export const HARD_PRICE_CEILING = 700;
 export const CALENDAR_DEFAULT_MAX_PRICE = 200;
 
 // ─── Near-miss availability (calendar exception bars) ────────────────────────
+// DORMANT since the "± 2 days" chip: near-miss bars used to appear unasked, so
+// they had to earn it by being a bargain. Now the user opts in explicitly and
+// the chip means "widen my windows by up to two days", so the only price rule
+// is the board's own Max € slider. Kept exported (near-avail.test.ts pins
+// them) —
+// restore the call in lib/queries.ts to bring the cheapness gate back.
 /**
- * Round-trip €-cap for a trip that misses the user's availability window by
- * one day to still show on the calendar as an "exception" bar. A near-miss
+ * Round-trip €-cap for a trip that misses the user's availability window to
+ * still show on the calendar as an "exception" bar. A near-miss
  * shows when it's a "steal" by tier OR at/below this absolute price — the user
  * may want to move things around for a genuine bargain.
  */
 export const NEAR_AVAIL_MAX_PRICE = 50;
 
 /**
- * True when a trip is cheap enough to surface as a ±1-day availability miss.
+ * DORMANT — see the note above.
+ *
+ * True when a trip is cheap enough to surface as a near-miss availability bar.
  * Effectively price-only: "steal" ⟺ price <= the destination's steal band ==
  * NEAR_AVAIL_MAX_PRICE × reach, so the tier clause subsumes the price clause.
  * `dest` optional — omitted keeps the flat €50 cap.
@@ -215,6 +223,27 @@ function clamp(n: number, lo: number, hi: number): number {
 // score/delta are unchanged and this never runs server-side (favourites are
 // per-user). The MAX_DEAL_PRICE sanity gate still applies: an expensive ticket
 // is never promoted, however far below its (possibly absurd) baseline it sits.
+
+/**
+ * Discovery-board €-cap a FAVOURITE destination gets, at reach 1.0.
+ *
+ * The calendar defaults to CALENDAR_DEFAULT_MAX_PRICE (€200) — a default the
+ * user never chose — which silently hides a starred city priced above it. A
+ * favourite is a deliberate act, so it earns the same allowance as the
+ * MAX_DEAL_PRICE sanity gate. Explicit user filters (the slider, "direct only",
+ * the nights range) still apply; only this default is relaxed.
+ */
+export const FAV_MAX_PRICE = 400;
+
+/**
+ * That cap for a specific destination, reach-scaled like every other band —
+ * a favourited Dubai (reach 2.6) is a different kind of expensive from a
+ * favourited Cologne, and one flat number would treat them identically.
+ * Callers must still clamp the result by HARD_PRICE_CEILING.
+ */
+export function favMaxPriceFor(dest?: string): number {
+  return FAV_MAX_PRICE * reachMultiplier(dest);
+}
 
 /** favourite: price <= this (EUR) → promote to "steal" (one band greener) — at reach 1.0 */
 export const FAV_PRICE_BAND_STEAL = 75;

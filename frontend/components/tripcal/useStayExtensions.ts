@@ -11,14 +11,9 @@
 // cached per route+dates+window for the session (cache hits render instantly).
 
 import { useEffect, useState } from "react";
-import type {
-  CalTrip,
-  DateWindow,
-  StretchVariant,
-  Trip,
-} from "@/types/api";
+import type { DateWindow, StretchVariant, Trip } from "@/types/api";
 import { getTripExtensions } from "@/lib/client";
-import { nightsBetween } from "@/lib/openjaw-core";
+import { nightsBetween } from "@/lib/format";
 
 export interface StayStretch extends StretchVariant {
   /** price difference vs the hovered trip (positive = costs more) */
@@ -48,8 +43,13 @@ export function stretchCount(s: StretchSet): number {
   return s.earlier.length + s.later.length + (s.fullWindow ? 1 : 0);
 }
 
-/** Max rows per direction shown (tooltip space is tight). */
-const MAX_PER_SIDE = 3;
+/**
+ * Max rows per direction shown, and how far past the trip we reach when no
+ * availability window contains it. Kept equal to STRETCH_MAX_DAYS /
+ * NEAR_AVAIL_MAX_SPILL_DAYS — two days is the app's one answer to "how far
+ * outside your free dates will you look?".
+ */
+const MAX_PER_SIDE = 2;
 /** Hover debounce before hitting the API. */
 const DEBOUNCE_MS = 200;
 
@@ -110,56 +110,6 @@ export function pickStretches(
     else if (v.kind === "full") set.fullWindow = s;
   }
   return set;
-}
-
-/**
- * Open-jaw twin of pickStretches (Phase 6): shapes the combo's server-attached
- * `extensions` (later back-leg dates from the same fare grid) into a
- * later-only StretchSet — no fetch needed. `price` is the NEW combo total
- * (out ticket + later back ticket); booking goes through the per-leg one-way
- * link, so search_link stays null. Clamped to the containing window (or +3d).
- */
-export function pickOpenJawExtensions(
-  trip: CalTrip,
-  windows: DateWindow[],
-  clampToWindows: boolean,
-): StayStretch[] {
-  const oj = trip.openjaw;
-  if (!oj?.extensions?.length) return [];
-  const containing = containingWindow(trip, windows, clampToWindows);
-  const maxReturn = containing
-    ? containing.end_date
-    : plusDays(trip.return_date, MAX_PER_SIDE);
-
-  return oj.extensions
-    .filter((e) => e.date > trip.return_date && e.date <= maxReturn)
-    .slice(0, MAX_PER_SIDE)
-    .map((e) => {
-      const extra = nightsBetween(trip.return_date, e.date);
-      return {
-        out_date: trip.outbound_date,
-        return_date: e.date,
-        nights: trip.duration_days + extra,
-        price: e.total,
-        estimated: false,
-        kind: "later" as const,
-        deal_tier: null,
-        delta_pct: null,
-        search_link: null,
-        deltaPrice: e.total - trip.price,
-        extraNights: extra,
-        daysEarlier: 0,
-        daysLater: extra,
-      };
-    });
-}
-
-/** Local YYYY-MM-DD + n days (avoids importing client calendarMath here). */
-function plusDays(from: string, n: number): string {
-  const [y, m, d] = from.split("-").map(Number);
-  const dt = new Date(y, m - 1, d + n);
-  const pad = (x: number) => String(x).padStart(2, "0");
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
 }
 
 export function useStayExtensions(

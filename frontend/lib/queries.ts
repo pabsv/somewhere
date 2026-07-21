@@ -21,6 +21,7 @@ import {
   type Trip,
 } from "@/types/api";
 import { toTrip, dedupeTrips, buildDensity } from "@/lib/trips";
+import { loadFareGrids } from "@/lib/fareGrids";
 import {
   enumerateStretchCandidates,
   priceStretchCandidates,
@@ -28,39 +29,30 @@ import {
 } from "@/lib/stretch-core";
 import {
   HARD_PRICE_CEILING,
-  GROUND_COMPETITIVE_CODES,
-  GROUND_COMPETITIVE_MAX_PRICE,
-  isNearAvailWorthy,
+  favMaxPriceFor,
+  promoteFavouriteTier,
 } from "@/lib/score";
+import { byPrice, curateBars, NEAR_AVAIL_CURATE_CAPS } from "@/lib/curate-core";
+import {
+  GROUND_COMPETITIVE_NOR,
+  buildTripFilter as buildPureTripFilter,
+  outboundMonthChunks,
+  type TripFilterParams as PureTripFilterParams,
+} from "@/lib/trip-filter";
 import { ORIGINS } from "@/data/airports.gen";
 import { getDestination } from "@/data/destinations.gen";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/**
- * Mongo clause: drop "ground-competitive" destinations (all Germany, Lux,
- * Paris, Lille) whose round-trip price is above GROUND_COMPETITIVE_MAX_PRICE —
- * a train or Flixbus beats them there, so an expensive flight is only clutter
- * on the discovery boards (Explore + Calendar). `$nor` with a single clause =
- * "NOT (ground-competitive AND over the cap)", so it composes with an existing
- * top-level `price` key without touching it. City drill-in pages are exempt
- * (a deliberate visit shows the full picture).
- */
-const GROUND_COMPETITIVE_NOR: Filter<FlightDoc>["$nor"] = [
-  {
-    destination: { $in: [...GROUND_COMPETITIVE_CODES] },
-    price: { $gt: GROUND_COMPETITIVE_MAX_PRICE },
-  },
-];
-
 const ALL_ORIGIN_CODES = ORIGINS.map((o) => o.code);
 
-/** Curation: per destination, per outbound-month, keep at most this many bars. */
-const BARS_PER_DEST_PER_MONTH = 2;
-/** Curation: global cap on bars per outbound-month. */
-const BARS_PER_MONTH = 40;
-/** Cap on ±1-day availability-exception bars per outbound-month (cheapest win). */
-const NEAR_AVAIL_MAX_PER_MONTH = 6;
+/**
+ * Most favourites a single request will run a relaxed query for. `saved_cities`
+ * allows 500, and each favourite costs one (small, shared) cached query — so
+ * this bounds the fan-out. Favourites past this point simply get no relaxation;
+ * they still appear under the normal rules like any other destination.
+ */
+export const MAX_FAV_QUERY = 40;
 /** Data-cache TTL for the user-independent halves of the calendar payload. */
 const TRIPS_REVALIDATE_SECONDS = 120; // 2 min — matches /api/cities
 
@@ -106,72 +98,46 @@ export function parseOrigins(fromParam: string | null | undefined): string[] {
   return out.length > 0 ? out : [...ALL_ORIGIN_CODES];
 }
 
-// ─── Trip filter builder ─────────────────────────────────────────────────────
+/**
+ * Parse a `favs=BCN,LIS` param into deduped, upper-cased, SORTED destination
+ * codes, capped at MAX_FAV_QUERY.
+ *
+ * Validated against the destination catalog, not just length-checked the way
+ * /api/saved-cities does: these codes become `unstable_cache` keys, so an
+ * unauthenticated caller could otherwise mint arbitrary cache entries with junk
+ * codes. Sorted so the same favourite set always produces the same keys
+ * regardless of the order the client happened to send them in.
+ *
+ * The param is spoofable by design — it only widens a read of already-public
+ * fare data, still bounded by HARD_PRICE_CEILING and this cap.
+ */
+export function parseFavourites(
+  favsParam: string | null | undefined,
+): string[] {
+  if (!favsParam) return [];
 
-export interface TripFilterParams {
-  origins: string[];
-  /** inclusive start of the date range (YYYY-MM-DD) — trips whose
-   *  [outbound_date, return_date] interval OVERLAPS [start, end] match */
-  start: string;
-  /** inclusive end of the date range (YYYY-MM-DD); omit for none */
-  end?: string | null;
-  /** max price in EUR; omit for no cap */
-  maxPrice?: number | null;
-  /** true → both legs must be non-stop */
-  direct?: boolean;
-  /** min trip length in days (duration_days >=) */
-  minNights?: number | null;
-  /** max trip length in days (duration_days <=) */
-  maxNights?: number | null;
+  const seen = new Set<string>();
+  for (const raw of favsParam.split(",")) {
+    const code = raw.trim().toUpperCase();
+    if (!code || seen.has(code)) continue;
+    if (!getDestination(code)) continue;
+    seen.add(code);
+  }
+  return [...seen].sort().slice(0, MAX_FAV_QUERY);
 }
 
+// ─── Trip filter builder ─────────────────────────────────────────────────────
+// The builder itself lives in lib/trip-filter.ts (pure, unit-tested). Wrapped
+// here so callers keep the old signature and don't each have to pass `today`.
+
+export type TripFilterParams = Omit<PureTripFilterParams, "today">;
+
 /**
- * Build a Mongo filter on the `flights` collection. Dates compare
- * lexicographically (YYYY-MM-DD strings sort chronologically).
+ * Build a Mongo filter on the `flights` collection. See lib/trip-filter.ts for
+ * the shape (spine + `$or` narrowing) and the favourite relaxation.
  */
 export function buildTripFilter(params: TripFilterParams): Filter<FlightDoc> {
-  const { origins, start, end, maxPrice, direct, minNights, maxNights } =
-    params;
-
-  const filter: Filter<FlightDoc> = {
-    origin: { $in: origins },
-  };
-
-  // Overlap semantics: a trip matches when its [outbound_date, return_date]
-  // interval intersects [start, end] — not only when it departs inside the
-  // range. Outbound is still floored at today: a trip that already departed
-  // can't be booked, so it never shows even when it overlaps the range.
-  const outbound: Record<string, string> = { $gte: todayStr() };
-  if (end) outbound.$lte = end;
-  filter.outbound_date = outbound;
-  filter.return_date = { $gte: start };
-
-  // Hard ceiling always applies — routing-artifact fares (€2000+ multi-leg
-  // tickets Google returns when a route has no real option) are never shown.
-  const effectiveMax =
-    typeof maxPrice === "number" && Number.isFinite(maxPrice)
-      ? Math.min(maxPrice, HARD_PRICE_CEILING)
-      : HARD_PRICE_CEILING;
-  filter.price = { $lte: effectiveMax };
-
-  if (direct) {
-    filter.outbound_stops = 0;
-    filter.return_stops = 0;
-  }
-
-  const dur: Record<string, number> = {};
-  if (typeof minNights === "number" && Number.isFinite(minNights)) {
-    dur.$gte = minNights;
-  }
-  if (typeof maxNights === "number" && Number.isFinite(maxNights)) {
-    dur.$lte = maxNights;
-  }
-  if (Object.keys(dur).length > 0) filter.duration_days = dur;
-
-  // Ground-competitive destinations only survive when cheap enough to beat rail.
-  filter.$nor = GROUND_COMPETITIVE_NOR;
-
-  return filter;
+  return buildPureTripFilter({ ...params, today: todayStr() });
 }
 
 // ─── Doc → scored Trip ───────────────────────────────────────────────────────
@@ -197,13 +163,6 @@ export function scoreFlights(
     trips.push(toTrip(doc, baselines));
   }
   return trips;
-}
-
-// ─── Month helper ────────────────────────────────────────────────────────────
-
-/** "2026-06-21" → "2026-06" (outbound-month key for curation). */
-function monthKey(date: string): string {
-  return date.slice(0, 7);
 }
 
 // ─── /api/cities aggregation + scoring ───────────────────────────────────────
@@ -533,10 +492,7 @@ export async function getTripStretchData(
       })
       .toArray(),
     getBaselines(),
-    // dynamic import: lib/openjaw imports from this module — avoid a static cycle
-    import("@/lib/openjaw").then((m) =>
-      m.loadFareGrids({ leg_key: { $in: [outLeg, backLeg] } }),
-    ),
+    loadFareGrids({ leg_key: { $in: [outLeg, backLeg] } }),
   ]);
 
   const exactByPair = new Map<string, ExactFare>();
@@ -575,6 +531,16 @@ export interface TripsQuery {
   tier?: "steal" | "deal" | "fair" | null;
   /** when true and a session is present, restrict to the user's free windows */
   avail?: boolean;
+  /**
+   * Also return trips that spill ONE day over a free window's edge, flagged
+   * `near_avail` and curated as a separate set. Only meaningful with `avail`.
+   */
+  near?: boolean;
+  /**
+   * Uppercase destination IATA codes the caller has starred. Already validated
+   * against the destination catalog by the route — these reach cache keys.
+   */
+  favourites?: string[] | null;
 }
 
 /** Minimal session shape — only what trips filtering needs. */
@@ -743,15 +709,7 @@ function cachedDensitySource(
   )();
 }
 
-/**
- * Scored + deduped bars for a filter (origins / date / price / direct / nights
- * — all user-independent), cached 2 min. The avail / near-miss / tier / curate
- * passes run per request over this. Caches BOTH the Atlas read (~3.4s) and the
- * scoring pass, so a signed-in "only my free dates" reload no longer re-hits
- * Atlas — only the cheap in-memory avail filter reruns. Scoring reuses
- * getBaselines (itself memoized), matching the /api/cities cache pattern.
- */
-function cachedScoredBars(p: {
+interface ScoredBarsParams {
   origins: string[];
   start: string;
   end: string;
@@ -759,7 +717,27 @@ function cachedScoredBars(p: {
   direct?: boolean;
   minNights?: number | null;
   maxNights?: number | null;
-}): Promise<Trip[]> {
+}
+
+/**
+ * Scored + deduped bars for ONE outbound month of a filter, cached 2 min.
+ *
+ * The per-month split exists because a single entry for the whole 10-month
+ * range serializes to ~2.1MB, and Next silently DROPS any data-cache entry
+ * over 2MB ("items over 2MB can not be cached") — so the calendar's cache was
+ * a no-op and every load re-ran the full Atlas read plus scoring. One month is
+ * ~200KB and stays that way as the pool densifies, because the number of months
+ * is fixed while the total is not.
+ *
+ * `outStart`/`outEnd` bound the OUTBOUND date only; `start` still bounds
+ * return_date, so the overlap semantics are identical to querying the whole
+ * range at once (a trip belongs to exactly one chunk — the one containing its
+ * outbound date — so the union is the same set, and de-duping per chunk is
+ * equivalent because dedupeTrips keys include the outbound date).
+ */
+function cachedScoredBarsChunk(
+  p: ScoredBarsParams & { outStart: string; outEnd: string },
+): Promise<Trip[]> {
   const maxPrice = p.maxPrice ?? null;
   const direct = p.direct ?? false;
   const minNights = p.minNights ?? null;
@@ -767,7 +745,8 @@ function cachedScoredBars(p: {
   const key = JSON.stringify({
     o: [...p.origins].sort(),
     start: p.start,
-    end: p.end,
+    outStart: p.outStart,
+    outEnd: p.outEnd,
     maxPrice,
     direct,
     minNights,
@@ -780,18 +759,114 @@ function cachedScoredBars(p: {
       const filter = buildTripFilter({
         origins: p.origins,
         start: p.start,
-        end: p.end,
+        end: p.outEnd,
         maxPrice,
         direct,
         minNights,
         maxNights,
       });
+      // Narrow the outbound floor to this chunk. buildTripFilter floors it at
+      // today; every chunk starts at or after today (they're enumerated from
+      // today), so this only ever tightens the range, never widens it.
+      filter.outbound_date = { $gte: p.outStart, $lte: p.outEnd };
       const docs = await flights
         .find(filter, { projection: { _id: 0 } })
         .toArray();
       return dedupeTrips(scoreFlights(docs, baselines));
     },
     ["trips-bars", key],
+    { revalidate: TRIPS_REVALIDATE_SECONDS },
+  )();
+}
+
+/**
+ * Scored + deduped bars for a filter (origins / date / price / direct / nights
+ * — all user-independent), cached 2 min per outbound month. The avail /
+ * near-miss / tier / curate passes run per request over this. Caches BOTH the
+ * Atlas reads and the scoring pass, so a signed-in "only my free dates" reload
+ * no longer re-hits Atlas — only the cheap in-memory avail filter reruns.
+ * Scoring reuses getBaselines (itself memoized).
+ *
+ * Chunks are fetched in parallel and each is bounded by the same indexes as
+ * before (origin + outbound_date), so the cold path costs about what the single
+ * query did; the warm path now actually hits, which it never did before.
+ */
+function cachedScoredBars(p: ScoredBarsParams): Promise<Trip[]> {
+  // Outbound is floored at today by buildTripFilter, so enumerate from today
+  // rather than from `start` — otherwise a start in the future would drop the
+  // trips that depart earlier and return inside the range (overlap semantics).
+  const chunks = outboundMonthChunks(todayStr(), p.end);
+  if (chunks.length === 0) return Promise.resolve([]);
+  return Promise.all(
+    chunks.map((c) =>
+      cachedScoredBarsChunk({ ...p, outStart: c.start, outEnd: c.end }),
+    ),
+  ).then((parts) => parts.flat());
+}
+
+/**
+ * Relaxed bars for ONE favourite destination, cached the same 2 min.
+ *
+ * Why a second query instead of folding favourites into `cachedScoredBars`'s
+ * key: favourites are PER-USER, and `trips-bars` is a deliberately shared,
+ * user-independent entry holding a full 10-month `Trip[]`. Adding a favourite
+ * list to that key would (a) mint one copy of the whole board per distinct
+ * favourite set — effectively per user — of an object already near the data
+ * cache's per-entry size limit, (b) guarantee a cold miss the instant someone
+ * toggles a star, which is exactly when the UI must feel instant, and (c) put
+ * per-user state one forgotten field away from being served to everyone.
+ *
+ * Keying per DESTINATION instead makes the entry genuinely shared: everyone who
+ * starred BCN hits the same one. Each is small (one city) and answered by a
+ * tight IXSCAN on `destination_outbound_price`.
+ *
+ * INVARIANT: every value read inside the closure must appear in `key`. This is
+ * the only thing standing between this cache and a cross-user leak.
+ */
+function cachedFavBars(p: {
+  dest: string;
+  origins: string[];
+  start: string;
+  end: string;
+  /** already max(userCap, favMaxPriceFor(dest)) and clamped to the ceiling */
+  maxPrice: number;
+  direct: boolean;
+  minNights: number | null;
+  maxNights: number | null;
+}): Promise<Trip[]> {
+  const key = JSON.stringify({
+    d: p.dest,
+    o: [...p.origins].sort(),
+    start: p.start,
+    end: p.end,
+    maxPrice: p.maxPrice,
+    direct: p.direct,
+    minNights: p.minNights,
+    maxNights: p.maxNights,
+  });
+  return unstable_cache(
+    async (): Promise<Trip[]> => {
+      const flights = await flightsCollection();
+      const baselines = await getBaselines();
+      const filter = buildTripFilter({
+        origins: p.origins,
+        start: p.start,
+        end: p.end,
+        // Both branches of the `$or` are scoped to this one destination, so
+        // the union collapses to "this city under the relaxed rules".
+        maxPrice: p.maxPrice,
+        direct: p.direct,
+        minNights: p.minNights,
+        maxNights: p.maxNights,
+        favourites: [p.dest],
+        favMaxPrice: p.maxPrice,
+      });
+      const docs = await flights
+        .find({ ...filter, destination: p.dest }, { projection: { _id: 0 } })
+        .toArray();
+      return dedupeTrips(scoreFlights(docs, baselines));
+    },
+    ["trips-fav-bars", key],
     { revalidate: TRIPS_REVALIDATE_SECONDS },
   )();
 }
@@ -817,6 +892,39 @@ export async function getTripsData(
     minNights: params.minNights,
     maxNights: params.maxNights,
   });
+
+  // ── Favourites: one small, shared, per-destination query each ─────────────
+  // The board query above keeps today's rules for everyone; a starred city gets
+  // its own looser pass so it can't be hidden by the €200 default the user
+  // never chose. Route-level filters the user DID choose still apply.
+  const favs = (params.favourites ?? []).slice(0, MAX_FAV_QUERY);
+  const favSet = new Set(favs);
+  const favBars = favs.length === 0
+    ? []
+    : (
+        await Promise.all(
+          favs.map((dest) =>
+            cachedFavBars({
+              dest,
+              origins: params.origins,
+              start: params.start,
+              end: params.end,
+              maxPrice: Math.min(
+                Math.max(
+                  // No cap requested means "any price", which resolves to the
+                  // ceiling — a favourite must never end up TIGHTER than that.
+                  params.maxPrice ?? HARD_PRICE_CEILING,
+                  favMaxPriceFor(dest),
+                ),
+                HARD_PRICE_CEILING,
+              ),
+              direct: params.direct ?? false,
+              minNights: params.minNights ?? null,
+              maxNights: params.maxNights ?? null,
+            }),
+          ),
+        )
+      ).flat();
 
   // ── Resolve availability (avail=1 + session) ──────────────────────────────
   let avail: UserAvailability | null = null;
@@ -855,11 +963,21 @@ export async function getTripsData(
   const density = buildDensity(densityInput);
 
   // ── Bars: (cached: score → dedupe) → avail filter → tier filter → curate ──
-  let bars = scoredBars;
+  // Re-dedupe over the union rather than merging by key: dedupeTrips collapses
+  // on dest|out|ret ACROSS origins and keeps the cheapest, so a favourite fare
+  // that also came back in the general query must be reconciled, not appended.
+  // It allocates instead of mutating, so the shared cached arrays stay safe.
+  let bars =
+    favBars.length === 0 ? scoredBars : dedupeTrips([...scoredBars, ...favBars]);
+
+  // ±2-day exceptions live in their own array all the way to curation, so
+  // turning them on can never cost a trip that actually fits the free dates
+  // a slot (they get NEAR_AVAIL_CURATE_CAPS, and lose the lane race client-side
+  // via LaneTrip.deprioritized).
+  let nearMisses: Trip[] = [];
 
   if (avail) {
     const kept: Trip[] = [];
-    const nearMisses: Trip[] = [];
     for (const t of bars) {
       const depHour = hourOf(t.outbound.dep);
       const arrHour = hourOf(t.ret.arr);
@@ -875,9 +993,11 @@ export async function getTripsData(
         kept.push(t);
         continue;
       }
-      // ±1-day exception: a very cheap trip that hangs one day over a window's
-      // edge still shows, flagged so the client renders it as "doesn't fit".
-      if (!isNearAvailWorthy(t.deal_tier, t.price, t.destination)) continue;
+      // ±2-day exception ("± 2 days" chip): the trip hangs up to two days over a
+      // window's edge, flagged so the client renders it as "doesn't quite fit".
+      // Opt-in — the user asked for the wider window, so there is no extra
+      // cheapness gate beyond the price cap the bars were already built with.
+      if (!params.near) continue;
       if (avail.minNights !== null && t.duration_days < avail.minNights)
         continue;
       if (avail.maxNights !== null && t.duration_days > avail.maxNights)
@@ -889,19 +1009,10 @@ export async function getTripsData(
         depHour,
         arrHour,
       );
+      // A spill of 0/0 is an edge-HOUR miss, not a ±2-day one — it has no
+      // "−1d"/"+1d" mark to render, so it stays filtered out.
       if (!miss || miss.out_spill + miss.ret_spill === 0) continue;
       nearMisses.push({ ...t, near_avail: miss });
-    }
-    // Flood guard: the cheapest few exceptions per month, so one bargain route
-    // can't fill the calendar with spilled variants.
-    nearMisses.sort((a, b) => a.price - b.price);
-    const nearMissByMonth = new Map<string, number>();
-    for (const t of nearMisses) {
-      const mk = monthKey(t.outbound_date);
-      const n = nearMissByMonth.get(mk) ?? 0;
-      if (n >= NEAR_AVAIL_MAX_PER_MONTH) continue;
-      nearMissByMonth.set(mk, n + 1);
-      kept.push(t);
     }
     bars = kept;
     // NOTE: auto-extend (applyAutoExtend) is intentionally OFF — it pre-filled
@@ -911,58 +1022,30 @@ export async function getTripsData(
   }
 
   if (params.tier) {
-    bars = bars.filter((t) => t.deal_tier === params.tier);
+    // Favourites are compared on their PROMOTED tier — otherwise a starred city
+    // that only reads as a "steal" because it's a favourite would vanish under
+    // a "steal" filter, the limitation the client-side promotion left behind.
+    const tier = params.tier;
+    const matchesTier = (t: Trip) =>
+      t.deal_tier === tier ||
+      (favSet.has(t.destination) &&
+        promoteFavouriteTier(t.deal_tier, t.score, t.price, t.destination) ===
+          tier);
+    bars = bars.filter(matchesTier);
+    nearMisses = nearMisses.filter(matchesTier);
   }
 
-  const beforeCuration = bars.length;
-  const curated = curateBars(bars);
-  const truncated = curated.length < beforeCuration;
+  const beforeCuration = bars.length + nearMisses.length;
+  const curated = curateBars(bars, favSet);
+  // Curated separately, on its own (much tighter) caps — see the note above.
+  const curatedNear =
+    nearMisses.length === 0
+      ? []
+      : curateBars(nearMisses, favSet, NEAR_AVAIL_CURATE_CAPS);
+  const trips = [...curated, ...curatedNear].sort(byPrice);
+  const truncated = trips.length < beforeCuration;
 
-  return { trips: curated, density, truncated };
-}
-
-/**
- * Curation for calendar bars (variety guard):
- *   1. per destination per outbound-month → keep the 2 cheapest
- *   2. then per outbound-month → keep the global 40 cheapest
- * Sorting throughout: price asc, tie → higher score.
- */
-function curateBars(trips: Trip[]): Trip[] {
-  const byPrice = (a: Trip, b: Trip) =>
-    a.price - b.price || b.score - a.score;
-
-  // Step 1: cap per (month, destination).
-  const perDestMonth = new Map<string, Trip[]>();
-  for (const t of trips) {
-    const k = `${monthKey(t.outbound_date)}|${t.destination}`;
-    const arr = perDestMonth.get(k);
-    if (arr) arr.push(t);
-    else perDestMonth.set(k, [t]);
-  }
-
-  const afterDestCap: Trip[] = [];
-  for (const arr of perDestMonth.values()) {
-    arr.sort(byPrice);
-    for (const t of arr.slice(0, BARS_PER_DEST_PER_MONTH)) afterDestCap.push(t);
-  }
-
-  // Step 2: cap per month globally.
-  const perMonth = new Map<string, Trip[]>();
-  for (const t of afterDestCap) {
-    const k = monthKey(t.outbound_date);
-    const arr = perMonth.get(k);
-    if (arr) arr.push(t);
-    else perMonth.set(k, [t]);
-  }
-
-  const out: Trip[] = [];
-  for (const arr of perMonth.values()) {
-    arr.sort(byPrice);
-    for (const t of arr.slice(0, BARS_PER_MONTH)) out.push(t);
-  }
-
-  out.sort(byPrice);
-  return out;
+  return { trips, density, truncated };
 }
 
 // ─── /api/groups/[id]/trips — group trip matching ───────────────────────────
@@ -979,8 +1062,12 @@ export interface GroupTripsData {
 
 /** Curation for group trip bars: per destination keep at most this many. */
 const GROUP_TRIPS_PER_DEST = 2;
+/** Same, for a destination on the crew's shared favourites list. */
+const GROUP_FAV_TRIPS_PER_DEST = 5;
 /** Curation: global cap across all destinations. */
 const GROUP_TRIPS_GLOBAL_CAP = 60;
+/** Slots of that cap reserved for favourites before the global rank cut. */
+const GROUP_FAV_TRIPS_RESERVED = 15;
 
 /** Rank order for group trips: full-group match first, then most free members,
  *  then best score, then cheapest. */
@@ -995,8 +1082,16 @@ function groupTripRankCompare(a: GroupTrip, b: GroupTrip): number {
  * Curation (variety guard, no month-bucketing — unlike curateBars):
  *   1. per destination → keep top GROUP_TRIPS_PER_DEST by rank
  *   2. then globally → keep top GROUP_TRIPS_GLOBAL_CAP by rank
+ *
+ * `favourites` (the crew's shared list) widens both caps for those
+ * destinations, the same reserved-quota shape curateBars uses: curation runs
+ * server-side, so without this a client-side favourites filter could only ever
+ * reveal what curation already happened to keep.
  */
-function curateGroupTrips(trips: GroupTrip[]): {
+function curateGroupTrips(
+  trips: GroupTrip[],
+  favourites: ReadonlySet<string> = new Set(),
+): {
   curated: GroupTrip[];
   truncated: boolean;
 } {
@@ -1008,13 +1103,32 @@ function curateGroupTrips(trips: GroupTrip[]): {
   }
 
   const afterDestCap: GroupTrip[] = [];
-  for (const arr of perDest.values()) {
+  for (const [dest, arr] of perDest) {
     arr.sort(groupTripRankCompare);
-    for (const t of arr.slice(0, GROUP_TRIPS_PER_DEST)) afterDestCap.push(t);
+    const cap = favourites.has(dest)
+      ? GROUP_FAV_TRIPS_PER_DEST
+      : GROUP_TRIPS_PER_DEST;
+    for (const t of arr.slice(0, cap)) afterDestCap.push(t);
   }
 
   afterDestCap.sort(groupTripRankCompare);
-  const curated = afterDestCap.slice(0, GROUP_TRIPS_GLOBAL_CAP);
+
+  // Best-ranked favourites claim the reserve; everything else (favourites
+  // included, once the reserve is full) competes for the remaining slots.
+  const reserved: GroupTrip[] = [];
+  if (favourites.size > 0) {
+    for (const t of afterDestCap) {
+      if (reserved.length >= GROUP_FAV_TRIPS_RESERVED) break;
+      if (favourites.has(t.destination)) reserved.push(t);
+    }
+  }
+  const taken = new Set(reserved.map((t) => t.key));
+  const rest = afterDestCap.filter((t) => !taken.has(t.key));
+  const curated = [
+    ...reserved,
+    ...rest.slice(0, Math.max(0, GROUP_TRIPS_GLOBAL_CAP - reserved.length)),
+  ];
+  curated.sort(groupTripRankCompare);
   const truncated = curated.length < trips.length;
 
   return { curated, truncated };
@@ -1217,6 +1331,8 @@ function buildAvailHeat(
 export async function getGroupTripsData(
   memberIds: string[],
   origins: string[],
+  /** The crew's shared favourites — a wider curation slice + promoted tiers. */
+  favourites: readonly string[] = [],
 ): Promise<GroupTripsData> {
   const avails = await Promise.all(memberIds.map((id) => loadUserAvailability(id)));
   const known: { id: string; avail: UserAvailability }[] = [];
@@ -1229,7 +1345,14 @@ export async function getGroupTripsData(
   const flights = await flightsCollection();
   const baselines = await getBaselines();
   const start = todayStr();
-  const end = monthsAhead(6);
+  // 10 months to match GroupTripsCalendar's MONTHS — at 6 the last four months
+  // of the group calendar were structurally empty, so a favourite landing there
+  // could never appear however generous curation got.
+  const end = monthsAhead(10);
+  const favSet = new Set(favourites);
+  // No maxPrice here, so the effective cap is already HARD_PRICE_CEILING and
+  // the favourite price relaxation is a no-op — the lever that matters for a
+  // group is curation, below.
   const filter = buildTripFilter({ origins, start, end });
   const docs = await flights.find(filter).toArray();
   const trips = dedupeTrips(scoreFlights(docs, baselines));
@@ -1251,6 +1374,13 @@ export async function getGroupTripsData(
     }
     return {
       ...t,
+      // Tier promotion is legitimate server-side here (unlike personal
+      // favourites): a group favourite is a property of the GROUP, so every
+      // member gets the identical board — which is also what makes it safe to
+      // let it influence ranking and curation below.
+      deal_tier: favSet.has(t.destination)
+        ? promoteFavouriteTier(t.deal_tier, t.score, t.price, t.destination)
+        : t.deal_tier,
       free_count: freeIds.length,
       known_count: known.length,
       unknown_count: unknownCount,
@@ -1268,7 +1398,7 @@ export async function getGroupTripsData(
 
   scored.sort(groupTripRankCompare);
 
-  const { curated, truncated } = curateGroupTrips(scored);
+  const { curated, truncated } = curateGroupTrips(scored, favSet);
 
   // Strip the internal hour fields at the boundary — they've already done
   // their job of excluding days where members' free hours don't actually

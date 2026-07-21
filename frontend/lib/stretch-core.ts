@@ -1,6 +1,6 @@
 // ─── Trip-stretch core — pure candidate enumeration + hybrid pricing ─────────
 // Powers the calendar hover's "leave earlier / return later / full window"
-// suggestions. Mongo-free on purpose (mirrors openjaw-core) so it's unit
+// suggestions. Mongo-free on purpose (like avail-core) so it's unit
 // testable: npx tsx --test lib/__tests__/stretch-core.test.ts
 // Callers (lib/queries.ts) supply the exact stored round-trip fares and the
 // two one-way grids; exact fares win, grid sums fill the gaps as ~estimates.
@@ -8,8 +8,13 @@
 import type { StretchVariant } from "@/types/api";
 import { parseLocalDate } from "@/lib/format";
 
-/** Max days a trip may stretch per side (outside the full-window candidate). */
-export const STRETCH_MAX_DAYS = 3;
+/**
+ * Max days a trip may stretch per side (outside the full-window candidate).
+ * Matches NEAR_AVAIL_MAX_SPILL_DAYS: two days is as far outside your
+ * availability as this app ever reaches, whether it's offering a stretch or a
+ * near-miss bar. Three was too much slack to call "around your free dates".
+ */
+export const STRETCH_MAX_DAYS = 2;
 
 export interface StretchCandidate {
   out: string;

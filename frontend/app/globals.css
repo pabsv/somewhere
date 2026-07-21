@@ -38,6 +38,15 @@
   --color-nearmiss: #d97706;
   --color-nearmiss-ink: #6b3a00;
 
+  /* favourite gold — the "this one is yours" contour on calendar bars.
+     Deliberately darker and browner than --color-brand (#ffc72c), which
+     already owns the deal tier and the active star: brand is 1.45:1 on
+     --color-paper and physically cannot read as an outline. */
+  --color-fav: #b8860b;
+  /* Same mark drawn over a saturated fill (the solid steal-green bar), where
+     the deep gold would disappear. */
+  --color-fav-hi: #e9c46a;
+
   /* academic-calendar overlay (muted, low-opacity use only) */
   --color-uni-exam: #b45437;
   --color-uni-break: #64789b;

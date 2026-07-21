@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CalTrip, Trip } from "@/types/api";
+import { useFavouriteSet } from "@/lib/favourite-scope";
+import { isFavouriteTrip } from "@/lib/favourites";
+import { FAV_GLYPH, FAV_GLYPH_TEXT, favRing } from "./favouriteSkin";
 
 /** One free-day fare cell inside the bubble (already resolved to a month day). */
 export interface StretchCell {
@@ -90,6 +93,11 @@ export default function StretchOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.key]);
 
+  // This bar REPLACES the grid TripBar while hovering, so it has to carry the
+  // gold contour too — otherwise the mark blinks off the moment you point at it.
+  const favourites = useFavouriteSet();
+  const isFav = isFavouriteTrip(trip, favourites);
+
   const winLen = Math.max(1, winEndCol - winStartCol + 1);
   const pctLeft = (col: number) => ((col - winStartCol) / winLen) * 100;
   const dayW = 100 / winLen;
@@ -98,7 +106,11 @@ export default function StretchOverlay({
     <div
       ref={wrapRef}
       style={{ gridColumn: `${winStartCol} / span ${winLen}`, gridRow: lane + 1 }}
-      className="relative z-[5]"
+      // Deliberately NO z-index: a z here would open a stacking context and
+      // trap the fare cells below the sibling TripBars (z-10) — a neighbouring
+      // trip inside the window would keep painting over the "~+€9" the user
+      // hovered to read. Left at auto, the children below pick their own level.
+      className="relative"
       onMouseEnter={(e) => onHover(trip, e.currentTarget)}
       onMouseLeave={() => onHover(null, null)}
     >
@@ -152,10 +164,17 @@ export default function StretchOverlay({
                   : undefined,
                 transition: "background-color 120ms ease",
               }}
-              className={`tnum absolute top-0 z-[7] flex h-6 items-center justify-center bg-transparent font-mono text-[9px] font-semibold leading-none text-steal hover:bg-steal/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${rounding}`}
+              className={`group/cell tnum absolute top-0 z-[15] flex h-6 items-center justify-center bg-transparent font-mono text-[9px] font-semibold leading-none text-steal hover:z-[17] hover:bg-steal/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${rounding}`}
             >
-              {/* label hides under the bar once the day is claimed */}
-              {!c.active && c.label}
+              {/* label hides under the bar once the day is claimed. It rides in
+                  an opaque chip because a free day can still be covered by a
+                  neighbouring trip's bar — the fare has to stay readable on
+                  whatever happens to sit underneath. */}
+              {!c.active && (
+                <span className="rounded-full bg-card px-1 py-[2px] shadow-[0_0_0_1px_rgba(14,159,110,0.35)] group-hover/cell:bg-steal group-hover/cell:text-white group-hover/cell:shadow-none">
+                  {c.label}
+                </span>
+              )}
             </button>
           );
         })}
@@ -176,9 +195,14 @@ export default function StretchOverlay({
           width: `${((barEndCol - barStartCol + 1) / winLen) * 100}%`,
           transition: `left 280ms ${QUART}, width 280ms ${QUART}`,
         }}
-        className={`tnum absolute top-0 z-10 flex h-6 min-w-0 items-center overflow-hidden rounded-full px-1.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${TIER_BAR[trip.deal_tier]}`}
+        className={`tnum absolute top-0 z-[16] flex h-6 min-w-0 items-center overflow-hidden rounded-full px-1.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${TIER_BAR[trip.deal_tier]} ${favRing(isFav, trip.deal_tier)}`}
       >
         <span className="truncate">
+          {isFav && (
+            <span className={`mr-0.5 ${FAV_GLYPH_TEXT[trip.deal_tier]}`}>
+              {FAV_GLYPH}
+            </span>
+          )}
           {barLabel}
           {deltaLabel && <span className="opacity-70"> ·{deltaLabel}</span>}
         </span>

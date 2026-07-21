@@ -1,29 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import type { CalTrip, OpenJawTrip, Trip, DateWindow } from "@/types/api";
-import { getTrips, getOpenJaw, getAvailability, ApiError } from "@/lib/client";
+import type { CalTrip, Trip, DateWindow } from "@/types/api";
+import { getTrips, getAvailability, ApiError } from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
-import { useOpenJawPref } from "@/lib/useOpenJawPref";
 import { useSavedCities } from "@/lib/saved-cities";
-import { promoteFavouriteTier, tierForPrice } from "@/lib/score";
+import { favouriteDest, isFavouriteTrip } from "@/lib/favourites";
+import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
 import MonthBlock, {
   type StretchContext,
   type StretchSelection,
 } from "@/components/tripcal/MonthBlock";
-import AgendaMonth from "@/components/tripcal/AgendaMonth";
+import TripRail from "@/components/tripcal/TripRail";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
 import {
   useStayExtensions,
-  pickOpenJawExtensions,
-  EMPTY_STRETCHES,
   type StayStretch,
-  type StretchSet,
 } from "@/components/tripcal/useStayExtensions";
 import { formatDelta, formatPrice } from "@/lib/format";
 import CalendarFilters, {
@@ -42,38 +40,6 @@ import {
 
 const MONTHS = 10;
 
-/**
- * Dress an open-jaw combo as a CalTrip so MonthBlock/TripBar can render it.
- * Tier: reach-scaled price band on the combo total (tierForPrice, keyed on the
- * fly-in city) so combos colour by cheapness like every other bar. score 0
- * keeps combos below scored round trips in lane packing.
- */
-function toCalTrip(oj: OpenJawTrip): CalTrip {
-  const emptyLeg = { dep: "", arr: "", duration: "", stops: 0 };
-  return {
-    key: `oj:${oj.key}`,
-    origin: oj.out.origin,
-    destination: oj.destination,
-    city: oj.city,
-    outbound_date: oj.out.date,
-    return_date: oj.back.date,
-    duration_days: oj.nights,
-    price: oj.total_price,
-    currency: "EUR",
-    airlines: [],
-    is_direct: false,
-    score: 0,
-    delta_pct: null,
-    deal_tier: tierForPrice(oj.total_price, oj.destination),
-    outbound: emptyLeg,
-    ret: emptyLeg,
-    price_points: [],
-    search_link: null,
-    last_seen_at: oj.scraped_at,
-    openjaw: oj,
-  };
-}
-
 export default function CalendarPage() {
   const { origins } = useOrigins();
   const searchParams = useSearchParams();
@@ -91,15 +57,11 @@ export default function CalendarPage() {
   const { periods: uniPeriods, university } = useUniCalendar();
 
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
-  const [onlyFree, setOnlyFree] = useState(true);
+  // The board is ALWAYS the user's free dates — showing fares on days someone
+  // can't travel was noise, so there is no "all dates" mode any more. The chip
+  // that used to toggle it now widens each window by up to two days instead.
+  const [nearMiss, setNearMiss] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
-
-  // open-jaw + twin-city combos as bars — behind a chip (default off), gated
-  // by the allow_open_jaw preference. Works from a single origin (twin-city
-  // trips and two-singles wins don't need an origin pair).
-  const allowOpenJaw = useOpenJawPref();
-  const [openJawOn, setOpenJawOn] = useState(false);
-  const [openJawTrips, setOpenJawTrips] = useState<OpenJawTrip[]>([]);
 
   const [trips, setTrips] = useState<Trip[] | null>(null);
   const [density, setDensity] = useState<Record<string, number>>({});
@@ -107,6 +69,9 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [windows, setWindows] = useState<DateWindow[]>([]);
+  // Told apart from "no windows set": the server filters from its own copy, so
+  // a failed fetch would otherwise present a filtered board as an unfiltered one.
+  const [windowsError, setWindowsError] = useState(false);
 
   // hover tooltip + click popover + day sheet
   const [hovered, setHovered] = useState<{
@@ -121,6 +86,10 @@ export default function CalendarPage() {
   const [selections, setSelections] = useState<Record<string, StayStretch>>({});
 
   const originsKey = origins.join(",");
+  // Sorted so a favourite set always serializes the same way: this feeds both
+  // the request and `paramsKey` below, and raw Set order would churn the
+  // refetch effect on every render.
+  const savedKey = [...saved].sort().join(",");
 
   // ─── Build getTrips params from filter state ──────────────────────────────
   const params = useMemo(() => {
@@ -134,11 +103,20 @@ export default function CalendarPage() {
         filters.minNights > NIGHTS_MIN ? filters.minNights : undefined,
       maxNights:
         filters.maxNights < NIGHTS_MAX ? filters.maxNights : undefined,
-      direct: filters.direct ? true : undefined,
-      avail: onlyFree && signedIn ? true : undefined,
+      // Always on for a signed-in user (the server no-ops it when they have no
+      // windows). Kept conditional on `signedIn` so an anonymous load doesn't
+      // pay for an `auth()` round trip that can only return the same payload.
+      avail: signedIn ? true : undefined,
+      // "± 2 days". Not gated on hasWindows: that comes from a second async
+      // fetch, and adding it here would fire a spurious refetch when it lands —
+      // the chip only renders with windows, so this can't be true without them.
+      near: nearMiss ? true : undefined,
+      // Sent whether or not the ★ filter is on: a favourite earns its bigger
+      // margin on the normal board too, not only when filtered down to it.
+      favs: savedKey ? savedKey.split(",") : undefined,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originsKey, today, rangeEnd, filters, onlyFree, signedIn]);
+  }, [originsKey, today, rangeEnd, filters, nearMiss, signedIn, savedKey]);
 
   const paramsKey = JSON.stringify(params);
 
@@ -171,52 +149,24 @@ export default function CalendarPage() {
 
   useEffect(() => load(), [load]);
 
-  // ─── Open-jaw combos (chip on + pref allows + ≥2 origins) ─────────────────
-  // Grids carry no stops data, so combos can't honor "Direct only" — hide
-  // them entirely while it's active.
-  const openJawActive =
-    openJawOn && allowOpenJaw && origins.length >= 1 && !filters.direct;
-  useEffect(() => {
-    if (!openJawActive) {
-      setOpenJawTrips([]);
-      return;
-    }
-    let cancelled = false;
-    getOpenJaw({
-      from: params.from,
-      start: params.start,
-      end: params.end,
-      min_nights: params.minNights,
-      max_nights: params.maxNights,
-      max_price: params.maxPrice,
-      avail: params.avail,
-    })
-      .then((res) => {
-        if (!cancelled) setOpenJawTrips(res.trips);
-      })
-      .catch(() => {
-        // Sparse grids and transient errors read the same: no combo bars.
-        if (!cancelled) setOpenJawTrips([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openJawActive, paramsKey]);
-
   // ─── Availability underlay (signed-in only) ───────────────────────────────
   useEffect(() => {
     if (!signedIn) {
       setWindows([]);
+      setWindowsError(false);
       return;
     }
     let cancelled = false;
     getAvailability()
       .then((res) => {
-        if (!cancelled) setWindows(res.windows);
+        if (cancelled) return;
+        setWindows(res.windows);
+        setWindowsError(false);
       })
       .catch(() => {
-        if (!cancelled) setWindows([]);
+        if (cancelled) return;
+        setWindows([]);
+        setWindowsError(true);
       });
     return () => {
       cancelled = true;
@@ -227,43 +177,26 @@ export default function CalendarPage() {
 
   // Saved-only narrows the loaded trips to starred destinations (client-side;
   // the density underlay still reflects the full set). Favourite bars also get
-  // relaxed tier coloring (a "deal" reads as a "steal", etc.).
-  // Limitation: the tier filter runs server-side (params.tier) before promotion,
-  // so a favourite that's only promoted-to-steal won't appear under a "steal"
-  // filter. Cosmetic-only here; a `fav=` param on /api/trips is the follow-up.
-  const savedKey = [...saved].sort().join(",");
+  // relaxed tier coloring (a "deal" reads as a "steal", etc.) and the gold
+  // contour, which TripBar/TripRail draw themselves off the favourite scope.
+  // The server already gave these destinations a looser price cap and a
+  // reserved share of each month (params.favs), so what arrives here is a
+  // generous set rather than the same 2-per-month every city gets.
   const shownTrips = useMemo(() => {
-    const roundtrips = trips ?? [];
-    // Dedupe origin-side combos against round-trip bars: a bar already exists
-    // for the same destination + exact dates → skip the combo (no duplicate
-    // spans). Twin-city combos are exempt — they're a different trip (a second
-    // city) even when the fly-in dest + dates match a round-trip bar.
-    const spans = new Set(
-      roundtrips.map((t) => `${t.destination}|${t.outbound_date}|${t.return_date}`),
-    );
-    const combos = openJawActive
-      ? openJawTrips
-          .filter(
-            (oj) =>
-              oj.ground != null ||
-              !spans.has(`${oj.destination}|${oj.out.date}|${oj.back.date}`),
-          )
-          .map(toCalTrip)
-      : [];
-    // A twin-city bar is a favourite when EITHER city is starred — the fly-in
-    // city is t.destination, the fly-out city is the combo's back.origin.
-    const isFavourite = (t: CalTrip) =>
-      saved.has(t.destination) ||
-      (t.openjaw?.ground != null && saved.has(t.openjaw.back.origin));
-    const all: CalTrip[] = [...roundtrips, ...combos];
-    const scoped = savedOnly ? all.filter(isFavourite) : all;
-    return scoped.map((t) =>
-      isFavourite(t)
-        ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price, t.destination) }
-        : t,
-    );
+    const all: CalTrip[] = trips ?? [];
+    const scoped = savedOnly
+      ? all.filter((t) => isFavouriteTrip(t, saved))
+      : all;
+    return scoped.map((t) => {
+      // Promote against the city that actually matched: price bands are
+      // reach-scaled, so a favourite must relax from its own region's reach.
+      const fav = favouriteDest(t, saved);
+      return fav
+        ? { ...t, deal_tier: promoteFavouriteTier(t.deal_tier, t.score, t.price, fav) }
+        : t;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips, savedOnly, savedKey, openJawActive, openJawTrips]);
+  }, [trips, savedOnly, savedKey]);
 
   // Drop the saved-only filter if the last starred city is removed.
   useEffect(() => {
@@ -319,33 +252,20 @@ export default function CalendarPage() {
   );
 
   // ─── Trip-stretch suggestions for the hovered bar ──────────────────────────
-  const clampToWindows = signedIn && onlyFree;
-  const { stretches: rtStretches } = useStayExtensions(
-    // open-jaw bars ship their extensions inline, near-miss bars sit outside
-    // the window — skip the variants fetch for both
-    hovered && !hovered.trip.openjaw && !hovered.trip.near_avail
-      ? hovered.trip
-      : null,
+  const clampToWindows = signedIn;
+  // ±2-day bars DO fetch: "can I shift this into my window?" is the whole
+  // reason to look at one, and they resolve no containing window, so the
+  // server falls back to the ±3-day envelope, which is exactly that answer.
+  const { stretches } = useStayExtensions(
+    hovered ? hovered.trip : null,
     windows,
     clampToWindows,
-  );
-  // Open-jaw bars: later back-leg dates come attached to the combo (Phase 6) —
-  // shaped client-side with the same window clamping as round-trip variants.
-  const stretches = useMemo<StretchSet>(
-    () =>
-      hovered?.trip.openjaw
-        ? {
-            ...EMPTY_STRETCHES,
-            later: pickOpenJawExtensions(hovered.trip, windows, clampToWindows),
-          }
-        : rtStretches,
-    [hovered, rtStretches, windows, clampToWindows],
   );
   // The availability window the hovered trip sits in — the bubble spans it.
   // Resolved only in clamp mode (matching how the variants are clamped); with
   // no window we fall back to the ±3-day stretch envelope below.
   const hoveredWindow = useMemo(() => {
-    if (!hovered || hovered.trip.openjaw || !clampToWindows) return undefined;
+    if (!hovered || !clampToWindows) return undefined;
     const t = hovered.trip;
     return windows.find(
       (w) => w.start_date <= t.outbound_date && t.return_date <= w.end_date,
@@ -354,13 +274,11 @@ export default function CalendarPage() {
 
   // ─── Full-length bubble (design option 2c) for the hovered bar ─────────────
   // One dashed pill over the whole window with a fare on each free day; click a
-  // day to swap the trip live. Open-jaw bars are excluded (their extensions are
-  // inline and one-sided). Cells come from single-side variants only so each
+  // day to swap the trip live. Cells come from single-side variants only so each
   // click maps unambiguously to one variant; the full-window variant lives in
   // the popover.
   const stretch = useMemo<StretchContext | null>(() => {
-    // near-miss bars sit partly outside the window — no stretch bubble
-    if (!hovered || hovered.trip.openjaw || hovered.trip.near_avail) return null;
+    if (!hovered) return null;
     const base = hovered.trip;
     const sel = selections[base.key] ?? null;
 
@@ -497,49 +415,45 @@ export default function CalendarPage() {
               {hasWindows && (
                 <Chip
                   size="sm"
-                  selected={onlyFree}
-                  onClick={() => setOnlyFree((v) => !v)}
+                  selected={nearMiss}
+                  onClick={() => setNearMiss((v) => !v)}
+                  title="Also show trips that spill up to two days outside a free window — leave early, come back late, or a day of each"
                 >
-                  Only my free dates
-                </Chip>
-              )}
-              {allowOpenJaw && origins.length >= 1 && (
-                <Chip
-                  size="sm"
-                  selected={openJawOn}
-                  onClick={() => setOpenJawOn((v) => !v)}
-                  title="Open-jaw & twin-city combos: mixed airports or two cities in one trip — two separate tickets"
-                >
-                  ⇄ Mix &amp; match
+                  ± 2 days
                 </Chip>
               )}
             </>
           }
         />
-        {openJawOn &&
-          allowOpenJaw &&
-          origins.length >= 1 &&
-          filters.direct && (
-            <p className="mt-2 text-xs text-ink-muted">
-              Mix &amp; match fares carry no stops data, so they’re hidden
-              while “Direct only” is on.
-            </p>
-          )}
-        {/* Edge-hour honesty (Phase 6): grids are date-only, so the "free
-            from / back by" hours on availability windows can't constrain
-            combo bars — say so instead of silently ignoring them. */}
-        {openJawActive &&
-          onlyFree &&
-          signedIn &&
-          windows.some((w) => w.start_time != null || w.end_time != null) && (
-            <p className="mt-2 text-xs text-ink-muted">
-              Mix &amp; match fares carry no departure times, so the “free
-              from / back by” hours on your windows can’t apply to them — only
-              the dates do.
-            </p>
-          )}
+        {/* What the board is filtered by. The chip used to say this for free;
+            with the board permanently on free dates, it has to be written down
+            — including for the two cases where the filter silently can't run. */}
+        {windowsError ? (
+          <p className="mt-2 px-4 text-xs text-ink-muted">
+            Couldn’t load your free dates, so this board may not match them.
+          </p>
+        ) : hasWindows ? (
+          <p className="mt-2 px-4 text-xs text-ink-muted">
+            Showing fares that fit your free dates.
+          </p>
+        ) : signedIn ? (
+          <p className="mt-2 px-4 text-xs text-ink-muted">
+            You haven’t set any free dates, so this is everything.{" "}
+            <Link
+              href="/settings"
+              className="font-medium text-ink underline underline-offset-2"
+            >
+              Set your availability →
+            </Link>
+          </p>
+        ) : (
+          <p className="mt-2 px-4 text-xs text-ink-muted">
+            Sign in and set your free dates to filter this board to when you
+            could actually go.
+          </p>
+        )}
         {university && uniPeriods.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
               <span
                 aria-hidden="true"
@@ -572,38 +486,59 @@ export default function CalendarPage() {
       ) : loading && trips === null ? (
         <SkeletonMonths />
       ) : isCold ? (
-        <ColdState />
+        // With the board permanently on free dates, "nothing here" usually
+        // means the windows or the sliders are too tight — not cold data.
+        hasWindows ? (
+          <NoFitState
+            nearMiss={nearMiss}
+            onTryNearMiss={() => setNearMiss(true)}
+          />
+        ) : (
+          <ColdState />
+        )
       ) : (
-        <div className="space-y-5">
-          {months.map((spec, i) =>
-            isMobile ? (
-              <AgendaMonth
-                key={spec.label}
-                spec={spec}
-                trips={tripsByMonth[i]}
-                uniPeriods={uniPeriods}
-                onPick={openPopover}
-              />
-            ) : (
-              <MonthBlock
-                key={spec.label}
-                spec={spec}
-                trips={tripsByMonth[i]}
-                inbound={inboundByMonth[i]}
-                density={density}
-                windows={hasWindows ? windows : []}
-                underlay={!onlyFree}
-                showFreeStrip={hasWindows}
-                uniPeriods={uniPeriods}
-                today={today}
-                selections={selectionsMap}
-                stretch={stretch}
-                onBarHover={(trip, el) =>
-                  setHovered(trip && el ? { trip, el } : null)
-                }
-                onBarClick={(t) => openPopover(applySelection(t))}
-              />
-            ),
+        // A chip toggle is a real round trip and the skeleton only covers the
+        // first load, so dim the board rather than looking inert.
+        <div
+          aria-busy={loading}
+          className={loading ? "opacity-60 transition-opacity" : undefined}
+        >
+          {isMobile ? (
+            <TripRail
+              trips={shownTrips}
+              density={density}
+              windows={hasWindows ? windows : []}
+              uniPeriods={uniPeriods}
+              today={today}
+              end={rangeEnd}
+              onPick={openPopover}
+            />
+          ) : (
+            <div className="space-y-5">
+              {months.map((spec, i) => (
+                <MonthBlock
+                  key={spec.label}
+                  spec={spec}
+                  trips={tripsByMonth[i]}
+                  inbound={inboundByMonth[i]}
+                  density={density}
+                  windows={hasWindows ? windows : []}
+                  // Every bar now sits inside a window, so the wash is the
+                  // cheapest way to show WHERE they are — and it's what makes a
+                  // ± 2 days bar visibly hang off the edge.
+                  underlay={hasWindows}
+                  showFreeStrip={hasWindows}
+                  uniPeriods={uniPeriods}
+                  today={today}
+                  selections={selectionsMap}
+                  stretch={stretch}
+                  onBarHover={(trip, el) =>
+                    setHovered(trip && el ? { trip, el } : null)
+                  }
+                  onBarClick={(t) => openPopover(applySelection(t))}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -649,6 +584,49 @@ function SkeletonMonths() {
           <div className="mt-3 h-3.5 w-full animate-pulse rounded bg-line/60" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The board is always filtered to the user's free dates now, so an empty board
+ * almost always means the windows or the sliders are too tight — not that the
+ * scrapes haven't landed. Offer the three real ways out.
+ */
+function NoFitState({
+  nearMiss,
+  onTryNearMiss,
+}: {
+  nearMiss: boolean;
+  onTryNearMiss: () => void;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-card px-6 py-16 text-center shadow-card">
+      <p className="font-display text-xl font-semibold text-ink">
+        No fares fit your free dates
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
+        Nothing in the next ten months lands inside your availability at this
+        price. Try raising “Max €”, widening your free dates, or looking a day
+        either side.
+      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {!nearMiss && (
+          <button
+            type="button"
+            onClick={onTryNearMiss}
+            className="rounded-full border border-ink bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-colors hover:bg-ink/90"
+          >
+            Try ± 2 days
+          </button>
+        )}
+        <Link
+          href="/settings"
+          className="rounded-full border border-line px-4 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-line/40"
+        >
+          Edit your free dates
+        </Link>
+      </div>
     </div>
   );
 }

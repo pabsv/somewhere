@@ -6,7 +6,15 @@ import { periodsInRange, type UniPeriod } from "@/lib/university/tue";
 import FareTag from "@/components/ui/FareTag";
 import CountryFlag from "@/components/ui/CountryFlag";
 import { getDestination } from "@/data/destinations.gen";
-import { formatDateShort, formatRange, nightsLabel } from "@/lib/format";
+import {
+  formatDateShort,
+  formatRange,
+  nearMissSentence,
+  nightsLabel,
+} from "@/lib/format";
+import { useFavouriteSet } from "@/lib/favourite-scope";
+import { isFavouriteTrip } from "@/lib/favourites";
+import { FAV_GLYPH, favRing } from "./favouriteSkin";
 import { type MonthSpec, dayStr } from "./calendarMath";
 
 interface AgendaMonthProps {
@@ -34,6 +42,8 @@ export default function AgendaMonth({
   uniPeriods,
   onPick,
 }: AgendaMonthProps) {
+  const favourites = useFavouriteSet();
+
   // "Exams Q1 26 Oct – 7 Nov · Christmas recess 21 Dec – 1 Jan"
   const uniNote = useMemo(() => {
     const overlapping = periodsInRange(
@@ -112,6 +122,7 @@ export default function AgendaMonth({
                 {week.trips.map((trip) => {
                   const dest = getDestination(trip.destination);
                   const city = dest?.name ?? trip.city;
+                  const isFav = isFavouriteTrip(trip, favourites);
                   return (
                     <li key={trip.key}>
                       <button
@@ -121,10 +132,13 @@ export default function AgendaMonth({
                           trip.near_avail
                             ? "border-dashed border-nearmiss hover:border-nearmiss-ink"
                             : "border-line hover:border-ink-muted"
-                        }`}
+                        } ${favRing(isFav, trip.deal_tier)}`}
                       >
                         <div className="min-w-0">
                           <p className="truncate font-display text-sm font-semibold text-ink">
+                            {isFav && (
+                              <span className="mr-1 text-fav">{FAV_GLYPH}</span>
+                            )}
                             <CountryFlag code={dest?.country} className="mr-1" />
                             {city}
                           </p>
@@ -138,10 +152,7 @@ export default function AgendaMonth({
                           </p>
                           {trip.near_avail && (
                             <p className="mt-0.5 text-[11px] font-medium text-nearmiss-ink">
-                              ⚠{" "}
-                              {trip.near_avail.out_spill > 0
-                                ? `−${trip.near_avail.out_spill}d before your free window`
-                                : `+${trip.near_avail.ret_spill}d after your free window`}
+                              ⚠ {nearMissSentence(trip.near_avail)}
                             </p>
                           )}
                         </div>

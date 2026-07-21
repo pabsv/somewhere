@@ -9,56 +9,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
 import { auth } from "@/auth";
-import { CitiesResponseSchema, type CitySummary } from "@/types/api";
-import { getExploreOpenJaw } from "@/lib/openjaw";
+import { CitiesResponseSchema } from "@/types/api";
 import {
   getCitiesData,
   loadUserAvailability,
   parseOrigins,
-  type UserAvailability,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 const REVALIDATE_SECONDS = 120; // 2 min
-
-// Open-jaw chip sweep uses the same nights defaults as /api/openjaw.
-const OJ_MIN_NIGHTS = 2;
-const OJ_MAX_NIGHTS = 10;
-
-/**
- * Attach each destination's best open-jaw combo (Phase 3) and best twin-city
- * combo (Phase 5) — each ONLY when it beats the destination's cheapest stored
- * round trip. The chips are "mix & match / twin city wins here" signals, not
- * parallel price lists. One shared grid sweep feeds both. Failure is
- * non-fatal: the sweep must never take Explore down.
- */
-async function withOpenJaw(
-  cities: CitySummary[],
-  origins: string[],
-  avail: UserAvailability | null,
-): Promise<CitySummary[]> {
-  if (cities.length === 0) return cities;
-  try {
-    const { openjaw, twin } = await getExploreOpenJaw(origins, {
-      minNights: OJ_MIN_NIGHTS,
-      maxNights: OJ_MAX_NIGHTS,
-      avail,
-    });
-    return cities.map((c) => {
-      const oj = openjaw.get(c.code);
-      const tw = twin.get(c.code);
-      return {
-        ...c,
-        ...(oj && oj.total_price < c.min_price ? { openjaw: oj } : {}),
-        ...(tw && tw.total_price < c.min_price ? { twin: tw } : {}),
-      };
-    });
-  } catch (err) {
-    console.warn("[GET /api/cities] open-jaw attach failed:", err);
-    return cities;
-  }
-}
 
 /**
  * Cache the (expensive) aggregation + scoring keyed by the sorted origin set.
@@ -67,10 +27,7 @@ async function withOpenJaw(
  */
 function citiesForOrigins(originsKey: string) {
   return unstable_cache(
-    async () => {
-      const origins = originsKey.split(",");
-      return withOpenJaw(await getCitiesData(origins), origins, null);
-    },
+    async () => getCitiesData(originsKey.split(",")),
     ["cities", originsKey],
     { revalidate: REVALIDATE_SECONDS, tags: ["cities", `cities:${originsKey}`] },
   )();
@@ -91,11 +48,7 @@ export async function GET(req: NextRequest) {
       const avail = userId ? await loadUserAvailability(userId) : null;
       cities =
         avail && avail.windows.length > 0
-          ? await withOpenJaw(
-              await getCitiesData(originsKey.split(","), avail),
-              originsKey.split(","),
-              avail,
-            )
+          ? await getCitiesData(originsKey.split(","), avail)
           : await citiesForOrigins(originsKey);
     } else {
       cities = await citiesForOrigins(originsKey);

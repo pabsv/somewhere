@@ -10,6 +10,13 @@ export interface LaneTrip {
   outbound_date: string; // YYYY-MM-DD
   return_date: string; // YYYY-MM-DD
   price: number;
+  /**
+   * Ranked BELOW every normal trip, whatever it costs — so it takes a lower
+   * lane and overflows first. Set for ±2-day availability exceptions: those
+   * bars are an opt-in extra and must never push a trip that actually fits the
+   * user's free dates into "+N more". Unset = the original price-first order.
+   */
+  deprioritized?: boolean;
 }
 
 export interface LaneAssignment {
@@ -32,8 +39,9 @@ function overlaps(a: Interval, out: string, ret: string): boolean {
 /**
  * Assign trips to ≤ maxLanes horizontal lanes.
  *
- * Order: price ASC, then outbound_date ASC, then key ASC — fully
- * deterministic, cheapest deals claim the top lanes first.
+ * Order: normal trips before `deprioritized` ones, then price ASC, then
+ * outbound_date ASC, then key ASC — fully deterministic, cheapest deals claim
+ * the top lanes first.
  *
  * Placement: first lane (lowest index) where the trip overlaps none of the
  * lane's existing intervals. Because insertion is price-ordered rather than
@@ -47,6 +55,9 @@ export function assignLanes(
   maxLanes = 6,
 ): LaneAssignment {
   const sorted = [...trips].sort((a, b) => {
+    const da = a.deprioritized ? 1 : 0;
+    const db = b.deprioritized ? 1 : 0;
+    if (da !== db) return da - db;
     if (a.price !== b.price) return a.price - b.price;
     if (a.outbound_date !== b.outbound_date)
       return a.outbound_date < b.outbound_date ? -1 : 1;

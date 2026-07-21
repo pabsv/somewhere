@@ -1,6 +1,5 @@
 "use client";
 
-import Chip from "@/components/ui/Chip";
 import { CALENDAR_DEFAULT_MAX_PRICE } from "@/lib/score";
 
 // Slider bounds. Price at PRICE_MAX and nights at the outer bounds mean
@@ -17,14 +16,12 @@ export interface CalendarFilterState {
   minNights: number;
   /** max nights (dual slider, upper thumb) */
   maxNights: number;
-  direct: boolean;
 }
 
 export const EMPTY_FILTERS: CalendarFilterState = {
   maxPrice: CALENDAR_DEFAULT_MAX_PRICE,
   minNights: NIGHTS_MIN,
   maxNights: NIGHTS_MAX,
-  direct: false,
 };
 
 interface CalendarFiltersProps {
@@ -53,9 +50,11 @@ function PriceSlider({
 }) {
   const pct = ((value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-ink-muted">Max</span>
-      <div className="relative h-4 w-36">
+    <div className="flex items-center gap-3">
+      <span className="w-12 shrink-0 text-xs font-medium text-ink-muted">
+        Max
+      </span>
+      <div className="relative h-4 flex-1 sm:w-36 sm:flex-none">
         <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line">
           <div
             className="h-full rounded-full bg-ink-muted"
@@ -73,7 +72,7 @@ function PriceSlider({
           className={thumbCls}
         />
       </div>
-      <span className="tnum w-12 font-mono text-sm text-ink">
+      <span className="tnum w-12 shrink-0 text-right font-mono text-sm text-ink sm:text-left">
         {value >= PRICE_MAX ? "any" : `€${value}`}
       </span>
     </div>
@@ -101,9 +100,11 @@ function NightsSlider({
       ? "any"
       : `${min}–${max === NIGHTS_MAX ? `${NIGHTS_MAX}+` : max}`;
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-ink-muted">Nights</span>
-      <div className="relative h-4 w-36">
+    <div className="flex items-center gap-3">
+      <span className="w-12 shrink-0 text-xs font-medium text-ink-muted">
+        Nights
+      </span>
+      <div className="relative h-4 flex-1 sm:w-36 sm:flex-none">
         <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line">
           <div
             className="absolute h-full rounded-full bg-ink-muted"
@@ -135,13 +136,16 @@ function NightsSlider({
           className={thumbCls}
         />
       </div>
-      <span className="tnum w-12 font-mono text-sm text-ink">{label}</span>
+      <span className="tnum w-12 shrink-0 text-right font-mono text-sm text-ink sm:text-left">
+        {label}
+      </span>
     </div>
   );
 }
 
 /**
- * Calendar filter row: price slider, dual nights slider, Direct only chip.
+ * Calendar filter row: price slider, dual nights slider, plus whatever chips
+ * the page passes in `extra`.
  * Price at PRICE_MAX and nights at the outer bounds mean "no filter" — the
  * page maps those to undefined before the fetch (otherwise the price slider
  * value IS the cap, defaulting to CALENDAR_DEFAULT_MAX_PRICE).
@@ -152,7 +156,7 @@ export default function CalendarFilters({
   extra,
 }: CalendarFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-card border border-line bg-card px-4 py-3 shadow-card">
+    <div className="flex flex-col gap-3 rounded-card border border-line bg-card px-4 py-3 shadow-card sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6">
       <PriceSlider
         value={value.maxPrice}
         onChange={(v) => onChange({ ...value, maxPrice: v })}
@@ -166,15 +170,12 @@ export default function CalendarFilters({
         }
       />
 
-      <Chip
-        size="sm"
-        selected={value.direct}
-        onClick={() => onChange({ ...value, direct: !value.direct })}
-      >
-        Direct only
-      </Chip>
-
-      {extra}
+      {/* Chips group so they wrap as a block on phones instead of trailing
+          the sliders one per line. Dropped entirely when there are no chips so
+          the row doesn't carry an empty flex gap. */}
+      {extra ? (
+        <div className="flex flex-wrap items-center gap-2">{extra}</div>
+      ) : null}
     </div>
   );
 }

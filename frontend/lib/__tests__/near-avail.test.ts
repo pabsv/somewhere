@@ -29,13 +29,29 @@ test("returns 1 day late → ret_spill 1", () => {
   assert.deepEqual(m, { out_spill: 0, ret_spill: 1 });
 });
 
-test("spills both sides (total 2) → null", () => {
-  assert.equal(nearMissWindow("2026-08-09", "2026-08-16", windows), null);
+test("spills one day each side (total 2) → allowed", () => {
+  assert.deepEqual(nearMissWindow("2026-08-09", "2026-08-16", windows), {
+    out_spill: 1,
+    ret_spill: 1,
+  });
 });
 
-test("2 days over one side → null", () => {
-  assert.equal(nearMissWindow("2026-08-10", "2026-08-17", windows), null);
-  assert.equal(nearMissWindow("2026-08-08", "2026-08-15", windows), null);
+test("2 days over one side → allowed (the whole budget on one edge)", () => {
+  assert.deepEqual(nearMissWindow("2026-08-10", "2026-08-17", windows), {
+    out_spill: 0,
+    ret_spill: 2,
+  });
+  assert.deepEqual(nearMissWindow("2026-08-08", "2026-08-15", windows), {
+    out_spill: 2,
+    ret_spill: 0,
+  });
+});
+
+test("past the 2-day budget → null", () => {
+  // 3 on one side, and 2+1 split — both exceed NEAR_AVAIL_MAX_SPILL_DAYS
+  assert.equal(nearMissWindow("2026-08-07", "2026-08-15", windows), null);
+  assert.equal(nearMissWindow("2026-08-10", "2026-08-18", windows), null);
+  assert.equal(nearMissWindow("2026-08-08", "2026-08-16", windows), null);
 });
 
 test("edge hours skipped on the spilled side, enforced on the other", () => {

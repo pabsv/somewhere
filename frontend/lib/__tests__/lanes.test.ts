@@ -82,3 +82,42 @@ test("overflow only past the lane cap", () => {
   // the two priciest overflow
   assert.deepEqual(overflow.sort(), ["k6", "k7"]);
 });
+
+test("deprioritized loses to every normal trip, however cheap", () => {
+  const { lanes } = assignLanes(
+    [
+      { ...t("near", "2026-08-01", "2026-08-10", 20), deprioritized: true },
+      t("dear", "2026-08-01", "2026-08-10", 300),
+    ],
+    6,
+  );
+  assert.equal(lanes.get("dear"), 0);
+  assert.equal(lanes.get("near"), 1);
+});
+
+test("deprioritized overflows first at the cap", () => {
+  // 6 normal + 2 cheap ±2 bars, all overlapping, cap 6 → the ±2 bars overflow
+  const trips: LaneTrip[] = [
+    ...Array.from({ length: 6 }, (_, i) =>
+      t(`k${i}`, "2026-08-01", "2026-08-10", 100 + i),
+    ),
+    { ...t("near1", "2026-08-01", "2026-08-10", 20), deprioritized: true },
+    { ...t("near2", "2026-08-01", "2026-08-10", 25), deprioritized: true },
+  ];
+  const { lanes, overflow } = assignLanes(trips, 6);
+  assert.equal(lanes.size, 6);
+  assert.deepEqual(overflow.sort(), ["near1", "near2"]);
+});
+
+test("absent deprioritized flag leaves ordering untouched", () => {
+  const trips = Array.from({ length: 8 }, (_, i) =>
+    t(`k${i}`, "2026-08-01", "2026-08-10", 10 + i),
+  );
+  const bare = assignLanes(trips, 6);
+  const explicitFalse = assignLanes(
+    trips.map((x) => ({ ...x, deprioritized: false })),
+    6,
+  );
+  assert.deepEqual(bare.lanes, explicitFalse.lanes);
+  assert.deepEqual(bare.overflow, explicitFalse.overflow);
+});

@@ -166,6 +166,9 @@ export default function MonthBlock({
           outbound_date: t.outbound_date,
           return_date: t.return_date,
           price: t.price,
+          // ±2-day bars are an opt-in extra: they take the lower lanes and
+          // overflow first, so turning them on never buries a trip that fits.
+          deprioritized: !!t.near_avail,
         })),
         expanded ? Number.POSITIVE_INFINITY : MAX_LANES,
       ),

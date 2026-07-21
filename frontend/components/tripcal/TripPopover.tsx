@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment } from "react";
 import Link from "next/link";
 import Sheet from "@/components/ui/Sheet";
 import FareTag from "@/components/ui/FareTag";
@@ -9,18 +8,19 @@ import Spark from "@/components/ui/Spark";
 import PriceDisclaimer from "@/components/ui/PriceDisclaimer";
 import type { CalTrip, DateWindow, Trip } from "@/types/api";
 import { getDestination } from "@/data/destinations.gen";
-import { getSearchUrl, buildGoogleFlightsOneWayUrl } from "@/lib/searchUrl";
+import { getSearchUrl } from "@/lib/searchUrl";
 import {
   formatDateShort,
   formatDelta,
   formatRange,
+  nearMissPhrase,
   nightsLabel,
   formatPrice,
 } from "@/lib/format";
 import CountryFlag from "@/components/ui/CountryFlag";
+import { useIsMobile } from "./useIsMobile";
 import {
   useStayExtensions,
-  pickOpenJawExtensions,
   stretchCount,
   type StayStretch,
 } from "./useStayExtensions";
@@ -126,17 +126,12 @@ export default function TripPopover({
   onClose,
 }: TripPopoverProps) {
   const open = trip != null;
-  const oj = trip?.openjaw ?? null;
-  // Open-jaw combos ship their extensions inline — skip the variants fetch.
+  const isMobile = useIsMobile();
   const { stretches, loading: stretchesLoading } = useStayExtensions(
-    oj ? null : trip,
+    trip,
     windows,
     clampToWindows,
   );
-  // Later back-leg dates attached to the combo (Phase 6), same clamping as
-  // the round-trip path. Empty = section hidden (sparse grids are normal).
-  const ojExtensions =
-    trip && oj ? pickOpenJawExtensions(trip, windows, clampToWindows) : [];
   const dest = trip ? getDestination(trip.destination) : undefined;
   const city = dest?.name ?? trip?.city ?? "";
   const title = trip ? (
@@ -152,18 +147,22 @@ export default function TripPopover({
     : "#";
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} ariaLabel={city || undefined}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      ariaLabel={city || undefined}
+      // Phones put the dismiss control top-left (and you can also just swipe
+      // the panel back to the right); desktop keeps the side-panel ✕.
+      closeSide={isMobile ? "left" : "right"}
+    >
       {trip && (
         <div className="space-y-5">
           {/* ─── Headline ─────────────────────────────────────────────── */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="tnum font-mono text-sm font-semibold uppercase tracking-wide text-ink">
-                {oj
-                  ? oj.ground
-                    ? `${oj.out.origin} → ${oj.out.destination} ⇢ ${oj.back.origin} → ${oj.back.destination}`
-                    : `${oj.out.origin} → ${trip.destination} → ${oj.back.destination}`
-                  : `${trip.origin} → ${trip.destination}`}
+                {trip.origin} → {trip.destination}
               </p>
               <p className="tnum mt-1 font-mono text-xs text-ink-muted">
                 {formatRange(trip.outbound_date, trip.return_date)} ·{" "}
@@ -171,11 +170,8 @@ export default function TripPopover({
               </p>
               {trip.near_avail && (
                 <p className="tnum mt-1 font-mono text-[11px] text-nearmiss-ink">
-                  ⚠ Outside your availability —{" "}
-                  {trip.near_avail.out_spill > 0
-                    ? `leaves ${trip.near_avail.out_spill} day before your free window opens`
-                    : `returns ${trip.near_avail.ret_spill} day after your free window ends`}
-                  . Shown because it&apos;s a bargain.
+                  ⚠ Outside your availability — {nearMissPhrase(trip.near_avail)}
+                  . Shown by “± 2 days”.
                 </p>
               )}
               {trip.auto_extended && (
@@ -195,77 +191,7 @@ export default function TripPopover({
             </div>
           </div>
 
-          {/* ─── Open-jaw: combo summary + legs with booking links ─────── */}
-          {oj && (
-            <>
-              <div className="rounded-card border border-line bg-paper px-3 py-2.5">
-                <p className="font-mono text-xs text-ink">
-                  {oj.ground
-                    ? `Twin city — fly into ${oj.out.destination}, home from ${oj.back.origin}. Two separate one-way tickets; the overland hop is on you.`
-                    : `Mix & match — ${
-                        oj.same_origin
-                          ? "two one-way singles instead of a return ticket"
-                          : "two separate one-way tickets"
-                      }`}
-                </p>
-                <p className="tnum mt-0.5 font-mono text-[11px] text-ink-muted">
-                  {oj.vs_roundtrip != null && oj.vs_roundtrip > 0 ? (
-                    <span className="font-medium text-steal">
-                      €{Math.round(oj.vs_roundtrip)} under the stored round trip
-                    </span>
-                  ) : (
-                    "no round trip stored for these exact dates"
-                  )}
-                </p>
-              </div>
-              <div className="rounded-card border border-line bg-card px-3">
-                {[oj.out, oj.back].map((leg, i) => (
-                  <Fragment key={i}>
-                    {/* Twin-city trips: overland hop between the two flights */}
-                    {i === 1 && oj.ground && (
-                      <div className="flex items-baseline justify-between gap-3 border-b border-line py-2">
-                        <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-                          Overland
-                        </span>
-                        <span className="tnum font-mono text-xs text-ink-muted">
-                          {oj.ground.from} ⇢ {oj.ground.to} · ~{oj.ground.hours}
-                          h
-                        </span>
-                      </div>
-                    )}
-                    <a
-                      href={buildGoogleFlightsOneWayUrl(
-                        leg.origin,
-                        leg.destination,
-                        leg.date,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
-                      title={`Book one-way ${leg.origin} → ${leg.destination} on Google Flights`}
-                    >
-                      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-                        {i === 0 ? "Out" : "Back"}
-                      </span>
-                      <span className="tnum font-mono text-xs text-ink">
-                        {leg.origin} → {leg.destination}
-                        <span className="ml-2 text-ink-muted">
-                          {formatDateShort(leg.date)}
-                        </span>
-                        <span className="ml-2">{formatPrice(leg.price)}</span>
-                        <span aria-hidden="true" className="ml-1 text-ink-muted/50">
-                          ↗
-                        </span>
-                      </span>
-                    </a>
-                  </Fragment>
-                ))}
-              </div>
-            </>
-          )}
-
           {/* ─── Airlines + sparkline ─────────────────────────────────── */}
-          {!oj && (
           <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-paper px-3 py-2.5">
             <div className="min-w-0">
               <p className="tnum font-mono text-[11px] text-ink-muted">
@@ -283,10 +209,8 @@ export default function TripPopover({
               />
             )}
           </div>
-          )}
 
           {/* ─── Itinerary legs ───────────────────────────────────────── */}
-          {!oj && (
           <div className="rounded-card border border-line bg-card px-3">
             <LegRow
               label="Out"
@@ -303,56 +227,9 @@ export default function TripPopover({
               stops={trip.ret.stops}
             />
           </div>
-          )}
-
-          {/* ─── Stay longer (open-jaw): move the back ticket later ───── */}
-          {oj && ojExtensions.length > 0 && (
-            <div className="rounded-card border border-line bg-card px-3">
-              <p className="border-b border-line py-2 font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-                Stay longer
-              </p>
-              {ojExtensions.map((ext) => (
-                <a
-                  key={ext.return_date}
-                  href={buildGoogleFlightsOneWayUrl(
-                    oj.back.origin,
-                    oj.back.destination,
-                    ext.return_date,
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`Book the later one-way back ticket, ${oj.back.origin} → ${oj.back.destination}`}
-                  className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0 transition-colors hover:bg-paper"
-                >
-                  <span className="tnum font-mono text-xs text-ink">
-                    → {formatDateShort(ext.return_date)}
-                    <span className="ml-2 text-ink-muted">
-                      {nightsLabel(ext.nights)}
-                    </span>
-                  </span>
-                  <span className="tnum font-mono text-xs text-ink">
-                    {formatPrice(ext.price)}
-                    <span
-                      className={`ml-2 ${
-                        Math.round(ext.deltaPrice) > 0
-                          ? "text-ink-muted"
-                          : "font-medium text-steal"
-                      }`}
-                    >
-                      {formatDelta(ext.deltaPrice)}
-                    </span>
-                  </span>
-                </a>
-              ))}
-              <p className="py-2 font-mono text-[11px] text-ink-muted">
-                New combo total — only the back ticket moves; the link books
-                that one-way.
-              </p>
-            </div>
-          )}
 
           {/* ─── Stretch this trip ────────────────────────────────────── */}
-          {!oj && !stretchesLoading && (
+          {!stretchesLoading && (
             <div className="rounded-card border border-line bg-card px-3">
               <p className="border-b border-line py-2 font-mono text-[11px] uppercase tracking-wide text-ink-muted">
                 Stretch this trip
@@ -405,7 +282,6 @@ export default function TripPopover({
 
           {/* ─── Actions ──────────────────────────────────────────────── */}
           <div className="space-y-2">
-            {!oj && (
             <a
               href={getSearchUrl(trip)}
               target="_blank"
@@ -427,7 +303,6 @@ export default function TripPopover({
                 <path d="M6 3h7v7M13 3L7 9M11 9v3.5A1.5 1.5 0 0 1 9.5 14h-6A1.5 1.5 0 0 1 2 12.5v-6A1.5 1.5 0 0 1 3.5 5H7" />
               </svg>
             </a>
-            )}
             <Link
               href={cityHref}
               className="flex w-full items-center justify-center gap-1.5 rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink-muted"
@@ -435,9 +310,7 @@ export default function TripPopover({
               More trips to {city} →
             </Link>
             <PriceDisclaimer className="pt-1 text-center">
-              {oj
-                ? "Snapshot one-way fares — confirm each ticket on Google Flights before booking."
-                : "Snapshot fare — confirm the live price on Google Flights."}
+              Snapshot fare — confirm the live price on Google Flights.
             </PriceDisclaimer>
           </div>
         </div>

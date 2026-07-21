@@ -182,12 +182,18 @@ export const ExtensionsResponseSchema = z.object({
 });
 export type ExtensionsResponse = z.infer<typeof ExtensionsResponseSchema>;
 
-// ─── OnewayFareDoc — raw `oneway_fares` Mongo document (open-jaw Phase 0) ────
+// ─── OnewayFareDoc — raw `oneway_fares` Mongo document ───────────────────────
 
 /**
- * One document per DIRECTED leg, written by the Python pool scheduler.
- * `prices` maps YYYY-MM-DD → cheapest one-way fare in EUR, replaced wholesale
- * each scrape. Loose: unknown extra fields (`_id`, diagnostics) pass through.
+ * One document per DIRECTED leg, written by the Python pool scheduler as a
+ * free by-product of the Phase-1 sweeps its round-trip pair ranking already
+ * runs. `prices` maps YYYY-MM-DD → cheapest one-way fare in EUR, replaced
+ * wholesale each scrape. Loose: unknown extra fields (`_id`, diagnostics) pass
+ * through.
+ *
+ * Read by lib/fareGrids.ts, whose one consumer is getTripStretchData — the
+ * `~` estimated rows of the round-trip stretch bubble are the sum of a route's
+ * two grids.
  */
 export const OnewayFareDocSchema = z.looseObject({
   leg_key: z.string().min(1), // "EIN-BCN"
@@ -199,136 +205,15 @@ export const OnewayFareDocSchema = z.looseObject({
 });
 export type OnewayFareDoc = z.infer<typeof OnewayFareDocSchema>;
 
-// ─── OpenJawTrip — combined one-way pair (open-jaw Phase 1) ──────────────────
-
 /**
- * One flight leg of an open-jaw combo. Leg-based on purpose: Phase 4
- * (destination-side multi-city) extends the same shape by letting
- * `back.origin`/`out.destination` name a DIFFERENT city — no new type.
+ * Calendar-side view of a trip. Kept as a distinct name from `Trip` because
+ * every calendar renderer (TripBar, TripRail, TripTooltip, TripPopover,
+ * StretchOverlay, MonthBlock) types on it — it used to carry a synthesized
+ * `openjaw` payload for multi-city bars, which went with the rollback
+ * (docs/MULTICITY_PLAN.md). An alias today, a seam if the calendar ever again
+ * needs to render something the API doesn't emit.
  */
-export const OpenJawLegSchema = z.object({
-  origin: z.string(),
-  destination: z.string(),
-  date: DateStringSchema,
-  /** cheapest one-way fare in EUR as of `scraped_at` on the parent trip */
-  price: z.number(),
-});
-export type OpenJawLeg = z.infer<typeof OpenJawLegSchema>;
-
-/**
- * Overland hop of a destination-side multi-city trip (Phase 4): fly into
- * `from`, train/bus to `to`, fly home from there. `hours` is the approximate
- * one-way ground time — displayed as info, never priced into total_price.
- */
-export const GroundHopSchema = z.object({
-  from: z.string(),
-  to: z.string(),
-  hours: z.number(),
-});
-export type GroundHop = z.infer<typeof GroundHopSchema>;
-
-/**
- * "Stay longer" option for an open-jaw combo (Phase 6): a LATER date from the
- * same back-leg fare grid. `total` = out.price + back_price — the new combo
- * total if the back ticket moves to `date`. Attached in calendar mode only.
- */
-export const OpenJawExtensionSchema = z.object({
-  date: DateStringSchema,
-  /** one-way back fare on that date */
-  back_price: z.number(),
-  /** out.price + back_price — the new combo total */
-  total: z.number(),
-});
-export type OpenJawExtension = z.infer<typeof OpenJawExtensionSchema>;
-
-export const OpenJawTripSchema = z.object({
-  key: z.string(), // "EIN-BCN-2026-10-03|BCN-AMS-2026-10-08"
-  destination: z.string(),
-  city: z.string(),
-  out: OpenJawLegSchema,
-  back: OpenJawLegSchema,
-  /** sum of the two one-way fares — the real bookable price (two tickets) */
-  total_price: z.number(),
-  nights: z.number(),
-  /** true when out.origin === back.origin (two singles instead of a return) */
-  same_origin: z.boolean(),
-  /**
-   * Best stored ROUND-TRIP price for the same destination + exact dates,
-   * minus total_price. Positive = the open-jaw combo is cheaper (the win
-   * signal). Null when no round trip is stored for those dates.
-   */
-  vs_roundtrip: z.number().nullable(),
-  /** older `scraped_at` of the two source grids — "prices as of" honesty */
-  scraped_at: z.string(),
-  /**
-   * Present on destination-side multi-city trips only (Phase 4): the overland
-   * hop between the fly-in city (`destination`) and the fly-out city
-   * (`back.origin`). Absent on origin-side open-jaw combos.
-   */
-  ground: GroundHopSchema.optional(),
-  /**
-   * Later back-leg dates from the same fare grid (Phase 6) — the calendar's
-   * "stay longer" hover for combo bars. Calendar mode only; absent in city
-   * mode (the section already lists every combo) and when no later dates
-   * exist in the grid.
-   */
-  extensions: z.array(OpenJawExtensionSchema).optional(),
-});
-export type OpenJawTrip = z.infer<typeof OpenJawTripSchema>;
-
-/** GET /api/openjaw */
-export const OpenJawResponseSchema = z.object({
-  trips: z.array(OpenJawTripSchema),
-});
-export type OpenJawResponse = z.infer<typeof OpenJawResponseSchema>;
-
-/**
- * Calendar-side view of a trip: a plain Trip, or an open-jaw combo dressed as
- * one (Phase 3). Client-side ONLY — the API never emits `openjaw` on a Trip;
- * the calendar page synthesizes these from OpenJawTrips so MonthBlock/TripBar
- * can render combos without forking the bar machinery. A plain Trip is
- * assignable (the field is optional).
- */
-export type CalTrip = Trip & { openjaw?: OpenJawTrip };
-
-/**
- * Best open-jaw combo for one destination, attached to a CitySummary on
- * Explore (Phase 3) ONLY when its total beats the destination's cheapest
- * stored round trip (`min_price`). Slim on purpose — the City page's
- * Mix & match section is the drill-down.
- */
-export const CityOpenJawSchema = z.object({
-  total_price: z.number(),
-  out_origin: z.string(),
-  back_origin: z.string(),
-  out_date: DateStringSchema,
-  back_date: DateStringSchema,
-  nights: z.number(),
-  same_origin: z.boolean(),
-});
-export type CityOpenJaw = z.infer<typeof CityOpenJawSchema>;
-
-/**
- * Best twin-city (destination-side multi-city) combo for one FLY-IN
- * destination, attached to its CitySummary on Explore (Phase 5) ONLY when the
- * whole two-city trip is cheaper than the destination's cheapest stored round
- * trip (`min_price`). `other` is the fly-out city of the ground pair; `hours`
- * is the overland time (display only, never priced). Slim on purpose — the
- * City page's Twin city section is the drill-down.
- */
-export const CityTwinSchema = z.object({
-  total_price: z.number(),
-  /** fly-out city IATA code (the other half of the ground pair) */
-  other: z.string(),
-  /** approximate one-way overland hours between the two cities */
-  hours: z.number(),
-  out_origin: z.string(),
-  back_origin: z.string(),
-  out_date: DateStringSchema,
-  back_date: DateStringSchema,
-  nights: z.number(),
-});
-export type CityTwin = z.infer<typeof CityTwinSchema>;
+export type CalTrip = Trip;
 
 // ─── CitySummary — Explore grid cell (spec section D) ────────────────────────
 
@@ -358,10 +243,6 @@ export const CitySummarySchema = z.object({
   trip_count: z.number(),
   baseline: z.number().nullable(),
   best: CityBestSchema,
-  /** Best open-jaw combo when it beats min_price (Phase 3); absent otherwise. */
-  openjaw: CityOpenJawSchema.nullable().optional(),
-  /** Best twin-city combo when it beats min_price (Phase 5); absent otherwise. */
-  twin: CityTwinSchema.nullable().optional(),
 });
 export type CitySummary = z.infer<typeof CitySummarySchema>;
 
@@ -390,8 +271,6 @@ export const PreferencesSchema = z.object({
   university: z.enum(["tue"]).nullable().optional(),
   /** Opted into deal-alert emails (feature not yet built — captured for later). */
   notify_optin: z.boolean().optional().default(false),
-  /** Show open-jaw / mix & match combos (split tickets) across the app. */
-  allow_open_jaw: z.boolean().optional().default(true),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 
@@ -420,7 +299,7 @@ export const AdminTargetSummarySchema = z.object({
 export type AdminTargetSummary = z.infer<typeof AdminTargetSummarySchema>;
 
 /**
- * One-way fare grid coverage (open-jaw Phase 6 observability). `stale_7d`
+ * One-way fare grid coverage. `stale_7d`
  * counts grids older than the slowest tier cadence (168h) — routes that
  * should have refreshed but haven't. `newest_scraped_at` going stale is the
  * "grids stopped refreshing entirely" alarm (the pool writes grids every
@@ -626,6 +505,11 @@ export const GroupDetailResponseSchema = z.object({
   created_at: z.string(),
   members: z.array(GroupMemberEntrySchema),
   invite_token: z.string(),
+  /**
+   * The crew's shared favourite destinations (uppercase IATA). Any member can
+   * add or remove. Defaulted so groups stored before the field existed parse.
+   */
+  favourites: z.array(z.string().min(1)).default([]),
 });
 export type GroupDetailResponse = z.infer<typeof GroupDetailResponseSchema>;
 

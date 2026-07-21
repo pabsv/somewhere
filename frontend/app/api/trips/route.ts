@@ -1,11 +1,12 @@
 // ─── GET /api/trips — Calendar payload ───────────────────────────────────────
 // Public (avail=1 needs a session). Query:
-//   ?from&start&end&maxPrice&minNights&maxNights&direct&tier&avail
+//   ?from&start&end&maxPrice&minNights&maxNights&direct&tier&avail&near&favs
 // → { trips: Trip[] (curated bars), density: Record<date,count>, truncated }.
 //
 // density is computed over the UNFILTERED match (origins + date range only) so
 // the heat never lies; price/tier/nights/direct narrow the BARS only. avail=1
-// restricts to the signed-in user's free windows + trip-length prefs.
+// restricts to the signed-in user's free windows + trip-length prefs; near=1
+// adds the ±2-day exceptions on top of them (no-op without avail).
 // Spec: docs/DESIGN_V1.md sections D + G.
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -15,6 +16,7 @@ import { TripsResponseSchema } from "@/types/api";
 import {
   getTripsData,
   monthsAhead,
+  parseFavourites,
   parseOrigins,
   todayStr,
   type TripsSession,
@@ -40,6 +42,10 @@ const QuerySchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => v === "1" || v === "true"),
+  near: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
 });
 
 export async function GET(req: NextRequest) {
@@ -47,6 +53,10 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
 
     const origins = parseOrigins(sp.get("from"));
+    // Starred destinations get a looser price cap + a bigger share of each
+    // month. Sanitized against the destination catalog because these codes
+    // reach cache keys — see parseFavourites.
+    const favourites = parseFavourites(sp.get("favs"));
 
     // Pull only the keys our schema knows about (avoid passing `from` etc.).
     const parsed = QuerySchema.safeParse({
@@ -58,6 +68,7 @@ export async function GET(req: NextRequest) {
       direct: sp.get("direct") ?? undefined,
       tier: sp.get("tier") ?? undefined,
       avail: sp.get("avail") ?? undefined,
+      near: sp.get("near") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -88,6 +99,8 @@ export async function GET(req: NextRequest) {
         direct: q.direct ?? false,
         tier: q.tier ?? null,
         avail: q.avail ?? false,
+        near: q.near ?? false,
+        favourites,
       },
       session,
     );
