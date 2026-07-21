@@ -1,17 +1,17 @@
 """
-OnewayFareRepository — one-way leg fare grids (open-jaw foundation).
+OnewayFareRepository — one-way leg fare grids.
 
 One doc per directed leg, keyed by leg_key ("EIN-BCN"). The prices grid is
 replaced wholesale on every upsert; first_seen_at is preserved on updates.
 
-Future open-jaw read path (not built yet) is two point lookups plus an
-in-memory date join with the nights constraint:
-  - origin-side:      find_by_leg("EIN", "BCN") x find_by_leg("BCN", "AMS")
-  - destination-side: find_by_leg("EIN", "BCN") x find_by_leg("MAD", "EIN")
+Grids are a free by-product of the Phase-1 one-way sweeps that round-trip pair
+ranking already runs (scraper-fli/scraper.py) — persisting them costs no extra
+HTTP calls. WRITE-ONLY from Python: the read path lives in the frontend
+(frontend/lib/fareGrids.ts), which prices the `~` estimate rows of the calendar
+trip-stretch bubble as the sum of a route's two grids.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pymongo import UpdateOne
 
@@ -60,20 +60,3 @@ class OnewayFareRepository:
             "new": result.upserted_count,
             "updated": result.modified_count,
         }
-
-    def find_by_leg(self, origin: str, destination: str) -> Optional[OnewayFareModel]:
-        """Get the fare grid for one directed leg."""
-        doc = self.collection.find_one({"leg_key": f"{origin}-{destination}"})
-        return OnewayFareModel.from_dict(doc) if doc else None
-
-    def find_by_origin(self, origin: str) -> list[OnewayFareModel]:
-        """All legs departing from an airport."""
-        return [OnewayFareModel.from_dict(d) for d in self.collection.find({"origin": origin})]
-
-    def find_by_destination(self, destination: str) -> list[OnewayFareModel]:
-        """All legs arriving at an airport."""
-        return [OnewayFareModel.from_dict(d) for d in self.collection.find({"destination": destination})]
-
-    def count_total(self) -> int:
-        """Total number of leg grids stored."""
-        return self.collection.count_documents({})

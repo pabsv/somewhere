@@ -148,22 +148,6 @@ export default function PreferencesCard() {
         </Chip>
       </Field>
 
-      {/* open-jaw / mix & match */}
-      <Field
-        label="Mix & match trips"
-        hint="Open-jaw combos: fly out of one airport, back into another — two separate tickets. Turn off if you never want split tickets."
-      >
-        <Chip
-          size="sm"
-          selected={prefs.allow_open_jaw ?? true}
-          onClick={() =>
-            patch({ allow_open_jaw: !(prefs.allow_open_jaw ?? true) })
-          }
-        >
-          ⇄ Show mix &amp; match
-        </Chip>
-      </Field>
-
       {/* max price */}
       <Field label="Price ceiling" hint="Leave empty for no cap.">
         <div className="relative w-32">

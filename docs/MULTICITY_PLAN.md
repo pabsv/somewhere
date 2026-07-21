@@ -1,4 +1,28 @@
-# Multi-City / Open-Jaw — Full Roadmap
+# Multi-City / Open-Jaw — Full Roadmap ⏸️ PARKED
+
+> **⏸️ PARKED 2026-07-21 — Phases 1–6 rolled back. Somewhere is round-trip-only.**
+>
+> Multi-city worked, but it rested on models too weak to justify the attention it took on every
+> calendar / explore / city change: the fare grids are **date-only** (no times, no stops), so combos
+> could never honour "Direct only" or availability edge hours, and the twin-city taste filter was a
+> hand-curated 68-pair `GROUND_PAIRS` table. Parked to be rebuilt on better models, not abandoned.
+>
+> **What was deleted** (frontend engine, API, UI, ground pairs): `lib/openjaw.ts`, `lib/openjaw-core.ts`,
+> `lib/useOpenJawPref.ts`, `app/api/openjaw/`, `components/city/{OpenJawSection,TwinCitySection,OpenJawRow}.tsx`,
+> `data/groundpairs.gen.ts`, `scraper/targets.py` `GROUND_PAIRS` + `validate_ground_pairs`, the
+> `Preferences.allow_open_jaw` flag, and every `OpenJaw*` / `GroundHop` / `CityTwin` type. `CalTrip`
+> collapsed to `= Trip`.
+>
+> **What survives on purpose:**
+> - **Phase 0 in full** — `oneway_fares` is still written every scrape (free by-product of the Phase-1
+>   sweeps the round-trip pair ranking already runs) and still read, by `lib/fareGrids.ts` →
+>   `getTripStretchData` → the **round-trip stretch bubble**'s `~` estimate rows. The Admin
+>   "One-way grids" card is now the only alarm that the writer died.
+> - `lib/googleFlightsTfs.ts` keeps `TFS_MULTI_CITY` and its golden-vector test — the type-3 encoder is
+>   pure and free, so a revival needs no re-capture from live Google.
+>
+> **To revive:** `git show 33ad0f7..3fd8eff` (7 commits, Phases 1–6) plus this document. Read the Phase 0
+> caveats below first — they still bind, and they are the reason this was parked.
 
 Master plan for open-jaw and multi-city support in Somewhere. Executed **one phase per chat session, consecutively**. Each phase is self-contained, shippable, and verified before the next starts. Update the status table as phases land.
 

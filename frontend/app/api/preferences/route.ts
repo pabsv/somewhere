@@ -22,7 +22,6 @@ const DEFAULTS: Preferences = {
   busy_weekdays: [],
   university: null,
   notify_optin: false,
-  allow_open_jaw: true,
 };
 
 // GET /api/preferences
