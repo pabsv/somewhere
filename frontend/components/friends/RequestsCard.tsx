@@ -1,11 +1,14 @@
 "use client";
 
-// ─── Pending requests — incoming (accept/decline) + outgoing (cancel) ────────
-// Presentational; the parent owns state and passes async handlers. A per-row
-// busy flag disables that row's buttons mid-flight (double-submit guard).
+// ─── Pending requests — one card: incoming rows + sent footer strip ──────────
+// Design "Friends — Final": mono REQUESTS label + brand count badge, each
+// incoming request as an avatar row with Accept/Decline, and outgoing requests
+// as muted footer strips ("waiting on X" + Cancel). Self-contained card chrome
+// — the parent mounts it bare. Per-row busy flag guards double submits.
+// PersonLabel stays exported here — groups + admin tables import it.
 
 import { useState } from "react";
-import Button from "@/components/ui/Button";
+import Avatar from "@/components/friends/Avatar";
 import type { FriendEntry } from "@/types/api";
 
 export default function RequestsCard({
@@ -34,89 +37,78 @@ export default function RequestsCard({
   };
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h3 className="mb-2 font-mono text-xs uppercase tracking-wide text-ink-muted">
-          Incoming
-        </h3>
-        {incoming.length === 0 ? (
-          <p className="text-sm text-ink-muted/80">No incoming requests.</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {incoming.map((r) => (
-              <li
-                key={r.friendship_id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <PersonLabel name={r.name} email={r.email} />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={busyId === r.friendship_id}
-                    onClick={() =>
-                      run(r.friendship_id, () =>
-                        onRespond(r.friendship_id, "accept"),
-                      )
-                    }
-                    className="rounded-(--radius-tag) bg-ink text-paper hover:bg-night"
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={busyId === r.friendship_id}
-                    onClick={() =>
-                      run(r.friendship_id, () =>
-                        onRespond(r.friendship_id, "decline"),
-                      )
-                    }
-                    className="rounded-(--radius-tag) border-line text-ink-muted hover:bg-transparent hover:text-ink"
-                  >
-                    Decline
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+    <div className="overflow-hidden rounded-(--radius-card) border border-line bg-card shadow-(--shadow-card)">
+      <div className="flex items-center gap-2.5 px-5 py-3">
+        <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+          Requests
+        </span>
+        {incoming.length > 0 && (
+          <span className="rounded-full bg-brand px-2 py-px font-mono text-[11px] font-medium text-brand-ink">
+            {incoming.length}
+          </span>
         )}
-      </section>
+      </div>
 
-      <section>
-        <h3 className="mb-2 font-mono text-xs uppercase tracking-wide text-ink-muted">
-          Sent
-        </h3>
-        {outgoing.length === 0 ? (
-          <p className="text-sm text-ink-muted/80">No pending requests sent.</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {outgoing.map((r) => (
-              <li
-                key={r.friendship_id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <PersonLabel name={r.name} email={r.email} />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busyId === r.friendship_id}
-                  onClick={() =>
-                    run(r.friendship_id, () => onCancel(r.friendship_id))
-                  }
-                  className="rounded-(--radius-tag) border-line text-ink-muted hover:bg-transparent hover:text-ink"
-                >
-                  Cancel
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {incoming.map((r) => (
+        <div
+          key={r.friendship_id}
+          className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-3"
+        >
+          <Avatar name={r.name} email={r.email} size={36} />
+          <p className="min-w-0 flex-1 text-sm text-ink-muted">
+            <span className="font-medium text-ink">{r.name || r.email}</span>{" "}
+            wants to be friends
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busyId === r.friendship_id}
+              onClick={() =>
+                run(r.friendship_id, () => onRespond(r.friendship_id, "accept"))
+              }
+              className="rounded-(--radius-tag) bg-ink px-3.5 py-1.5 text-sm font-medium text-paper hover:bg-night disabled:opacity-60"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              disabled={busyId === r.friendship_id}
+              onClick={() =>
+                run(r.friendship_id, () =>
+                  onRespond(r.friendship_id, "decline"),
+                )
+              }
+              className="rounded-(--radius-tag) border border-line px-3.5 py-1.5 text-sm font-medium text-ink-muted hover:text-ink disabled:opacity-60"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      ))}
 
-      {error && <p className="text-sm text-alert">{error}</p>}
+      {outgoing.map((r) => (
+        <div
+          key={r.friendship_id}
+          className="flex items-center gap-2 border-t border-line bg-paper px-5 py-2.5"
+        >
+          <p className="min-w-0 flex-1 truncate text-[13px] text-ink-muted/80">
+            Sent — waiting on{" "}
+            <span className="font-medium text-ink-muted">
+              {r.name || r.email}
+            </span>
+          </p>
+          <button
+            type="button"
+            disabled={busyId === r.friendship_id}
+            onClick={() => run(r.friendship_id, () => onCancel(r.friendship_id))}
+            className="text-[13px] text-ink-muted underline hover:text-ink disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+      ))}
+
+      {error && <p className="px-5 py-2 text-sm text-alert">{error}</p>}
     </div>
   );
 }
