@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Somewhere onboarding first tab preview</title>
+  <style>
+    @font-face {
+      font-family: "Bricolage Grotesque";
+      src: url("../frontend/.next/static/media/017d9bea37084d9b-s.p.a6d6de71.woff2") format("woff2");
+      font-weight: 200 800;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Instrument Sans";
+      src: url("../frontend/.next/static/media/f06bf9da926bae75-s.p.c68a79fb.woff2") format("woff2");
+      font-weight: 400 700;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Spline Sans Mono";
+      src: url("../frontend/.next/static/media/d2d62b05021c6286-s.p.c4236d74.woff2") format("woff2");
+      font-weight: 300 700;
+      font-display: swap;
+    }
+
+    :root {
+      --paper: #faf7f0;
+      --card: #ffffff;
+      --line: #e7e1d3;
+      --ink: #1f242e;
+      --muted: #5c6470;
+      --night: #14171d;
+      --tile: #1f232b;
+      --brand: #ffc72c;
+      --steal: #0e9f6e;
+      --radius-card: 12px;
+      --radius-tag: 6px;
+      --shadow-card: 0 1px 2px rgba(20, 23, 29, .05), 0 10px 28px -14px rgba(20, 23, 29, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: #eeeae1; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Instrument Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; }
+
+    .preview-bar {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 58px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #d8d2c5;
+      background: rgba(250, 247, 240, .94);
+      backdrop-filter: blur(12px);
+    }
+
+    .preview-label {
+      margin-right: 8px;
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .option-button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      padding: 8px 13px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .option-button[aria-selected="true"] {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .stage {
+      min-height: calc(100vh - 58px);
+      background:
+        radial-gradient(circle at 82% 8%, rgba(255, 199, 44, .09), transparent 23%),
+        var(--paper);
+    }
+
+    /* Matches OnboardingWizard: max-w-2xl, px-4/sm:px-6, py-10. */
+    .wizard {
+      width: 100%;
+      max-width: 672px;
+      margin: 0 auto;
+      padding: 40px 16px;
+    }
+
+    .progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .skip {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .progress-line {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+
+    .progress-line span {
+      height: 4px;
+      border-radius: 99px;
+      background: var(--line);
+    }
+
+    .progress-line span:first-child { background: var(--brand); }
+
+    .onboarding-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      background: var(--card);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .concept { display: none; }
+    .concept.active { display: block; animation: reveal 240ms ease-out both; }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      margin: 0 0 9px;
+      color: rgba(92, 100, 112, .78);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 30px;
+      font-weight: 750;
+      letter-spacing: -.035em;
+      line-height: 1.08;
+    }
+
+    .lede {
+      max-width: 520px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .concept-body { margin-top: 24px; }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 24px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+    }
+
+    .back-button {
+      visibility: hidden;
+      border: 0;
+      background: transparent;
+      padding: 8px 16px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 550;
+    }
+
+    .next-button {
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: var(--radius-tag);
+      background: var(--ink);
+      padding: 10px 24px;
+      color: var(--paper);
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 13px);
+      gap: 4px;
+    }
+
+    .calendar i {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      background: #efede7;
+    }
+
+    .calendar i.hot { background: var(--brand); }
+    .calendar i.warm { background: rgba(255, 199, 44, .3); }
+
+    .watch-board {
+      width: 138px;
+      border-radius: 8px;
+      background: var(--night);
+      padding: 7px 9px;
+      box-shadow: 0 5px 12px rgba(20, 23, 29, .16);
+    }
+
+    .watch-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: white;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 8px;
+      font-weight: 650;
+    }
+
+    .deal {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .fare, .badge {
+      border-radius: 5px;
+      background: var(--steal);
+      padding: 4px 7px;
+      color: white;
+      letter-spacing: 0;
+    }
+
+    .badge {
+      font-size: 8px;
+      letter-spacing: .1em;
+    }
+
+    .trip-meta {
+      margin-top: 8px;
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 7px;
+      font-weight: 650;
+      letter-spacing: .13em;
+      text-align: center;
+    }
+
+    /* Option one */
+    .equation {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr) 20px minmax(0, 1fr);
+      align-items: stretch;
+    }
+
+    .equation-card {
+      min-width: 0;
+      min-height: 182px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .equation-card.result {
+      border: 2px solid var(--brand);
+      background: linear-gradient(145deg, white 55%, rgba(255, 199, 44, .07));
+    }
+
+    .visual-slot {
+      min-height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .availability-visual {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .origin-pills {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .origin-pills span {
+      border-radius: 4px;
+      background: var(--brand);
+      padding: 4px 6px;
+      color: #3a2d00;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 7px;
+      font-weight: 800;
+      letter-spacing: .05em;
+    }
+
+    .origin-pills b {
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 8px;
+      font-weight: 600;
+    }
+
+    .equation-card h2,
+    .flow-stage h2 {
+      margin: 10px 0 4px;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 14px;
+      line-height: 1.15;
+    }
+
+    .equation-card p,
+    .flow-stage p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .operator {
+      align-self: center;
+      text-align: center;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    /* Option two */
+    .flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1.08fr 1fr;
+      min-height: 210px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+    }
+
+    .flow::before {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      left: 12%;
+      right: 12%;
+      top: 91px;
+      height: 3px;
+      background: var(--brand);
+    }
+
+    .flow-stage {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px 11px 16px;
+      text-align: center;
+    }
+
+    .flow-stage.dark {
+      background: var(--night);
+      color: white;
+    }
+
+    .stage-label {
+      position: absolute;
+      top: 17px;
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: .13em;
+    }
+
+    .dark .stage-label { color: #b7bdc6; }
+    .dark p { color: #bdc2ca; }
+
+    .flow-visual {
+      min-height: 62px;
+      display: grid;
+      place-items: center;
+    }
+
+    .radar {
+      position: relative;
+      width: 67px;
+      height: 67px;
+      border: 1px solid #4c535e;
+      border-radius: 50%;
+    }
+
+    .radar::before,
+    .radar::after {
+      content: "";
+      position: absolute;
+      inset: 15px;
+      border: 1px solid #4c535e;
+      border-radius: 50%;
+    }
+
+    .radar::after {
+      inset: 31px;
+      border: 0;
+      background: var(--brand);
+      box-shadow: 17px -12px 0 -1px var(--steal), -16px 14px 0 -2px white;
+    }
+
+    .radar-line {
+      position: absolute;
+      left: 32px;
+      top: 7px;
+      width: 2px;
+      height: 27px;
+      background: var(--brand);
+      transform: rotate(36deg);
+      transform-origin: bottom;
+    }
+
+    .ticket {
+      border: 2px solid var(--brand);
+      border-radius: 9px;
+      background: white;
+      padding: 13px 9px;
+      box-shadow: 0 8px 20px rgba(20, 23, 29, .08);
+    }
+
+    /* Option three */
+    .split {
+      display: grid;
+      grid-template-columns: 1.05fr 32px .95fr;
+      align-items: stretch;
+    }
+
+    .setup-panel,
+    .payoff-panel {
+      min-height: 216px;
+      border-radius: var(--radius-card);
+      padding: 15px;
+    }
+
+    .setup-panel { border: 1px solid var(--line); }
+
+    .panel-label {
+      margin-bottom: 11px;
+      color: var(--muted);
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .13em;
+    }
+
+    .setup-row {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      align-items: center;
+      gap: 9px;
+      padding: 12px 0;
+    }
+
+    .setup-row + .setup-row { border-top: 1px solid var(--line); }
+
+    .setup-number {
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: white;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .setup-row h2 {
+      margin: 0 0 3px;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .setup-row p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.25;
+    }
+
+    .airport-list { display: flex; gap: 3px; }
+    .airport-list i {
+      border-radius: 4px;
+      background: var(--brand);
+      padding: 5px;
+      color: #3a2d00;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 7px;
+      font-style: normal;
+      font-weight: 800;
+    }
+
+    .mini-calendar {
+      display: grid;
+      grid-template-columns: repeat(5, 9px);
+      gap: 3px;
+    }
+
+    .mini-calendar i {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      background: #eeeae2;
+    }
+
+    .mini-calendar i.hot { background: var(--brand); }
+
+    .split-arrow {
+      align-self: center;
+      text-align: center;
+      font-size: 23px;
+    }
+
+    .payoff-panel {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--night);
+      color: white;
+    }
+
+    .payoff-panel::after {
+      content: "";
+      position: absolute;
+      right: -65px;
+      bottom: -76px;
+      width: 145px;
+      height: 145px;
+      border: 24px solid rgba(255, 199, 44, .12);
+      border-radius: 50%;
+    }
+
+    .payoff-panel .panel-label { color: #b7bdc6; }
+    .payoff-panel .deal { justify-content: flex-start; }
+
+    .payoff-panel h2 {
+      margin: 15px 0 5px;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 21px;
+      line-height: 1.08;
+    }
+
+    .payoff-panel p {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      color: #bdc2ca;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .watching {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 13px;
+      color: #8c949f;
+      font-size: 9px;
+    }
+
+    .watching i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--steal);
+      box-shadow: 0 0 0 4px rgba(14, 159, 110, .12);
+    }
+
+    @media (min-width: 640px) {
+      .wizard { padding-inline: 24px; }
+      .onboarding-card { padding: 32px; }
+      h1 { font-size: 36px; }
+    }
+
+    @media (max-width: 639px) {
+      .preview-bar { flex-wrap: wrap; }
+      .preview-label { width: 100%; margin: 0; text-align: center; }
+      .wizard { padding-block: 24px; }
+      .progress-meta { font-size: 10px; }
+      .lede { font-size: 15px; }
+      .equation,
+      .flow,
+      .split { grid-template-columns: 1fr; gap: 10px; }
+      .operator,
+      .split-arrow { transform: rotate(90deg); }
+      .flow::before { display: none; }
+      .flow-stage { min-height: 150px; }
+      .setup-panel,
+      .payoff-panel { min-height: 190px; }
+      .card-footer { align-items: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .concept.active { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="preview-bar" aria-label="Choose a preview">
+    <span class="preview-label">First tab preview</span>
+    <button class="option-button" data-option="1" aria-selected="true">1 Equation</button>
+    <button class="option-button" data-option="2" aria-selected="false">2 Journey</button>
+    <button class="option-button" data-option="3" aria-selected="false">3 Two things</button>
+  </nav>
+
+  <main class="stage">
+    <div class="wizard">
+      <div class="progress-meta">
+        <span>01 / 06&nbsp;&nbsp; CHECK IN</span>
+        <span class="skip">Skip for now</span>
+      </div>
+      <div class="progress-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section class="onboarding-card">
+        <article class="concept active" data-concept="1">
+          <header>
+            <p class="eyebrow">How it works</p>
+            <h1>Open to go anywhere,<br>on any free day.</h1>
+            <p class="lede">Two minutes of setup, then Somewhere quietly watches for cheap flights so you do not have to.</p>
+          </header>
+
+          <div class="concept-body equation">
+            <section class="equation-card">
+              <div class="visual-slot">
+                <div class="availability-visual" aria-hidden="true">
+                  <div class="origin-pills"><span>EIN</span><b>+</b><span>AMS</span></div>
+                  <div class="calendar">
+                    <i></i><i></i><i></i><i></i><i></i><i class="hot"></i><i class="hot"></i>
+                    <i></i><i class="warm"></i><i class="warm"></i><i></i><i class="hot"></i><i class="hot"></i><i class="hot"></i>
+                    <i></i><i></i><i></i><i></i><i></i><i class="hot"></i><i></i>
+                  </div>
+                </div>
+              </div>
+              <h2>Your free days</h2>
+              <p>And the airports you want to fly from.</p>
+            </section>
+            <div class="operator">+</div>
+            <section class="equation-card">
+              <div class="visual-slot">
+                <div class="watch-board" aria-hidden="true">
+                  <div class="watch-row"><span>EIN→BCN</span><span>€38</span></div>
+                  <div class="watch-row"><span>AMS→FCO</span><span>€52</span></div>
+                  <div class="watch-row"><span>BRU→OPO</span><span>€41</span></div>
+                </div>
+              </div>
+              <h2>Our daily price watch</h2>
+            </section>
+            <div class="operator">=</div>
+            <section class="equation-card result">
+              <div class="visual-slot">
+                <div>
+                  <div class="deal"><span>EIN→BCN</span><span class="fare">€29</span><span class="badge">STEAL</span></div>
+                  <div class="trip-meta">21 JUN · 4 NTS</div>
+                </div>
+              </div>
+              <h2>A trip worth taking</h2>
+            </section>
+          </div>
+
+          <footer class="card-footer">
+            <button class="back-button">Back</button>
+            <button class="next-button">Set me up</button>
+          </footer>
+        </article>
+
+        <article class="concept" data-concept="2">
+          <header>
+            <p class="eyebrow">Flight search, backwards</p>
+            <h1>Start with your free days.<br>We find the flight.</h1>
+            <p class="lede">Set your calendar once. Somewhere keeps watching and only brings you trips that actually fit.</p>
+          </header>
+
+          <div class="concept-body flow">
+            <section class="flow-stage">
+              <span class="stage-label">YOU CHOOSE</span>
+              <div class="flow-visual">
+                <div class="calendar" aria-hidden="true">
+                  <i></i><i></i><i></i><i class="hot"></i><i class="hot"></i><i class="hot"></i><i></i>
+                  <i></i><i class="warm"></i><i class="hot"></i><i class="hot"></i><i></i><i class="hot"></i><i class="hot"></i>
+                </div>
+              </div>
+              <h2>The days you are free</h2>
+              <p>A quick two minute setup.</p>
+            </section>
+            <section class="flow-stage dark">
+              <span class="stage-label">SOMEWHERE WATCHES</span>
+              <div class="flow-visual"><div class="radar"><span class="radar-line"></span></div></div>
+              <h2>Prices move every day</h2>
+              <p>We quietly scan routes from your airports.</p>
+            </section>
+            <section class="flow-stage">
+              <span class="stage-label">YOU GET</span>
+              <div class="flow-visual">
+                <div class="ticket">
+                  <div class="deal"><span>EIN→BCN</span><span class="fare">€29</span></div>
+                  <div class="trip-meta">21 JUN · 4 NTS · STEAL</div>
+                </div>
+              </div>
+              <h2>One easy yes</h2>
+              <p>A cheap trip on dates that work.</p>
+            </section>
+          </div>
+
+          <footer class="card-footer">
+            <button class="back-button">Back</button>
+            <button class="next-button">Set me up</button>
+          </footer>
+        </article>
+
+        <article class="concept" data-concept="3">
+          <header>
+            <p class="eyebrow">Your two minute setup</p>
+            <h1>Tell us two things.<br>We take it from there.</h1>
+            <p class="lede">Choose your airports and paint your free days. Somewhere turns that into trips you can actually take.</p>
+          </header>
+
+          <div class="concept-body split">
+            <section class="setup-panel">
+              <div class="panel-label">WHAT YOU DO ONCE</div>
+              <div class="setup-row">
+                <span class="setup-number">01</span>
+                <div><h2>Pick your airports</h2><p>We watch every route from them.</p></div>
+                <div class="airport-list"><i>EIN</i><i>AMS</i></div>
+              </div>
+              <div class="setup-row">
+                <span class="setup-number">02</span>
+                <div><h2>Mark your free days</h2><p>We keep every trip inside them.</p></div>
+                <div class="mini-calendar" aria-hidden="true">
+                  <i></i><i class="hot"></i><i class="hot"></i><i></i><i class="hot"></i>
+                  <i></i><i></i><i class="hot"></i><i class="hot"></i><i class="hot"></i>
+                </div>
+              </div>
+            </section>
+            <div class="split-arrow">→</div>
+            <section class="payoff-panel">
+              <div class="panel-label">WHAT HAPPENS NEXT</div>
+              <div class="deal"><span>EIN→BCN</span><span class="fare">€29</span><span class="badge">STEAL</span></div>
+              <h2>A trip that fits.</h2>
+              <p>Somewhere checks prices every day and surfaces the best match.</p>
+              <div class="watching"><i></i><span>Watching quietly in the background</span></div>
+            </section>
+          </div>
+
+          <footer class="card-footer">
+            <button class="back-button">Back</button>
+            <button class="next-button">Set me up</button>
+          </footer>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const optionButtons = [...document.querySelectorAll(".option-button")];
+    const concepts = [...document.querySelectorAll(".concept")];
+
+    function showOption(option) {
+      optionButtons.forEach((button) => {
+        button.setAttribute("aria-selected", String(button.dataset.option === option));
+      });
+      concepts.forEach((concept) => {
+        concept.classList.toggle("active", concept.dataset.concept === option);
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.set("option", option);
+      history.replaceState(null, "", url);
+    }
+
+    optionButtons.forEach((button) => {
+      button.addEventListener("click", () => showOption(button.dataset.option));
+    });
+
+    showOption(new URLSearchParams(window.location.search).get("option") || "1");
+  </script>
+</body>
+</html>

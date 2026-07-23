@@ -82,6 +82,8 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [windows, setWindows] = useState<DateWindow[]>([]);
+  const [windowsLoaded, setWindowsLoaded] = useState(false);
+  const [showNoWindows, setShowNoWindows] = useState(false);
   // Told apart from "no windows set": the server filters from its own copy, so
   // a failed fetch would otherwise present a filtered board as an unfiltered one.
   const [windowsError, setWindowsError] = useState(false);
@@ -221,25 +223,40 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!signedIn) {
       setWindows([]);
+      setWindowsLoaded(status !== "loading");
       setWindowsError(false);
       return;
     }
+    setWindowsLoaded(false);
     let cancelled = false;
     getAvailability()
       .then((res) => {
         if (cancelled) return;
         setWindows(res.windows);
         setWindowsError(false);
+        setWindowsLoaded(true);
       })
       .catch(() => {
         if (cancelled) return;
         setWindows([]);
         setWindowsError(true);
+        setWindowsLoaded(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [signedIn]);
+  }, [signedIn, status]);
+
+  // An empty availability response is useful guidance, but it should not
+  // masquerade as loading state or blink during a quick request.
+  useEffect(() => {
+    if (!signedIn || !windowsLoaded || windowsError || windows.length > 0) {
+      setShowNoWindows(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowNoWindows(true), 500);
+    return () => window.clearTimeout(timer);
+  }, [signedIn, windowsLoaded, windowsError, windows.length]);
 
   const hasWindows = signedIn && windows.length > 0;
 
@@ -506,7 +523,7 @@ export default function CalendarPage() {
           <p className="mt-2 px-4 text-xs text-ink-muted">
             Couldn’t load your free dates, so this board may not match them.
           </p>
-        ) : !hasWindows && signedIn ? (
+        ) : showNoWindows ? (
           <p className="mt-2 px-4 text-xs text-ink-muted">
             You haven’t set any free dates, so this is everything.{" "}
             <Link
@@ -516,7 +533,7 @@ export default function CalendarPage() {
               Set your availability →
             </Link>
           </p>
-        ) : !hasWindows ? (
+        ) : windowsLoaded && !signedIn ? (
           <p className="mt-2 px-4 text-xs text-ink-muted">
             Sign in and set your free dates to filter this board to when you
             could actually go.

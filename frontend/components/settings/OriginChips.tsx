@@ -19,6 +19,7 @@ export default function OriginChips({
         <Chip
           key={o.code}
           size="sm"
+          appearance="availability"
           selected={selected.includes(o.code)}
           onClick={() => onToggle(o.code)}
           title={o.name}

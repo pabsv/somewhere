@@ -1,7 +1,7 @@
 // ─── /api/onboarding — first-run wizard completion state ─────────────────────
 // GET → DB-truth pending flag for the /welcome gate (source of truth, since the
 // JWT can go stale between completing the wizard and the next token refresh).
-// POST → mark onboarding done (finish or skip — same effect either way).
+// POST → mark onboarding done after the user reaches the final step.
 
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -26,7 +26,7 @@ export async function GET() {
   return NextResponse.json({ pending: !!user?.onboarding_pending });
 }
 
-// POST /api/onboarding — complete (finish or skip)
+// POST /api/onboarding — complete
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {

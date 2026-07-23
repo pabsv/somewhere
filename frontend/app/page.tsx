@@ -11,11 +11,13 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import WaitlistSignup from "@/components/landing/WaitlistSignup";
 import { getCities } from "@/lib/client";
 import { formatDateBoard } from "@/lib/format";
+import { selectLandingCities } from "@/lib/landing-board";
 
 /**
  * Landing page — the one-line pitch plus a live "best fares right now" board.
  * Purely promotional: the actual filtering/browsing lives on /explore. The
- * board mirrors Explore's hero (6 cheapest steals across all origins).
+ * The board keeps two price-led headline slots, then favours recognizable
+ * tourist destinations over an undifferentiated cheapest-six list.
  */
 export default function LandingPage() {
   const { status } = useSession();
@@ -24,14 +26,11 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    getCities({})
-      .then((res) => {
+    Promise.all([getCities({}), getCities({ from: ["EIN"] })])
+      .then(([all, eindhoven]) => {
         if (cancelled) return;
         setRows(
-          res.cities
-            .filter((c) => c.best.deal_tier === "steal")
-            .sort((a, b) => a.best.price - b.best.price)
-            .slice(0, 6)
+          selectLandingCities(all.cities, eindhoven.cities)
             .map((c) => ({
               origin: c.best.origin,
               destination: c.code,

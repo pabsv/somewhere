@@ -14,11 +14,13 @@ export default function OriginsStep({
           Where do you fly from?
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Pick every airport you&rsquo;d realistically leave from. You can
-          change this any time in Settings.
+          Pick airports you&rsquo;d realistically leave from. Change this any time
+          in Settings.
         </p>
       </div>
-      <OriginChips selected={selected} onToggle={onToggle} />
+      <div className="flex justify-center">
+        <OriginChips selected={selected} onToggle={onToggle} />
+      </div>
     </div>
   );
 }

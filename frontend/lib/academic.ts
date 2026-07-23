@@ -1,6 +1,6 @@
 // ─── Quick-setup window generation — pure, no IO ─────────────────────────────
-// Settings → Quick setup: the user ticks recurring weekly busy days, hits
-// "Apply to calendar", and we materialize the free gaps as painted
+// Settings → Quick setup: the user ticks recurring weekly available days,
+// hits "Apply to calendar", and we materialize those days as painted
 // availability windows. The calendar (and the windows collection) stays the
 // single source of truth for filtering — this is just a generator.
 
@@ -25,9 +25,10 @@ function toStr(d: Date): string {
 }
 
 /**
- * Free windows between recurring busy weekdays, from `start` (inclusive)
- * through `months` calendar months ahead. Consecutive free days coalesce into
- * one window. Empty `busyWeekdays` → one giant window; all 7 busy → none.
+ * Availability windows for the selected recurring weekdays, from `start`
+ * (inclusive) through `months` calendar months ahead. Consecutive selected
+ * days coalesce into one window. No selected weekdays → no windows; all 7
+ * selected → one continuous window.
  */
 export function generateFreeWindows(
   busyWeekdays: number[],
@@ -51,8 +52,8 @@ export function generateFreeWindows(
 
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const day = toStr(d);
-    const free = !busyWeekdays.includes(isoWeekday(day));
-    if (free) {
+    const available = busyWeekdays.includes(isoWeekday(day));
+    if (available) {
       if (runStart === null) runStart = day;
       prev = day;
     } else if (runStart !== null && prev !== null) {

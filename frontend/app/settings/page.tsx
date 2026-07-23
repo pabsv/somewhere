@@ -60,7 +60,12 @@ export default function SettingsPage() {
           title="Availability"
           storageKey="somewhere:settings:availability-open"
         >
-          <AcademicCard />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-10">
+            <AcademicCard />
+            <div className="lg:min-w-72 lg:border-l lg:border-line lg:pl-8">
+              <PreferencesCard />
+            </div>
+          </div>
           <div className="border-t border-line pt-6">
             <YearPaint />
           </div>
@@ -83,18 +88,6 @@ export default function SettingsPage() {
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
           <FavouritesCard />
-        </div>
-      </section>
-
-      {/* Preferences */}
-      <section className="mb-12">
-        <div className="mb-4">
-          <h2 className="font-display text-xl font-semibold text-ink">
-            Preferences
-          </h2>
-        </div>
-        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
-          <PreferencesCard />
         </div>
       </section>
 

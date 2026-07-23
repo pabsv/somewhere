@@ -1,7 +1,7 @@
 "use client";
 
-// Quick setup: tick recurring weekly busy days, hit "Apply to calendar" —
-// the free gaps for the next 12 months are painted into the availability
+// Quick setup: tick recurring weekly available days, hit "Apply to calendar" —
+// those days for the next 12 months are painted into the availability
 // calendar below. The calendar is the single source of truth; this is just
 // a fast way to fill it. Apply sequence lives in lib/useQuickSetup.ts,
 // shared with the /welcome onboarding wizard.
@@ -20,6 +20,7 @@ import {
   AVAILABILITY_SNAPSHOT_EVENT,
   AVAILABILITY_UPDATED_EVENT,
 } from "@/lib/useQuickSetup";
+import { useUniCalendar } from "@/lib/university/context";
 import type { DateWindow, Preferences } from "@/types/api";
 
 const UNDO_WINDOW_MS = 15_000;
@@ -46,6 +47,7 @@ async function currentAvailability(): Promise<DateWindow[]> {
 }
 
 export default function AcademicCard() {
+  const { setUniversity } = useUniCalendar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const { busy, setBusy, toggle, applying, apply } = useQuickSetup();
   const [message, setMessage] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export default function AcademicCard() {
   const [undoing, setUndoing] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [savingUniversity, setSavingUniversity] = useState(false);
 
   useEffect(() => {
     getPreferences()
@@ -88,11 +91,8 @@ export default function AcademicCard() {
       busyWeekdays: [...(prefs.busy_weekdays ?? [])],
     });
     try {
-      const { windows, prefs: updated } = await apply(prefs);
+      const { prefs: updated } = await apply();
       setPrefs(updated);
-      setMessage(
-        `Painted ${windows.length} free window(s) into your calendar below — fine-tune there.`,
-      );
     } catch {
       setMessage("Couldn’t apply — try again.");
     }
@@ -157,7 +157,6 @@ export default function AcademicCard() {
     if (previous.busyWeekdays) {
       try {
         const updated = await putPreferences({
-          ...prefs,
           busy_weekdays: previous.busyWeekdays,
         });
         setPrefs(updated);
@@ -175,63 +174,128 @@ export default function AcademicCard() {
     setUndoing(false);
   };
 
+  const onToggleUniversity = async () => {
+    if (!prefs || savingUniversity) return;
+
+    const previous = prefs.university ?? null;
+    const next: Preferences["university"] =
+      previous === "tue" ? null : "tue";
+    const optimistic: Preferences = { ...prefs, university: next };
+
+    setMessage(null);
+    setPrefs(optimistic);
+    setUniversity(next);
+    setSavingUniversity(true);
+    try {
+      const updated = await putPreferences({ university: next });
+      setPrefs(updated);
+      setUniversity(updated.university ?? null);
+    } catch {
+      setPrefs(prefs);
+      setUniversity(previous);
+      setMessage("Couldn’t update the TU/e calendar — try again.");
+    } finally {
+      setSavingUniversity(false);
+    }
+  };
+
   if (!prefs) {
     return <p className="text-sm text-ink-muted">Loading…</p>;
   }
 
   const controlsBusy = applying || undoing || capturing || clearing;
+  const universityOn = prefs.university === "tue";
 
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wide text-ink-muted">
+        <p className="font-mono text-xs font-bold uppercase tracking-wide text-ink">
           Quick setup
         </p>
         <p className="text-sm text-ink-muted">
-          Select the weekdays you&apos;re usually busy. Applying fills the next
-          12 months and replaces your current calendar.
+          Select the weekdays you&apos;re usually available. Yellow means
+          selected. Applying fills the next 12 months and replaces your current
+          calendar.
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {WEEKDAYS.map((d) => (
+      <div className="space-y-4 lg:flex lg:items-center lg:gap-2 lg:space-y-0">
+        <div className="grid grid-cols-7 gap-1.5 sm:flex sm:items-center sm:gap-2 lg:shrink-0">
+          {WEEKDAYS.map((d) => (
+            <Chip
+              key={d.iso}
+              size="sm"
+              appearance="availability"
+              selected={busy.includes(d.iso)}
+              onClick={() => toggle(d.iso)}
+              disabled={controlsBusy}
+              className="w-full min-w-0 justify-center px-0 sm:w-auto sm:px-2.5"
+            >
+              {d.label}
+            </Chip>
+          ))}
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 sm:flex lg:shrink-0">
           <Chip
-            key={d.iso}
             size="sm"
-            selected={busy.includes(d.iso)}
-            onClick={() => toggle(d.iso)}
-            disabled={controlsBusy}
+            onClick={onApply}
+            disabled={controlsBusy || busy.length === 0 || busy.length === 7}
+            className="justify-center whitespace-nowrap sm:px-3.5 sm:py-1.5 sm:text-sm"
           >
-            {d.label}
+            {applying ? "Applying…" : "Apply to calendar"}
           </Chip>
-        ))}
-        <Chip
-          onClick={onApply}
-          disabled={controlsBusy || busy.length === 0 || busy.length === 7}
-          className="ml-2"
-        >
-          {applying ? "Applying…" : "Apply to calendar"}
-        </Chip>
-        {undo && (
+          <Chip
+            size="sm"
+            onClick={onClear}
+            disabled={controlsBusy}
+            className="whitespace-nowrap text-ink-muted hover:border-alert hover:text-alert disabled:cursor-not-allowed disabled:opacity-40 sm:px-3.5 sm:py-1.5 sm:text-sm"
+          >
+            {clearing ? "Clearing…" : "Clear all"}
+          </Chip>
           <button
             type="button"
             onClick={onUndo}
-            disabled={controlsBusy}
+            disabled={controlsBusy || !undo}
             aria-label="Undo the last calendar change"
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-steal transition-colors hover:bg-steal/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-steal transition-colors hover:bg-steal/10 disabled:cursor-not-allowed disabled:text-ink-muted disabled:hover:bg-transparent sm:gap-1.5 sm:px-3.5 sm:py-1.5 sm:text-sm"
           >
             <span aria-hidden="true" className="text-base leading-none">
               ↶
             </span>
             Undo
           </button>
-        )}
-        <Chip
-          onClick={onClear}
-          disabled={controlsBusy}
-          className="text-ink-muted hover:border-alert hover:text-alert disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {clearing ? "Clearing…" : "Clear all"}
-        </Chip>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 lg:min-w-0 lg:flex-nowrap">
+          <Chip
+            size="sm"
+            selected={universityOn}
+            onClick={onToggleUniversity}
+            disabled={controlsBusy || savingUniversity}
+            title="Show TU/e exams and holidays on the calendar"
+            className="shrink-0"
+          >
+            TU/e student
+          </Chip>
+          {universityOn && (
+            <span className="flex items-center gap-3 text-xs text-ink-muted">
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-[3px] w-4 rounded-full"
+                  style={{ backgroundColor: "var(--color-uni-exam)" }}
+                />
+                TU/e exams
+              </span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-[3px] w-4 rounded-full"
+                  style={{ backgroundColor: "var(--color-uni-break)" }}
+                />
+                TU/e holidays
+              </span>
+            </span>
+          )}
+        </div>
       </div>
       {message && <p className="text-sm text-ink-muted">{message}</p>}
     </div>

@@ -265,7 +265,7 @@ export const PreferencesSchema = z.object({
   trip_max_nights: z.number(),
   direct_only: z.boolean(),
   max_price: z.number().nullable(),
-  /** Recurring weekly busy days, ISO 1=Mon…7=Sun (Settings → Quick setup). */
+  /** Recurring weekly available days, ISO 1=Mon…7=Sun (legacy field name). */
   busy_weekdays: z.array(z.number().int().min(1).max(7)).optional(),
   /** Academic calendar to overlay on calendar views (lib/university/tue.ts). */
   university: z.enum(["tue"]).nullable().optional(),
@@ -402,12 +402,14 @@ export const AvailabilityResponseSchema = z.object({
 export type AvailabilityResponse = z.infer<typeof AvailabilityResponseSchema>;
 
 /**
- * GET + PUT /api/saved-cities — the user's starred destinations (IATA codes).
- * Replace-all semantics, like availability. Codes are uppercased + deduped
- * server-side; order is not significant.
+ * GET + PUT /api/saved-cities — the user's starred destinations (IATA codes)
+ * plus country containers explicitly created in the favourites picker.
+ * Country containers preserve a partial country selection without changing
+ * the city-based fare queries used everywhere else.
  */
 export const SavedCitiesResponseSchema = z.object({
   cities: z.array(z.string().min(1)),
+  countries: z.array(z.string().min(1)),
 });
 export type SavedCitiesResponse = z.infer<typeof SavedCitiesResponseSchema>;
 

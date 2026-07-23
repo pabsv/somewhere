@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = PreferencesSchema.safeParse(body);
+  const parsed = PreferencesSchema.partial().safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: z.prettifyError(parsed.error) },
@@ -77,12 +77,6 @@ export async function PUT(req: NextRequest) {
   }
 
   const prefs = parsed.data;
-  if (prefs.trip_min_nights > prefs.trip_max_nights) {
-    return NextResponse.json(
-      { error: "trip_min_nights must not exceed trip_max_nights" },
-      { status: 400 },
-    );
-  }
 
   // Merge over the stored subdoc so a client sending a partial Preferences
   // shape (e.g. the prefs card, unaware of v2 fields) can't wipe other keys.
@@ -97,6 +91,12 @@ export async function PUT(req: NextRequest) {
     ...((existing?.preferences ?? {}) as Partial<Preferences>),
     ...prefs,
   };
+  if (merged.trip_min_nights > merged.trip_max_nights) {
+    return NextResponse.json(
+      { error: "trip_min_nights must not exceed trip_max_nights" },
+      { status: 400 },
+    );
+  }
 
   await users.updateOne(
     { _id: new ObjectId(session.user.id) },

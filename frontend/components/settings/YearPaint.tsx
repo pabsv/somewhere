@@ -13,6 +13,7 @@ import {
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
 import {
   AVAILABILITY_SNAPSHOT_EVENT,
+  AVAILABILITY_SAVED_EVENT,
   AVAILABILITY_UPDATED_EVENT,
 } from "@/lib/useQuickSetup";
 import { useUniCalendar } from "@/lib/university/context";
@@ -701,7 +702,13 @@ export default function YearPaint() {
     return putAvailability(ws)
       .then((res) => {
         lastSyncedRef.current = canonWindows(res.windows);
-        setSaveMsg({ kind: "ok", text: "Saved ✓" });
+        setSaveMsg(null);
+        window.dispatchEvent(
+          new CustomEvent<{ windows: DateWindow[] }>(
+            AVAILABILITY_SAVED_EVENT,
+            { detail: { windows: res.windows } },
+          ),
+        );
       })
       .catch((e) => {
         if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -738,13 +745,6 @@ export default function YearPaint() {
     return () => clearTimeout(t);
   }, [windows, mode, saveNow]);
 
-  // auto-fade the saved message
-  useEffect(() => {
-    if (saveMsg?.kind !== "ok") return;
-    const t = setTimeout(() => setSaveMsg(null), 2000);
-    return () => clearTimeout(t);
-  }, [saveMsg]);
-
   // Give the controls the exact local paint, including edits still inside the
   // autosave debounce, before a replace-all action runs.
   useEffect(() => {
@@ -776,64 +776,44 @@ export default function YearPaint() {
 
   return (
     <div>
-      {/* Save feedback + university calendar legend */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        {(saving || saveMsg) && (
-          <span
-            aria-live="polite"
-            className={`text-sm transition-colors ${
-              saving
-                ? "text-ink-muted"
-                : saveMsg?.kind === "ok"
-                  ? "text-steal"
+      {/* Save feedback + range-paint guidance */}
+      {(saving || saveMsg || pendingStart) && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          {(saving || saveMsg) && (
+            <span
+              aria-live="polite"
+              className={`text-sm transition-colors ${
+                saving
+                  ? "text-ink-muted"
                   : "text-alert"
-            }`}
-          >
-            {saving ? "Saving…" : saveMsg?.text}
-          </span>
-        )}
-        {saveMsg?.kind === "err" && !saving && (
-          <button
-            type="button"
-            onClick={() => void saveNow(windows)}
-            className="text-sm font-medium text-ink underline underline-offset-2 hover:text-alert"
-          >
-            Retry
-          </button>
-        )}
-        {uniDays.size > 0 && (
-          <span className="flex items-center gap-3 text-xs text-ink-muted">
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-block h-[3px] w-4 rounded-full"
-                style={{ backgroundColor: "var(--color-uni-exam)" }}
-              />
-              TU/e exams
+              }`}
+            >
+              {saving ? "Saving…" : saveMsg?.text}
             </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-block h-[3px] w-4 rounded-full"
-                style={{ backgroundColor: "var(--color-uni-break)" }}
-              />
-              TU/e holidays
-            </span>
-          </span>
-        )}
-        {pendingStart && (
-          <span className="font-mono text-xs text-ink">
-            Pick an end day for {prettyDay(pendingStart)} — or{" "}
+          )}
+          {saveMsg?.kind === "err" && !saving && (
             <button
               type="button"
-              onClick={() => setPendingStart(null)}
-              className="underline underline-offset-2 hover:text-alert"
+              onClick={() => void saveNow(windows)}
+              className="text-sm font-medium text-ink underline underline-offset-2 hover:text-alert"
             >
-              cancel
+              Retry
             </button>
-          </span>
-        )}
-      </div>
+          )}
+          {pendingStart && (
+            <span className="font-mono text-xs text-ink">
+              Pick an end day for {prettyDay(pendingStart)} — or{" "}
+              <button
+                type="button"
+                onClick={() => setPendingStart(null)}
+                className="underline underline-offset-2 hover:text-alert"
+              >
+                cancel
+              </button>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* month grids */}
       {/* pan-y (not none) so the page still scrolls past the 12-month grid on

@@ -1,8 +1,9 @@
 // ─── /api/saved-cities — user's starred destinations (session-gated) ────────
-// GET → { cities: string[] } the session user's saved IATA codes.
+// GET → the session user's saved IATA codes + grouped country selections.
 // PUT → replace-all: sanitize (uppercase + dedupe + cap), persist on the
-//        users doc under `saved_cities`. Interest cities = focus points,
-//        surfaced/pinned in Explore + Calendar. Mirrors /api/availability.
+//        users doc under `saved_cities` / `saved_countries`. Cities remain the
+//        focus points used by Explore + Calendar; countries only preserve the
+//        editable grouping intent in this picker.
 
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -16,6 +17,7 @@ const MAX_SAVED = 500;
 
 const PutBodySchema = z.object({
   cities: z.array(z.string()),
+  countries: z.array(z.string()).optional().default([]),
 });
 
 /** Uppercase, trim, drop blanks/over-long, dedupe (stable), cap length. */
@@ -45,7 +47,7 @@ export async function GET() {
     .collection("users")
     .findOne(
       { _id: new ObjectId(session.user.id) },
-      { projection: { saved_cities: 1 } },
+      { projection: { saved_cities: 1, saved_countries: 1 } },
     );
 
   const stored = Array.isArray(user?.saved_cities)
@@ -53,9 +55,17 @@ export async function GET() {
         (c): c is string => typeof c === "string",
       )
     : [];
+  const storedCountries = Array.isArray(user?.saved_countries)
+    ? (user!.saved_countries as unknown[]).filter(
+        (c): c is string => typeof c === "string",
+      )
+    : [];
 
   return NextResponse.json(
-    SavedCitiesResponseSchema.parse({ cities: sanitize(stored) }),
+    SavedCitiesResponseSchema.parse({
+      cities: sanitize(stored),
+      countries: sanitize(storedCountries),
+    }),
   );
 }
 
@@ -82,14 +92,17 @@ export async function PUT(req: NextRequest) {
   }
 
   const cities = sanitize(parsed.data.cities);
+  const countries = sanitize(parsed.data.countries);
 
   const db = await getDb();
   await db
     .collection("users")
     .updateOne(
       { _id: new ObjectId(session.user.id) },
-      { $set: { saved_cities: cities } },
+      { $set: { saved_cities: cities, saved_countries: countries } },
     );
 
-  return NextResponse.json(SavedCitiesResponseSchema.parse({ cities }));
+  return NextResponse.json(
+    SavedCitiesResponseSchema.parse({ cities, countries }),
+  );
 }

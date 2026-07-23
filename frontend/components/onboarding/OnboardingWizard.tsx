@@ -2,8 +2,7 @@
 
 // First-run onboarding — a "boarding sequence" through six steps:
 // CHECK-IN → ORIGINS → CALENDAR → DESTINATIONS → ALERTS → DEPARTURES.
-// Reaching the last step (DEPARTURES) marks onboarding complete server-side;
-// "Skip for now" from any earlier step does the same and leaves immediately.
+// Reaching the last step (DEPARTURES) marks onboarding complete server-side.
 // Every network write reuses the exact same client calls as Settings
 // (putPreferences / putAvailability / useSavedCities), so nothing here
 // invents a parallel data path.
@@ -11,9 +10,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { getPreferences, putPreferences, getCities } from "@/lib/client";
+import {
+  getAvailability,
+  getPreferences,
+  putPreferences,
+  getCities,
+} from "@/lib/client";
 import { useSavedCities } from "@/lib/saved-cities";
-import { useUniCalendar } from "@/lib/university/context";
+import {
+  AVAILABILITY_SAVED_EVENT,
+  AVAILABILITY_UPDATED_EVENT,
+} from "@/lib/useQuickSetup";
 import { formatDateBoard } from "@/lib/format";
 import type { Preferences } from "@/types/api";
 import type { DepartureRow } from "@/components/board/DepartureBoard";
@@ -43,18 +50,21 @@ export default function OnboardingWizard() {
   // meaningful destination (e.g. a /join/<token> round trip).
   const rawNext = params.get("next");
   const next = rawNext && rawNext !== "/" ? rawNext : "/calendar";
+  const previewCalendar =
+    process.env.NODE_ENV === "development" &&
+    params.get("preview") === "calendar";
   const { update } = useSession();
   const { isSaved } = useSavedCities();
-  const { setUniversity } = useUniCalendar();
 
   const [ready, setReady] = useState(false);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(previewCalendar ? 2 : 0);
+  const [furthestStep, setFurthestStep] = useState(previewCalendar ? 2 : 0);
   const [saving, setSaving] = useState(false);
 
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [originsSelected, setOriginsSelected] = useState<string[]>([]);
   const [notifyOptin, setNotifyOptin] = useState(false);
-  const [universityOn, setUniversityOn] = useState(false);
+  const [hasAvailability, setHasAvailability] = useState(false);
 
   const [payoffRows, setPayoffRows] = useState<DepartureRow[] | null>(null);
 
@@ -63,19 +73,20 @@ export default function OnboardingWizard() {
     let cancelled = false;
     (async () => {
       try {
-        const [pendingRes, p] = await Promise.all([
+        const [pendingRes, p, availability] = await Promise.all([
           fetch("/api/onboarding").then((r) => r.json()),
           getPreferences(),
+          getAvailability(),
         ]);
         if (cancelled) return;
-        if (!pendingRes.pending) {
+        if (!pendingRes.pending && !previewCalendar) {
           router.replace(next);
           return;
         }
         setPrefs(p);
         setOriginsSelected(p.origins);
         setNotifyOptin(!!p.notify_optin);
-        setUniversityOn(p.university === "tue");
+        setHasAvailability(availability.windows.length > 0);
       } catch {
         // fail open — don't trap the user behind a blank screen
       } finally {
@@ -88,8 +99,22 @@ export default function OnboardingWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const onAvailabilityUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ windows?: unknown[] }>).detail;
+      if (detail?.windows) setHasAvailability(detail.windows.length > 0);
+    };
+    window.addEventListener(AVAILABILITY_UPDATED_EVENT, onAvailabilityUpdated);
+    window.addEventListener(AVAILABILITY_SAVED_EVENT, onAvailabilityUpdated);
+    return () =>
+      [AVAILABILITY_UPDATED_EVENT, AVAILABILITY_SAVED_EVENT].forEach((event) =>
+        window.removeEventListener(event, onAvailabilityUpdated),
+      );
+  }, []);
+
   // ─── Completion ─────────────────────────────────────────────────────────────
   const completeOnboarding = useCallback(async () => {
+    if (previewCalendar) return;
     try {
       await fetch("/api/onboarding", { method: "POST" });
     } catch {
@@ -103,15 +128,11 @@ export default function OnboardingWizard() {
     if (typeof window !== "undefined") {
       sessionStorage.setItem(DONE_KEY, "1");
     }
-  }, [update]);
+  }, [previewCalendar, update]);
 
   const leave = useCallback(() => {
     router.replace(next);
   }, [router, next]);
-
-  const skip = useCallback(() => {
-    completeOnboarding().then(leave);
-  }, [completeOnboarding, leave]);
 
   // ─── Reaching the payoff step = done; fetch origin-relevant deals ──────────
   useEffect(() => {
@@ -148,27 +169,23 @@ export default function OnboardingWizard() {
     setSaving(true);
     try {
       if (step === 1 && prefs) {
-        const updated = await putPreferences({ ...prefs, origins: originsSelected });
-        setPrefs(updated);
-      } else if (step === 2 && prefs) {
-        // availability saves through AcademicCard / YearPaint themselves —
-        // only the TU/e preference goes through the wizard
-        const updated = await putPreferences({
-          ...prefs,
-          university: universityOn ? "tue" : null,
-        });
+        const updated = await putPreferences({ origins: originsSelected });
         setPrefs(updated);
       } else if (step === 4 && prefs) {
-        const updated = await putPreferences({ ...prefs, notify_optin: notifyOptin });
+        const updated = await putPreferences({ notify_optin: notifyOptin });
         setPrefs(updated);
       }
     } catch {
       // a save hiccup shouldn't strand the user mid-wizard — Settings covers retry
     } finally {
       setSaving(false);
-      setStep((s) => Math.min(s + 1, LAST_STEP));
+      setStep((s) => {
+        const nextStep = Math.min(s + 1, LAST_STEP);
+        setFurthestStep((furthest) => Math.max(furthest, nextStep));
+        return nextStep;
+      });
     }
-  }, [step, prefs, originsSelected, universityOn, notifyOptin]);
+  }, [step, prefs, originsSelected, notifyOptin]);
 
   const goBack = useCallback(() => {
     setStep((s) => Math.max(s - 1, 0));
@@ -179,6 +196,17 @@ export default function OnboardingWizard() {
   // The calendar step hosts the full Settings-size YearPaint — give it the
   // whole page width; every other step stays a focused narrow column.
   const wide = step === 2;
+  const currentStepComplete =
+    step === 0 ||
+    (step === 1 && originsSelected.length > 0) ||
+    (step === 2 && hasAvailability) ||
+    step === 3 ||
+    step === 4 ||
+    step === LAST_STEP;
+  const furthestClickableStep = Math.min(
+    LAST_STEP,
+    Math.max(furthestStep, currentStepComplete ? step + 1 : step),
+  );
 
   return (
     <div
@@ -188,30 +216,47 @@ export default function OnboardingWizard() {
     >
       {/* ─── Progress ────────────────────────────────────────────────────────── */}
       <div className="mb-6">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center">
           <span className="tnum font-mono text-xs uppercase tracking-widest text-ink-muted">
             {String(step + 1).padStart(2, "0")} / {STEP_LABELS.length} — {STEP_LABELS[step]}
           </span>
-          {step < LAST_STEP && (
-            <button
-              type="button"
-              onClick={skip}
-              className="font-mono text-xs uppercase tracking-wide text-ink-muted underline hover:text-ink"
-            >
-              Skip for now
-            </button>
-          )}
         </div>
-        <div className="flex gap-1">
+        <nav className="flex gap-1" aria-label="Onboarding progress">
           {STEP_LABELS.map((label, i) => (
-            <span
+            <button
               key={label}
-              className={`h-1 flex-1 rounded-full transition-colors ${
-                i <= step ? "bg-brand" : "bg-line"
+              type="button"
+              onClick={() => {
+                if (i > furthestStep) goNext();
+                else if (i !== step) setStep(i);
+              }}
+              disabled={i > furthestClickableStep || i === step || saving}
+              aria-current={i === step ? "step" : undefined}
+              aria-label={`${i + 1}. ${label}${
+                i <= furthestClickableStep && i !== step
+                  ? " — go to this step"
+                  : ""
               }`}
-            />
+              className={`group relative flex h-5 flex-1 items-center ${
+                i <= furthestClickableStep && i !== step
+                  ? "cursor-pointer"
+                  : "cursor-default"
+              }`}
+            >
+              <span
+                className={`h-1 w-full rounded-full transition-[height,background-color] ${
+                  i <= step ? "bg-brand" : "bg-line"
+                } ${i <= furthestClickableStep && i !== step ? "group-hover:h-1.5 group-focus-visible:h-1.5" : ""}`}
+              />
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-(--radius-tag) bg-ink px-2 py-1 font-mono text-[10px] uppercase tracking-wide text-paper opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              >
+                {String(i + 1).padStart(2, "0")} — {label}
+              </span>
+            </button>
           ))}
-        </div>
+        </nav>
       </div>
 
       {/* ─── Step content ────────────────────────────────────────────────────── */}
@@ -229,17 +274,7 @@ export default function OnboardingWizard() {
             }
           />
         )}
-        {step === 2 && (
-          <CalendarStep
-            university={universityOn}
-            onToggleUniversity={() => {
-              const next = !universityOn;
-              setUniversityOn(next);
-              // live overlay on the YearPaint below (persisted on Next)
-              setUniversity(next ? "tue" : null);
-            }}
-          />
-        )}
+        {step === 2 && <CalendarStep />}
         {step === 3 && <DestinationsStep />}
         {step === 4 && (
           <AlertsStep

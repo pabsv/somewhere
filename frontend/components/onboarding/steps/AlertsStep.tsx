@@ -12,7 +12,7 @@ export default function AlertsStep({
           Want a nudge when a steal appears?
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Email alerts aren&rsquo;t live yet — flip this on and we&rsquo;ll
+          Email alerts aren&rsquo;t live yet. Flip this on and we&rsquo;ll
           switch you in the moment they ship.
         </p>
       </div>
@@ -25,7 +25,7 @@ export default function AlertsStep({
             aria-hidden="true"
           />
           <p className="flex-1 font-mono text-xs uppercase tracking-widest text-paper/80">
-            Coming soon — email the moment a steal hits one of your stars
+            Coming soon. Email the moment a steal hits one of your stars
           </p>
           <button
             type="button"

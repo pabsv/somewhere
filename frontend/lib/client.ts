@@ -171,7 +171,7 @@ export function getPreferences(): Promise<Preferences> {
 }
 
 /** PUT /api/preferences */
-export function putPreferences(p: Preferences): Promise<Preferences> {
+export function putPreferences(p: Partial<Preferences>): Promise<Preferences> {
   return request(`/api/preferences`, {
     method: "PUT",
     body: JSON.stringify(p),
@@ -186,10 +186,11 @@ export function getSavedCities(): Promise<SavedCitiesResponse> {
 /** PUT /api/saved-cities — replace-all semantics */
 export function putSavedCities(
   cities: string[],
+  countries: string[] = [],
 ): Promise<SavedCitiesResponse> {
   return request(`/api/saved-cities`, {
     method: "PUT",
-    body: JSON.stringify({ cities }),
+    body: JSON.stringify({ cities, countries }),
   });
 }
 

@@ -7,16 +7,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Chip from "@/components/ui/Chip";
 import OriginChips from "@/components/settings/OriginChips";
 import { getPreferences, putPreferences, ApiError } from "@/lib/client";
-import { useUniCalendar } from "@/lib/university/context";
 import type { Preferences } from "@/types/api";
 
 type Mode = "loading" | "ready" | "error";
 
 export default function PreferencesCard() {
-  const { setUniversity } = useUniCalendar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -85,11 +82,10 @@ export default function PreferencesCard() {
       setSaveMsg(null);
       saveQueueRef.current = saveQueueRef.current
         .catch(() => undefined)
-        .then(() => putPreferences(snapshot))
+        .then(() => putPreferences({ origins: snapshot.origins }))
         .then((savedPrefs) => {
           if (version !== saveVersionRef.current) return;
           lastSyncedRef.current = JSON.stringify(savedPrefs);
-          setUniversity(savedPrefs.university ?? null);
           setSaveMsg({ kind: "ok", text: "Saved ✓" });
         })
         .catch((e) => {
@@ -109,7 +105,7 @@ export default function PreferencesCard() {
     }, 450);
 
     return () => clearTimeout(timeout);
-  }, [prefs, mode, setUniversity]);
+  }, [prefs, mode]);
 
   useEffect(() => {
     if (saveMsg?.kind !== "ok") return;
@@ -129,24 +125,9 @@ export default function PreferencesCard() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-3">
       <Field label="Departure airports" hint="Where you'd fly out from.">
         <OriginChips selected={prefs.origins} onToggle={toggleOrigin} />
-      </Field>
-
-      <Field
-        label="University calendar"
-        hint="Show TU/e exam periods and holidays on your calendars."
-      >
-        <Chip
-          size="sm"
-          selected={prefs.university === "tue"}
-          onClick={() =>
-            patch({ university: prefs.university === "tue" ? null : "tue" })
-          }
-        >
-          I&rsquo;m a TU/e student
-        </Chip>
       </Field>
 
       {(saving || saveMsg) && (
@@ -192,13 +173,9 @@ function Field({
 
 function PreferencesSkeleton() {
   return (
-    <div aria-hidden="true" className="space-y-7">
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i}>
-          <div className="mb-2 h-3 w-32 animate-pulse rounded bg-line" />
-          <div className="h-8 w-48 animate-pulse rounded-(--radius-tag) bg-line" />
-        </div>
-      ))}
+    <div aria-hidden="true">
+      <div className="mb-2 h-3 w-32 animate-pulse rounded bg-line" />
+      <div className="h-8 w-64 animate-pulse rounded-(--radius-tag) bg-line" />
     </div>
   );
 }
