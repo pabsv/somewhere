@@ -452,30 +452,44 @@ export default function CalendarPage() {
             could actually go.
           </p>
         )}
-        {university && uniPeriods.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-xs text-ink-muted">
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-block h-2.5 w-2.5 rounded-[2px]"
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 45%, transparent) 0 2px, transparent 2px 4px)",
-                }}
-              />
-              TU/e exams
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-block h-2.5 w-2.5 rounded-[2px]"
-                style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--color-uni-break) 35%, transparent)",
-                }}
-              />
-              TU/e holidays
-            </span>
+        {(signedIn || (university && uniPeriods.length > 0)) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 text-xs text-ink-muted">
+            {university && uniPeriods.length > 0 && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 45%, transparent) 0 2px, transparent 2px 4px)",
+                    }}
+                  />
+                  TU/e exams
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--color-uni-break) 35%, transparent)",
+                    }}
+                  />
+                  TU/e holidays
+                </span>
+              </>
+            )}
+            {/* Chip-shaped link (Chip itself is button-only) — the ★ filter
+                chip above only toggles, it can't take you to the editor. */}
+            {signedIn && (
+              <Link
+                href="/settings#favourites"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:border-ink-muted"
+              >
+                ★ Edit favourite cities
+              </Link>
+            )}
           </div>
         )}
       </div>
