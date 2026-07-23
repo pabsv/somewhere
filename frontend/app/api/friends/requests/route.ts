@@ -18,7 +18,7 @@ import {
 } from "@/lib/friends";
 
 const PostBodySchema = z.object({
-  email: z.string(),
+  email: z.string().max(320),
 });
 
 export async function POST(req: NextRequest) {

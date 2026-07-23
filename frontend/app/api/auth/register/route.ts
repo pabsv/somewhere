@@ -6,8 +6,17 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getDb } from "@/lib/mongodb";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
+  // Mass-signup / enumeration gate.
+  if (!rateLimit(`register:${clientIp(request)}`, 5, 15 * 60_000)) {
+    return NextResponse.json(
+      { error: "Too many attempts — try again in a few minutes" },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

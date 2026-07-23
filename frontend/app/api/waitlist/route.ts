@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 const WAITLIST_COLLECTION = "waitlist";
 
@@ -18,6 +19,13 @@ const PostBodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(`waitlist:${clientIp(req)}`, 5, 10 * 60_000)) {
+    return NextResponse.json(
+      { error: "Too many requests — try again in a few minutes" },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

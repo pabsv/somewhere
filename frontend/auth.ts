@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 import { authConfig } from "@/auth.config";
 import { getDb } from "@/lib/mongodb";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -27,7 +28,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       // Sign-in only — account creation happens via POST /api/auth/register.
       // Looks up the user by email and verifies the bcrypt password hash.
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
+        // Brute-force gate: over-limit callers get the same null (= invalid
+        // credentials) the UI already handles.
+        if (!rateLimit(`login:${clientIp(request)}`, 10, 15 * 60_000)) {
+          return null;
+        }
+
         const email =
           typeof credentials?.email === "string"
             ? credentials.email.trim().toLowerCase()
