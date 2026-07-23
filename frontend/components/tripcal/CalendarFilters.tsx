@@ -1,6 +1,7 @@
 "use client";
 
 import { CALENDAR_DEFAULT_MAX_PRICE } from "@/lib/score";
+import { useState } from "react";
 
 // Slider bounds. Price at PRICE_MAX and nights at the outer bounds mean
 // "no filter" — the page drops those values before the fetch.
@@ -49,6 +50,30 @@ function PriceSlider({
   onChange: (v: number) => void;
 }) {
   const pct = ((value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
+  const formatValue = (price: number) =>
+    price >= PRICE_MAX ? "any" : String(price);
+  const [draft, setDraft] = useState<string | null>(null);
+  const displayedValue = draft ?? formatValue(value);
+
+  function commitDraft(input: string) {
+    const raw = input.trim().toLowerCase();
+    if (raw === "" || raw === "any") {
+      onChange(PRICE_MAX);
+      setDraft(null);
+      return;
+    }
+
+    const parsed = Number(raw.replace(/[€\s]/g, ""));
+    if (!Number.isFinite(parsed)) {
+      setDraft(null);
+      return;
+    }
+
+    const next = Math.min(PRICE_MAX, Math.max(PRICE_MIN, Math.round(parsed)));
+    onChange(next);
+    setDraft(null);
+  }
+
   return (
     <div className="flex items-center gap-3">
       <span className="w-12 shrink-0 text-xs font-medium text-ink-muted">
@@ -72,9 +97,42 @@ function PriceSlider({
           className={thumbCls}
         />
       </div>
-      <span className="tnum w-12 shrink-0 text-right font-mono text-sm text-ink sm:text-left">
-        {value >= PRICE_MAX ? "any" : `€${value}`}
-      </span>
+      <div className="relative w-14 shrink-0">
+        {displayedValue.toLowerCase() !== "any" && displayedValue !== "" ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1.5 top-1/2 -translate-y-1/2 font-mono text-sm text-ink-muted"
+          >
+            €
+          </span>
+        ) : null}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={displayedValue}
+          aria-label="Maximum price in euros"
+          title={`Enter €${PRICE_MIN}–€${PRICE_MAX - 1}, or leave blank for any price`}
+          onFocus={(e) => {
+            if (displayedValue === "any") setDraft("");
+            else e.currentTarget.select();
+          }}
+          onChange={(e) => {
+            const nextDraft = e.target.value.replace(/[^0-9]/g, "");
+            setDraft(nextDraft);
+            const next = Number(nextDraft);
+            if (nextDraft !== "" && next >= PRICE_MIN && next <= PRICE_MAX) {
+              onChange(next);
+            }
+          }}
+          onBlur={(e) => commitDraft(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className={`tnum w-full rounded-md border border-transparent bg-transparent py-1 text-right font-mono text-sm text-ink outline-none transition-colors hover:border-line focus:border-ink-muted focus:bg-card ${
+            displayedValue.toLowerCase() !== "any" && displayedValue !== "" ? "pl-4 pr-1" : "px-1"
+          }`}
+        />
+      </div>
     </div>
   );
 }
