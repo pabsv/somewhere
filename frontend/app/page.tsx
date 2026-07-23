@@ -66,10 +66,6 @@ export default function LandingPage() {
           </span>{" "}
           cheap?
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-ink-muted">
-          Your free days + our daily price watch = a trip you didn&rsquo;t
-          know you wanted.
-        </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {!signedIn && (
             <Link
