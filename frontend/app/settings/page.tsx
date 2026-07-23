@@ -76,8 +76,9 @@ export default function SettingsPage() {
             Favourite destinations
           </h2>
           <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Star the cities you always want to see. We show their cheapest fare
-            even when it isn&rsquo;t a steal, and pin them to the top of Explore.
+            Star a city or a whole country you always want to see. We show
+            their cheapest fares even when they aren&rsquo;t steals, and pin
+            them to the top of Explore.
           </p>
         </div>
         <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
@@ -96,6 +97,16 @@ export default function SettingsPage() {
           <PreferencesCard />
         </div>
       </section>
+
+      <footer className="flex items-center justify-center gap-2 border-t border-line/70 py-5 text-sm text-ink-muted">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-steal/10 text-xs font-semibold text-steal"
+        >
+          ✓
+        </span>
+        Everything saves automatically.
+      </footer>
     </div>
   );
 }

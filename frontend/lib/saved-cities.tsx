@@ -15,6 +15,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
@@ -26,6 +27,8 @@ interface SavedCitiesValue {
   isSaved: (code: string) => boolean;
   /** Optimistically flip a city's saved state and persist. No-op if signed out. */
   toggle: (code: string) => void;
+  /** Add or remove several cities as one optimistic, ordered save. */
+  setMany: (codes: readonly string[], active: boolean) => void;
   /** True once the initial fetch has resolved (or settled signed-out). */
   ready: boolean;
   signedIn: boolean;
@@ -47,14 +50,23 @@ export function SavedCitiesProvider({
 
   const [saved, setSaved] = useState<Set<string>>(EMPTY);
   const [ready, setReady] = useState(false);
+  const savedRef = useRef<Set<string>>(EMPTY);
+  const mutationRef = useRef(0);
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  const adoptSaved = useCallback((next: Set<string>) => {
+    savedRef.current = next;
+    setSaved(next);
+  }, []);
 
   // Load once per sign-in; clear on sign-out.
   useEffect(() => {
     if (status === "loading") return;
     if (!signedIn) {
+      mutationRef.current += 1;
       // Stable EMPTY ref → no cascading render; safe to clear synchronously.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSaved(EMPTY);
+      adoptSaved(EMPTY);
       setReady(true);
       return;
     }
@@ -62,10 +74,12 @@ export function SavedCitiesProvider({
     setReady(false);
     getSavedCities()
       .then((res) => {
-        if (!cancelled) setSaved(new Set(res.cities.map((c) => c.toUpperCase())));
+        if (!cancelled) {
+          adoptSaved(new Set(res.cities.map((c) => c.toUpperCase())));
+        }
       })
       .catch(() => {
-        if (!cancelled) setSaved(new Set());
+        if (!cancelled) adoptSaved(new Set());
       })
       .finally(() => {
         if (!cancelled) setReady(true);
@@ -73,29 +87,54 @@ export function SavedCitiesProvider({
     return () => {
       cancelled = true;
     };
-  }, [status, signedIn]);
+  }, [status, signedIn, adoptSaved]);
 
-  const toggle = useCallback(
-    (raw: string) => {
+  const updateMany = useCallback(
+    (rawCodes: readonly string[], active?: boolean) => {
       if (!signedIn) return;
-      const code = raw.toUpperCase();
-      const prev = saved;
+      const codes = rawCodes.map((code) => code.toUpperCase());
+      const prev = savedRef.current;
       const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
+      for (const code of codes) {
+        if (active === true) next.add(code);
+        else if (active === false) next.delete(code);
+        else if (next.has(code)) next.delete(code);
+        else next.add(code);
+      }
+      if (
+        next.size === prev.size &&
+        [...next].every((code) => prev.has(code))
+      ) {
+        return;
+      }
 
-      setSaved(next); // optimistic
-      putSavedCities([...next])
+      const mutation = ++mutationRef.current;
+      adoptSaved(next);
+
+      // Serialize replace-all writes so a slower, older response can never
+      // overwrite a newer country/city selection on the server.
+      saveQueueRef.current = saveQueueRef.current
+        .catch(() => undefined)
+        .then(() => putSavedCities([...next]))
         .then((res) => {
-          // Reconcile with the server's sanitized truth.
-          setSaved(new Set(res.cities.map((c) => c.toUpperCase())));
+          if (mutation !== mutationRef.current) return;
+          adoptSaved(new Set(res.cities.map((c) => c.toUpperCase())));
         })
         .catch(() => {
-          // Revert on failure.
-          setSaved(prev);
+          if (mutation === mutationRef.current) adoptSaved(prev);
         });
     },
-    [signedIn, saved],
+    [signedIn, adoptSaved],
+  );
+
+  const toggle = useCallback(
+    (code: string) => updateMany([code]),
+    [updateMany],
+  );
+
+  const setMany = useCallback(
+    (codes: readonly string[], active: boolean) => updateMany(codes, active),
+    [updateMany],
   );
 
   const isSaved = useCallback((code: string) => saved.has(code.toUpperCase()), [
@@ -104,7 +143,7 @@ export function SavedCitiesProvider({
 
   return (
     <SavedCitiesContext.Provider
-      value={{ saved, isSaved, toggle, ready, signedIn }}
+      value={{ saved, isSaved, toggle, setMany, ready, signedIn }}
     >
       {children}
     </SavedCitiesContext.Provider>
@@ -122,6 +161,7 @@ export function useSavedCities(): SavedCitiesValue {
     saved: EMPTY,
     isSaved: () => false,
     toggle: () => {},
+    setMany: () => {},
     ready: true,
     signedIn: false,
   };

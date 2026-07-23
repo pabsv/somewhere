@@ -5,8 +5,11 @@
 // so a regenerated dataset never renders blank.
 
 const COUNTRY_NAMES: Record<string, string> = {
+  AE: "United Arab Emirates",
   AL: "Albania",
+  AM: "Armenia",
   AT: "Austria",
+  AZ: "Azerbaijan",
   BA: "Bosnia & Herzegovina",
   BG: "Bulgaria",
   CH: "Switzerland",
@@ -21,6 +24,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   FI: "Finland",
   FR: "France",
   GB: "United Kingdom",
+  GE: "Georgia",
   GR: "Greece",
   HR: "Croatia",
   HU: "Hungary",
@@ -28,6 +32,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   IL: "Israel",
   IS: "Iceland",
   IT: "Italy",
+  JO: "Jordan",
   LT: "Lithuania",
   LU: "Luxembourg",
   LV: "Latvia",
@@ -38,6 +43,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   NO: "Norway",
   PL: "Poland",
   PT: "Portugal",
+  QA: "Qatar",
   RO: "Romania",
   RS: "Serbia",
   SE: "Sweden",
