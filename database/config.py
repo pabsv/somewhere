@@ -44,6 +44,8 @@ COLLECTION_SCRAPE_RUNS = "scrape_runs"         # per-execution log for observabi
 COLLECTION_FRIENDSHIPS = "friendships"         # friend requests + accepted pairs (written by frontend)
 COLLECTION_GROUPS = "groups"          # travel groups + embedded invite tokens (written by frontend)
 COLLECTION_ONEWAY_FARES = "oneway_fares"       # one-way leg fare grids (stretch-bubble fares)
+COLLECTION_WAITLIST = "waitlist"               # expansion waitlist signups (written by frontend)
+COLLECTION_FEEDBACK = "feedback"               # feedback/bug reports (written by frontend)
 
 # TTL settings
 FLIGHTS_TTL_DAYS = 14          # Auto-delete flights not re-seen in 14 days

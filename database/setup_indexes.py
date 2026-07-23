@@ -30,6 +30,8 @@ from .config import (
     COLLECTION_FRIENDSHIPS,
     COLLECTION_GROUPS,
     COLLECTION_ONEWAY_FARES,
+    COLLECTION_WAITLIST,
+    COLLECTION_FEEDBACK,
     FLIGHTS_TTL_DAYS,
     SCRAPE_RUNS_TTL_DAYS,
     ONEWAY_FARES_TTL_DAYS,
@@ -231,6 +233,29 @@ def setup_oneway_fare_indexes(db):
     logger.info(f"  TTL: oneway_fares expire {ONEWAY_FARES_TTL_DAYS}d after scraped_at")
 
 
+def setup_waitlist_indexes(db):
+    """Create indexes for waitlist collection (written by the frontend)."""
+    collection = db[COLLECTION_WAITLIST]
+
+    indexes = [
+        # One signup per email — the frontend maps the dup-key to "already on the list".
+        IndexModel([("email", ASCENDING)], unique=True, name="email_unique"),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_WAITLIST}")
+
+
+def setup_feedback_indexes(db):
+    """Create indexes for feedback collection (written by the frontend)."""
+    collection = db[COLLECTION_FEEDBACK]
+
+    indexes = [
+        IndexModel([("created_at", DESCENDING)], name="created_at"),
+    ]
+    collection.create_indexes(indexes)
+    logger.info(f"Created {len(indexes)} indexes for {COLLECTION_FEEDBACK}")
+
+
 def setup_all_indexes():
     """Create all indexes for all collections."""
     logger.info("=" * 60)
@@ -249,6 +274,8 @@ def setup_all_indexes():
         ("scrape_targets", setup_scrape_target_indexes),
         ("scrape_runs",    setup_scrape_run_indexes),
         ("oneway_fares",   setup_oneway_fare_indexes),
+        ("waitlist",       setup_waitlist_indexes),
+        ("feedback",       setup_feedback_indexes),
     ]
     failures = []
     for name, fn in steps:
@@ -287,6 +314,8 @@ def list_all_indexes():
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
         COLLECTION_ONEWAY_FARES,
+        COLLECTION_WAITLIST,
+        COLLECTION_FEEDBACK,
     ]
 
     for coll_name in collections:
@@ -308,6 +337,8 @@ def drop_all_indexes():
         COLLECTION_SCRAPE_TARGETS,
         COLLECTION_SCRAPE_RUNS,
         COLLECTION_ONEWAY_FARES,
+        COLLECTION_WAITLIST,
+        COLLECTION_FEEDBACK,
     ]
 
     for coll_name in collections:

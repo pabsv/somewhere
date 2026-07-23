@@ -7,6 +7,7 @@ import DepartureBoard, {
   BoardSkeleton,
   type DepartureRow,
 } from "@/components/board/DepartureBoard";
+import WaitlistSignup from "@/components/landing/WaitlistSignup";
 import { getCities } from "@/lib/client";
 import { formatDateBoard } from "@/lib/format";
 
@@ -93,6 +94,21 @@ export default function LandingPage() {
       {/* ─── How it works — one line ─────────────────────────────────────────── */}
       <p className="mt-6 text-center font-mono text-xs uppercase tracking-widest text-ink-muted/70">
         Pick your airports · Mark your free days · We watch the prices
+      </p>
+
+      {/* ─── Waitlist ────────────────────────────────────────────────────────── */}
+      <div className="mt-12">
+        <WaitlistSignup />
+      </div>
+
+      {/* ─── Feedback link ───────────────────────────────────────────────────── */}
+      <p className="mt-8 text-center">
+        <Link
+          href="/feedback"
+          className="font-mono text-xs uppercase tracking-widest text-ink-muted/70 underline-offset-4 transition-colors hover:text-ink hover:underline"
+        >
+          Spotted a bug? Send feedback →
+        </Link>
       </p>
     </div>
   );
