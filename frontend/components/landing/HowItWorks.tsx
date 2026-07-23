@@ -179,7 +179,7 @@ function EquationMark({ children }: { children: React.ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className="-my-1.5 font-display text-2xl font-bold leading-none text-ink sm:-my-1 sm:mb-16 sm:text-4xl"
+      className="hidden font-display font-bold leading-none text-ink sm:-my-1 sm:mb-16 sm:block sm:text-4xl"
     >
       {children}
     </span>
