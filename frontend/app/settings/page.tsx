@@ -54,18 +54,20 @@ export default function SettingsPage() {
         </h1>
       </header>
 
+      {/* Departure airports */}
+      <section className="mb-12">
+        <div className="rounded-(--radius-card) border border-line bg-card p-5 shadow-(--shadow-card) sm:p-6">
+          <PreferencesCard />
+        </div>
+      </section>
+
       {/* Quick setup + Availability */}
       <section className="mb-12">
         <CollapsibleSection
           title="Availability"
           storageKey="somewhere:settings:availability-open"
         >
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-10">
-            <AcademicCard />
-            <div className="lg:min-w-72 lg:border-l lg:border-line lg:pl-8">
-              <PreferencesCard />
-            </div>
-          </div>
+          <AcademicCard />
           <div className="border-t border-line pt-6">
             <YearPaint />
           </div>
