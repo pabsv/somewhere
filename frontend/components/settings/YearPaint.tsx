@@ -11,7 +11,10 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { getAvailability, putAvailability, ApiError } from "@/lib/client";
-import { AVAILABILITY_UPDATED_EVENT } from "@/components/settings/AcademicCard";
+import {
+  AVAILABILITY_SNAPSHOT_EVENT,
+  AVAILABILITY_UPDATED_EVENT,
+} from "@/lib/useQuickSetup";
 import { useUniCalendar } from "@/lib/university/context";
 import type { UniPeriodKind } from "@/lib/university/tue";
 import { parseLocalDate } from "@/lib/format";
@@ -408,9 +411,14 @@ export default function YearPaint() {
     };
   }, [seedFromWindows]);
 
-  // ─── Re-sync when Quick setup rewrites the windows ──────────────────────────
+  // ─── Re-sync when Quick setup or Undo rewrites the windows ─────────────────
   useEffect(() => {
-    const onUpdated = () => {
+    const onUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ windows?: DateWindow[] }>).detail;
+      if (detail?.windows) {
+        seedFromWindows(detail.windows);
+        return;
+      }
       getAvailability()
         .then((res) => seedFromWindows(res.windows))
         .catch(() => {
@@ -577,7 +585,7 @@ export default function YearPaint() {
         // edge, so erase strictly beyond it (not the anchor→cursor span
         // inclusive — that would make e.g. day 19 unreachable when pulling
         // back from day 20).
-        let spanA = d.anchor;
+        const spanA = d.anchor;
         let spanB = cur;
         if (isEdgePull && !painting) {
           if (role === "last") spanB = addDays(cur, 1);
@@ -737,12 +745,21 @@ export default function YearPaint() {
     return () => clearTimeout(t);
   }, [saveMsg]);
 
-  const clearAll = useCallback(() => {
-    setPainted(new Set());
-    setFromT(new Map());
-    setBackT(new Map());
-    setPendingStart(null);
-  }, []);
+  // Give the controls the exact local paint, including edits still inside the
+  // autosave debounce, before a replace-all action runs.
+  useEffect(() => {
+    const onSnapshot = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          respond?: (snapshot: DateWindow[]) => void;
+        }>
+      ).detail;
+      detail?.respond?.(windows.map((window) => ({ ...window })));
+    };
+    window.addEventListener(AVAILABILITY_SNAPSHOT_EVENT, onSnapshot);
+    return () =>
+      window.removeEventListener(AVAILABILITY_SNAPSHOT_EVENT, onSnapshot);
+  }, [windows]);
 
   // ─── Render: error / loading gates ──────────────────────────────────────────
   if (mode === "error") {
@@ -759,26 +776,22 @@ export default function YearPaint() {
 
   return (
     <div>
-      {/* actions + hint */}
+      {/* Save feedback + university calendar legend */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span
-          aria-live="polite"
-          className={`text-sm transition-colors ${
-            saving
-              ? "text-ink-muted"
-              : saveMsg?.kind === "ok"
-                ? "text-steal"
-                : saveMsg?.kind === "err"
-                  ? "text-alert"
-                  : "text-ink-muted/70"
-          }`}
-        >
-          {saving
-            ? "Saving…"
-            : saveMsg
-              ? saveMsg.text
-              : "Changes save automatically"}
-        </span>
+        {(saving || saveMsg) && (
+          <span
+            aria-live="polite"
+            className={`text-sm transition-colors ${
+              saving
+                ? "text-ink-muted"
+                : saveMsg?.kind === "ok"
+                  ? "text-steal"
+                  : "text-alert"
+            }`}
+          >
+            {saving ? "Saving…" : saveMsg?.text}
+          </span>
+        )}
         {saveMsg?.kind === "err" && !saving && (
           <button
             type="button"
@@ -788,18 +801,6 @@ export default function YearPaint() {
             Retry
           </button>
         )}
-        <button
-          type="button"
-          onClick={clearAll}
-          disabled={windows.length === 0}
-          className="text-sm text-ink-muted transition-colors hover:text-alert disabled:opacity-40"
-        >
-          Clear all
-        </button>
-        <span className="text-sm text-ink-muted/70">
-          Drag across days to paint free days. Drag a trip&apos;s first or last
-          day up/down to set when you get free / must be back.
-        </span>
         {uniDays.size > 0 && (
           <span className="flex items-center gap-3 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">

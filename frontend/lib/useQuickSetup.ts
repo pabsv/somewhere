@@ -10,13 +10,16 @@ import { useState } from "react";
 import { putPreferences, putAvailability } from "@/lib/client";
 import { generateFreeWindows } from "@/lib/academic";
 import { todayStr } from "@/components/tripcal/calendarMath";
-import type { Preferences } from "@/types/api";
+import type { DateWindow, Preferences } from "@/types/api";
 
 /** Matches MONTHS_AHEAD in YearPaint — the painted calendar's horizon. */
 const MONTHS_AHEAD = 12;
 
-/** YearPaint listens for this to re-fetch after the windows are rewritten. */
+/** YearPaint listens for this after the windows are rewritten. */
 export const AVAILABILITY_UPDATED_EVENT = "somewhere:availability-updated";
+
+/** AcademicCard uses this to capture unsaved paint before replacing it. */
+export const AVAILABILITY_SNAPSHOT_EVENT = "somewhere:availability-snapshot";
 
 export const WEEKDAYS: { iso: number; label: string }[] = [
   { iso: 1, label: "Mon" },
@@ -44,7 +47,11 @@ export function useQuickSetup(initialBusy: number[] = []) {
       const windows = generateFreeWindows(busy, todayStr(), MONTHS_AHEAD);
       await putAvailability(windows);
       const updated = await putPreferences({ ...prefs, busy_weekdays: busy });
-      window.dispatchEvent(new Event(AVAILABILITY_UPDATED_EVENT));
+      window.dispatchEvent(
+        new CustomEvent<{ windows: DateWindow[] }>(AVAILABILITY_UPDATED_EVENT, {
+          detail: { windows },
+        }),
+      );
       return { windows, prefs: updated };
     } finally {
       setApplying(false);
