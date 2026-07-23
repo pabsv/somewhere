@@ -157,7 +157,7 @@ function Step({ title, caption, result = false, children }: StepProps) {
   return (
     <div className="w-full text-center">
       <div
-        className={`flex h-[120px] items-center justify-center rounded-[var(--radius-card)] bg-card ${
+        className={`flex h-[92px] items-center justify-center rounded-[var(--radius-card)] bg-card sm:h-[120px] ${
           result
             ? "border-2 border-brand shadow-card"
             : "border border-line"
@@ -165,10 +165,10 @@ function Step({ title, caption, result = false, children }: StepProps) {
       >
         {children}
       </div>
-      <h3 className="mt-4 font-display text-[17px] font-semibold text-ink">
+      <h3 className="mt-2 font-display text-[15px] font-semibold text-ink sm:mt-4 sm:text-[17px]">
         {title}
       </h3>
-      <p className="mx-auto mt-1 max-w-[230px] text-[13.5px] leading-relaxed text-ink-muted">
+      <p className="mx-auto mt-0.5 max-w-[230px] text-[12.5px] leading-snug text-ink-muted sm:mt-1 sm:text-[13.5px] sm:leading-relaxed">
         {caption}
       </p>
     </div>
@@ -179,7 +179,7 @@ function EquationMark({ children }: { children: React.ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className="-my-1 font-display text-3xl font-bold leading-none text-ink sm:mb-16 sm:text-4xl"
+      className="-my-1.5 font-display text-2xl font-bold leading-none text-ink sm:-my-1 sm:mb-16 sm:text-4xl"
     >
       {children}
     </span>
@@ -201,7 +201,7 @@ export default function HowItWorks() {
         </h2>
       </header>
 
-      <div className="mt-10 flex flex-col items-center gap-5 sm:grid sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+      <div className="mt-6 flex flex-col items-center gap-2.5 sm:mt-10 sm:grid sm:gap-5 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
         <Step
           title="Your free days"
           caption="Paint them once in 2 minutes."
