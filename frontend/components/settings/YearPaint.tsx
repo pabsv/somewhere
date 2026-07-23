@@ -989,6 +989,23 @@ const MonthGrid = memo(function MonthGrid({
           // continuation without a bridge = run wraps a row or crosses a month
           const contPrev = prevPainted && !bridgeLeft;
           const contNext = nextPainted && !bridgeRight;
+          // Hovering any day traces the whole saved window. Each visible week
+          // becomes one outlined segment: horizontal neighbours bridge the
+          // grid gap, while week/month wraps restart with rounded caps. This
+          // makes long ranges scannable without changing the underlying paint
+          // (including the partial-day fill on the true endpoints).
+          const isHoveredRange =
+            hoverWin !== null && key >= hoverWin.s && key <= hoverWin.e;
+          const hoverBridgeLeft =
+            isHoveredRange &&
+            col > 0 &&
+            day > 1 &&
+            addDays(key, -1) >= hoverWin.s;
+          const hoverBridgeRight =
+            isHoveredRange &&
+            col < 6 &&
+            day < days &&
+            addDays(key, 1) <= hoverWin.e;
           // true window caps (first/last day of the whole range)
           const capLeft = isPainted && !prevPainted;
           const capRight = isPainted && !nextPainted;
@@ -1064,6 +1081,37 @@ const MonthGrid = memo(function MonthGrid({
                           backgroundColor: MID_BG,
                         }
                   }
+                />
+              )}
+              {isHoveredRange && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[2]"
+                  style={{
+                    top: -1,
+                    bottom: -1,
+                    left: hoverBridgeLeft ? -GAP_PX : -1,
+                    right: hoverBridgeRight ? -GAP_PX : -1,
+                    borderTop:
+                      "1.5px solid color-mix(in srgb, var(--color-brand-ink) 72%, transparent)",
+                    borderBottom:
+                      "1.5px solid color-mix(in srgb, var(--color-brand-ink) 72%, transparent)",
+                    borderLeft: hoverBridgeLeft
+                      ? "none"
+                      : "1.5px solid color-mix(in srgb, var(--color-brand-ink) 72%, transparent)",
+                    borderRight: hoverBridgeRight
+                      ? "none"
+                      : "1.5px solid color-mix(in srgb, var(--color-brand-ink) 72%, transparent)",
+                    borderRadius: `${hoverBridgeLeft ? 0 : 7}px ${
+                      hoverBridgeRight ? 0 : 7
+                    }px ${hoverBridgeRight ? 0 : 7}px ${
+                      hoverBridgeLeft ? 0 : 7
+                    }px`,
+                    backgroundColor:
+                      "color-mix(in srgb, var(--color-brand) 9%, transparent)",
+                    boxShadow:
+                      "0 1px 3px color-mix(in srgb, var(--color-brand-ink) 10%, transparent)",
+                  }}
                 />
               )}
               {uniKind && (
