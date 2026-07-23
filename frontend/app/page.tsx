@@ -7,6 +7,7 @@ import DepartureBoard, {
   BoardSkeleton,
   type DepartureRow,
 } from "@/components/board/DepartureBoard";
+import HowItWorks from "@/components/landing/HowItWorks";
 import WaitlistSignup from "@/components/landing/WaitlistSignup";
 import { getCities } from "@/lib/client";
 import { formatDateBoard } from "@/lib/format";
@@ -69,10 +70,6 @@ export default function LandingPage() {
           Your free days + our daily price watch = a trip you didn&rsquo;t
           know you wanted.
         </p>
-        <p className="mt-2 max-w-xl text-lg text-ink-muted">
-          Going with <strong className="font-semibold text-ink">friends</strong>?
-          We find the dates that work for all of you.
-        </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {!signedIn && (
             <Link
@@ -91,10 +88,7 @@ export default function LandingPage() {
         {rows === null ? <BoardSkeleton /> : <DepartureBoard rows={rows} />}
       </div>
 
-      {/* ─── How it works — one line ─────────────────────────────────────────── */}
-      <p className="mt-6 text-center font-mono text-xs uppercase tracking-widest text-ink-muted/70">
-        Pick your airports · Mark your free days · We watch the prices
-      </p>
+      <HowItWorks />
 
       {/* ─── Waitlist ────────────────────────────────────────────────────────── */}
       <div className="mt-12">
