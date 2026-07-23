@@ -271,6 +271,8 @@ export const PreferencesSchema = z.object({
   university: z.enum(["tue"]).nullable().optional(),
   /** Opted into deal-alert emails (feature not yet built — captured for later). */
   notify_optin: z.boolean().optional().default(false),
+  /** Calendar includes trips up to two days outside availability by default. */
+  calendar_near_miss: z.boolean().optional().default(true),
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 

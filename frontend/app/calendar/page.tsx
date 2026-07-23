@@ -4,8 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import type { CalTrip, Trip, DateWindow } from "@/types/api";
-import { getTrips, getAvailability, ApiError } from "@/lib/client";
+import type { CalTrip, Trip, DateWindow, Preferences } from "@/types/api";
+import {
+  getTrips,
+  getAvailability,
+  getPreferences,
+  putPreferences,
+  ApiError,
+} from "@/lib/client";
 import { useOrigins } from "@/lib/useOrigins";
 import { useSavedCities } from "@/lib/saved-cities";
 import { favouriteDest, isFavouriteTrip } from "@/lib/favourites";
@@ -60,7 +66,13 @@ export default function CalendarPage() {
   // The board is ALWAYS the user's free dates — showing fares on days someone
   // can't travel was noise, so there is no "all dates" mode any more. The chip
   // that used to toggle it now widens each window by up to two days instead.
-  const [nearMiss, setNearMiss] = useState(false);
+  // Missing preference intentionally means ON: new users and existing users
+  // who have never touched the chip get the useful, more forgiving view.
+  const [nearMiss, setNearMiss] = useState(true);
+  const [calendarPreferences, setCalendarPreferences] =
+    useState<Preferences | null>(null);
+  const [nearMissSaving, setNearMissSaving] = useState(false);
+  const [nearMissError, setNearMissError] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
 
   const [trips, setTrips] = useState<Trip[] | null>(null);
@@ -110,7 +122,7 @@ export default function CalendarPage() {
       // "± 2 days". Not gated on hasWindows: that comes from a second async
       // fetch, and adding it here would fire a spurious refetch when it lands —
       // the chip only renders with windows, so this can't be true without them.
-      near: nearMiss ? true : undefined,
+      near: signedIn && nearMiss ? true : undefined,
       // Sent whether or not the ★ filter is on: a favourite earns its bigger
       // margin on the normal board too, not only when filtered down to it.
       favs: savedKey ? savedKey.split(",") : undefined,
@@ -148,6 +160,61 @@ export default function CalendarPage() {
   }, [paramsKey]);
 
   useEffect(() => load(), [load]);
+
+  // Restore this account's explicit Calendar choice. The API merges stored
+  // preferences over a true default, so untouched accounts remain opted in.
+  useEffect(() => {
+    if (!signedIn) {
+      setCalendarPreferences(null);
+      setNearMiss(true);
+      setNearMissError(null);
+      return;
+    }
+
+    let cancelled = false;
+    getPreferences()
+      .then((preferences) => {
+        if (cancelled) return;
+        setCalendarPreferences(preferences);
+        setNearMiss(preferences.calendar_near_miss);
+      })
+      .catch(() => {
+        // Keep the safe default. A later click retries the preference read
+        // before saving, so a transient load failure cannot erase other prefs.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
+
+  const toggleNearMiss = useCallback(async () => {
+    if (nearMissSaving) return;
+
+    const previous = nearMiss;
+    const next = !previous;
+    setNearMiss(next);
+    setNearMissError(null);
+
+    if (!signedIn) return;
+
+    setNearMissSaving(true);
+    try {
+      // Normally already loaded. Retrying here preserves all other settings
+      // if the initial request failed instead of writing a partial document.
+      const current = calendarPreferences ?? (await getPreferences());
+      const savedPreferences = await putPreferences({
+        ...current,
+        calendar_near_miss: next,
+      });
+      setCalendarPreferences(savedPreferences);
+      setNearMiss(savedPreferences.calendar_near_miss);
+    } catch {
+      setNearMiss(previous);
+      setNearMissError("Couldn’t save your ± 2 days preference. Try again.");
+    } finally {
+      setNearMissSaving(false);
+    }
+  }, [calendarPreferences, nearMiss, nearMissSaving, signedIn]);
 
   // ─── Availability underlay (signed-in only) ───────────────────────────────
   useEffect(() => {
@@ -416,7 +483,9 @@ export default function CalendarPage() {
                 <Chip
                   size="sm"
                   selected={nearMiss}
-                  onClick={() => setNearMiss((v) => !v)}
+                  onClick={toggleNearMiss}
+                  disabled={nearMissSaving}
+                  className={nearMissSaving ? "cursor-wait opacity-70" : ""}
                   title="Also show trips that spill up to two days outside a free window — leave early, come back late, or a day of each"
                 >
                   ± 2 days
@@ -425,6 +494,11 @@ export default function CalendarPage() {
             </>
           }
         />
+        {nearMissError && (
+          <p className="mt-2 px-4 text-xs text-alert" role="status">
+            {nearMissError}
+          </p>
+        )}
         {/* What the board is filtered by. The chip used to say this for free;
             with the board permanently on free dates, it has to be written down
             — including for the two cases where the filter silently can't run. */}
