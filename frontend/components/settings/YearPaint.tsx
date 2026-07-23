@@ -777,18 +777,11 @@ export default function YearPaint() {
   return (
     <div>
       {/* Save feedback + range-paint guidance */}
-      {(saving || saveMsg || pendingStart) && (
+      {(saveMsg || pendingStart) && (
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          {(saving || saveMsg) && (
-            <span
-              aria-live="polite"
-              className={`text-sm transition-colors ${
-                saving
-                  ? "text-ink-muted"
-                  : "text-alert"
-              }`}
-            >
-              {saving ? "Saving…" : saveMsg?.text}
+          {saveMsg && !saving && (
+            <span aria-live="polite" className="text-sm text-alert">
+              {saveMsg.text}
             </span>
           )}
           {saveMsg?.kind === "err" && !saving && (

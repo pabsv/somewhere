@@ -86,7 +86,6 @@ export default function PreferencesCard() {
         .then((savedPrefs) => {
           if (version !== saveVersionRef.current) return;
           lastSyncedRef.current = JSON.stringify(savedPrefs);
-          setSaveMsg({ kind: "ok", text: "Saved ✓" });
         })
         .catch((e) => {
           if (version !== saveVersionRef.current) return;
@@ -107,12 +106,6 @@ export default function PreferencesCard() {
     return () => clearTimeout(timeout);
   }, [prefs, mode]);
 
-  useEffect(() => {
-    if (saveMsg?.kind !== "ok") return;
-    const timeout = setTimeout(() => setSaveMsg(null), 2000);
-    return () => clearTimeout(timeout);
-  }, [saveMsg]);
-
   if (mode === "error") {
     return (
       <div className="rounded-(--radius-card) border border-line bg-card p-6 text-sm text-ink-muted">
@@ -130,19 +123,9 @@ export default function PreferencesCard() {
         <OriginChips selected={prefs.origins} onToggle={toggleOrigin} />
       </Field>
 
-      {(saving || saveMsg) && (
-        <div className="text-sm text-ink-muted" aria-live="polite">
-          {saving ? (
-            <span>Saving changes…</span>
-          ) : (
-            <span
-              className={`transition-opacity ${
-                saveMsg?.kind === "ok" ? "text-steal" : "text-alert"
-              }`}
-            >
-              {saveMsg?.text}
-            </span>
-          )}
+      {saveMsg?.kind === "err" && !saving && (
+        <div className="text-sm text-alert" aria-live="polite">
+          {saveMsg.text}
         </div>
       )}
     </div>
