@@ -1,7 +1,7 @@
 "use client";
 
 // ─── Group calendar — the crew as one "overlapped user" ──────────────────────
-// Reuses the personal calendar's MonthBlock/AgendaMonth machinery: the group's
+// Reuses the personal calendar's MonthBlock/TripRail machinery: the group's
 // shared availability windows (intersection of every known member) become the
 // steal-green underlay, and the matched GroupTrips become the bars. Everything
 // is derived from the GroupTripsResponse the detail page already fetched — no
@@ -13,7 +13,7 @@ import type { DateWindow, GroupTrip, Trip } from "@/types/api";
 import { useUniCalendar } from "@/lib/university/context";
 import { FavouriteScopeProvider } from "@/lib/favourite-scope";
 import MonthBlock from "@/components/tripcal/MonthBlock";
-import AgendaMonth from "@/components/tripcal/AgendaMonth";
+import TripRail from "@/components/tripcal/TripRail";
 import TripPopover from "@/components/tripcal/TripPopover";
 import TripTooltip from "@/components/tripcal/TripTooltip";
 import { useIsMobile } from "@/components/tripcal/useIsMobile";
@@ -70,6 +70,7 @@ export default function GroupTripsCalendar({
 
   const today = useMemo(() => todayStr(), []);
   const months = useMemo(() => monthSpan(today, MONTHS), [today]);
+  const rangeEnd = months[months.length - 1].endStr;
 
   const [hovered, setHovered] = useState<{
     trip: Trip;
@@ -125,21 +126,27 @@ export default function GroupTripsCalendar({
   }, []);
 
   return (
-    // Scope override: TripBar / AgendaMonth read their favourite set from
+    // Scope override: TripBar / TripRail read their favourite set from
     // context, which defaults to the VIEWER's personal stars. Here it must be
     // the crew's list instead, so the gold contour is identical for everyone.
     <FavouriteScopeProvider value={favSet}>
-      <div className="space-y-5">
-        {months.map((spec, i) =>
-          isMobile ? (
-            <AgendaMonth
-              key={spec.label}
-              spec={spec}
-              trips={tripsByMonth[i]}
-              uniPeriods={uniPeriods}
-              onPick={openPopover}
-            />
-          ) : (
+      {isMobile ? (
+        // The rail is one continuous timeline — feed the curated set whole,
+        // not sliced by month (mirrors the personal calendar's mobile branch).
+        <TripRail
+          trips={shownTrips}
+          density={density}
+          windows={windows}
+          uniPeriods={uniPeriods}
+          today={today}
+          end={rangeEnd}
+          onPick={openPopover}
+          // long-press stretch rows clamp to the crew's shared free windows
+          clampToWindows={windows.length > 0}
+        />
+      ) : (
+        <div className="space-y-5">
+          {months.map((spec, i) => (
             <MonthBlock
               key={spec.label}
               spec={spec}
@@ -156,9 +163,9 @@ export default function GroupTripsCalendar({
               }
               onBarClick={openPopover}
             />
-          ),
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {hovered && !popoverTrip && (
         <TripTooltip trip={hovered.trip} anchor={hovered.el} />

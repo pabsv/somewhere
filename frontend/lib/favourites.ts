@@ -2,7 +2,7 @@
 // A favourite is a starred destination IATA code (users.saved_cities, or a
 // group's shared list — see lib/favourite-scope.tsx for which set applies).
 //
-// One rule, one home: TripBar, StretchOverlay, TripRail, AgendaMonth, the group
+// One rule, one home: TripBar, StretchOverlay, TripRail, the group
 // calendar and app/calendar/page.tsx all ask here rather than each re-deriving
 // it. (This module also used to hold the twin-city "either city counts" rule;
 // that went with the multi-city rollback — see docs/MULTICITY_PLAN.md.)

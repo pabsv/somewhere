@@ -3,7 +3,7 @@
 // ─── University calendar — shared client state ────────────────────────────────
 // Mirrors lib/saved-cities.tsx: one getPreferences() fetch per signed-in
 // session resolves which university calendar (if any) to overlay on the
-// calendar surfaces (MonthBlock wash, AgendaMonth notes, YearPaint stripes).
+// calendar surfaces (MonthBlock wash, TripRail stripes, YearPaint stripes).
 // setUniversity only updates local state — PreferencesCard calls it after a
 // successful save so same-page consumers (YearPaint) update without a refetch.
 

@@ -1,7 +1,7 @@
 "use client";
 
 // ─── Which favourites apply here ─────────────────────────────────────────────
-// Calendar bars (TripBar, StretchOverlay, TripRail, AgendaMonth) draw the gold
+// Calendar bars (TripBar, StretchOverlay, TripRail) draw the gold
 // contour for "this one is yours". On /calendar "yours" means the viewer's own
 // starred cities; on a group calendar it means the CREW's shared list, which is
 // deliberately the same for every member — a board people point at on a call

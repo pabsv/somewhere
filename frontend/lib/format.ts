@@ -75,7 +75,7 @@ export function formatDelta(delta: number): string {
 // ─── Near-miss ("± 2 days") wording ──────────────────────────────────────────
 // The spill budget is 2 days TOTAL, so a trip can also hang over BOTH edges at
 // once (1 + 1) — which the old one-sided phrasing silently dropped. Shared by
-// TripBar, TripRail, TripTooltip, TripPopover and AgendaMonth so the five of
+// TripBar, TripRail, TripTooltip and TripPopover so the four of
 // them can't drift apart again.
 
 /** How far a trip hangs outside its free window, per edge. */

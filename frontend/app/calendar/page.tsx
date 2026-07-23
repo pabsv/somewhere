@@ -621,6 +621,7 @@ export default function CalendarPage() {
               today={today}
               end={rangeEnd}
               onPick={openPopover}
+              clampToWindows={clampToWindows}
             />
           ) : (
             <div className="space-y-5">

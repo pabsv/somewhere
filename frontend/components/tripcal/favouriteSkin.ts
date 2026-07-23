@@ -1,7 +1,7 @@
 // ─── The gold contour — one definition, four bar renderers ───────────────────
 // A favourited city's bar gets a gold ring drawn INSIDE its own bounds plus a
 // ★ in the label. Shared by TripBar, StretchOverlay (the substitute bar shown
-// while hovering), TripRail (mobile tag) and AgendaMonth (mobile group rows).
+// while hovering), TripRail (mobile tag).
 //
 // Why an INSET box-shadow rather than a border or an outset ring — four
 // separate hazards, all avoided by the same choice:

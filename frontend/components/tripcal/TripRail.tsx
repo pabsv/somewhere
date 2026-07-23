@@ -20,6 +20,7 @@ import { useFavouriteSet } from "@/lib/favourite-scope";
 import { isFavouriteTrip } from "@/lib/favourites";
 import { FAV_GLYPH, FAV_GLYPH_TEXT, favRing } from "./favouriteSkin";
 import TripTooltip from "./TripTooltip";
+import { useStayExtensions } from "./useStayExtensions";
 
 /** Sticky date gutter width (px). */
 const GUTTER = 48;
@@ -50,6 +51,12 @@ interface TripRailProps {
   /** YYYY-MM-DD, last day of the rail */
   end: string;
   onPick: (trip: CalTrip) => void;
+  /**
+   * Resolve the availability window containing a held trip and enumerate
+   * stretch options inside it (mirrors the desktop bubble's clampToWindows).
+   * False → the server's ±2-day fallback envelope.
+   */
+  clampToWindows?: boolean;
 }
 
 // tier → tag skin. Mirrors TripBar's TIER_BAR so a fare reads identically on
@@ -88,6 +95,7 @@ export default function TripRail({
   today,
   end,
   onPick,
+  clampToWindows = false,
 }: TripRailProps) {
   const [expanded, setExpanded] = useState(false);
   const [collapseRuns, setCollapseRuns] = useState(true);
@@ -121,6 +129,16 @@ export default function TripRail({
   }, []);
 
   useEffect(() => cancelHold, [cancelHold]);
+
+  // Stretch options for the held trip — same hook the desktop bubble uses
+  // (debounced 200ms after the hold fires; cache hits render instantly). The
+  // tooltip repositions itself when the rows land. Release dismisses the
+  // preview, so the rows are read-only — there's no bubble to click on touch.
+  const { stretches } = useStayExtensions(
+    preview?.trip ?? null,
+    windows,
+    clampToWindows,
+  );
 
   const startHold = useCallback(
     (trip: CalTrip, el: HTMLElement) => {
@@ -549,7 +567,13 @@ export default function TripRail({
 
       {/* Hold-to-preview: the desktop hover tooltip, summoned by a long press
           and dismissed on release. */}
-      {preview && <TripTooltip trip={preview.trip} anchor={preview.el} />}
+      {preview && (
+        <TripTooltip
+          trip={preview.trip}
+          anchor={preview.el}
+          stretches={stretches}
+        />
+      )}
     </div>
   );
 }
