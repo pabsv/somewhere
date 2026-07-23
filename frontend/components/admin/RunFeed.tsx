@@ -10,6 +10,7 @@ import { timeAgo } from "./timeAgo";
 
 const REFRESH_MS = 60_000;
 const LIMIT = 50;
+const COLLAPSED_ROWS = 8;
 
 type Status = ScrapeRunSummary["status"];
 
@@ -29,6 +30,7 @@ export default function RunFeed() {
   const [data, setData] = useState<AdminRunsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   // guard against overlapping in-flight refreshes
   const inFlight = useRef(false);
@@ -82,6 +84,8 @@ export default function RunFeed() {
     (acc, v) => acc + (v?.total_flights ?? 0),
     0,
   );
+  const visibleRuns = runs.slice(0, expanded ? LIMIT : COLLAPSED_ROWS);
+  const canToggle = runs.length > COLLAPSED_ROWS;
 
   return (
     <div className="space-y-4">
@@ -110,16 +114,16 @@ export default function RunFeed() {
           </div>
         ) : (
           <ul className="divide-y divide-line/60">
-            {runs.map((r) => (
+            {visibleRuns.map((r) => (
               <li
                 key={`${r.route_key}-${r.started_at}`}
                 className="flex items-center gap-3 px-4 py-2.5"
               >
-                <span className="w-28 shrink-0 font-mono text-xs text-ink">
+                <span className="w-24 shrink-0 font-mono text-xs text-ink sm:w-28">
                   {r.route_key}
                 </span>
                 <span
-                  className="w-20 shrink-0 font-mono text-xs text-ink-muted"
+                  className="shrink-0 font-mono text-xs text-ink-muted sm:w-20"
                   title={r.started_at}
                 >
                   {timeAgo(r.started_at)}
@@ -128,7 +132,7 @@ export default function RunFeed() {
                 <span className="tnum ml-auto shrink-0 font-mono text-xs text-ink-muted">
                   {r.flight_count} fl
                 </span>
-                <span className="tnum w-14 shrink-0 text-right font-mono text-xs text-ink-muted">
+                <span className="tnum hidden w-14 shrink-0 text-right font-mono text-xs text-ink-muted sm:block">
                   {r.duration_seconds != null
                     ? `${r.duration_seconds.toFixed(1)}s`
                     : "—"}
@@ -136,6 +140,16 @@ export default function RunFeed() {
               </li>
             ))}
           </ul>
+        )}
+        {canToggle && (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((current) => !current)}
+            className="block w-full border-t border-line bg-transparent px-3 py-2.5 font-mono text-[11px] uppercase tracking-wide text-ink-muted transition-colors hover:bg-paper/60 hover:text-ink"
+          >
+            {expanded ? "Show fewer" : `Show all ${runs.length} runs`}
+          </button>
         )}
       </div>
     </div>

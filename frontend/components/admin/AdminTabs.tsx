@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Tab strip for the admin area. Pool = the exact /admin path; Users = anything
-// under /admin/users. Token-native underline tabs (mono, uppercase).
+// Token-native underline tabs for the three admin views.
 
 const TABS: { href: string; label: string; match: (p: string) => boolean }[] = [
-  { href: "/admin", label: "Pool", match: (p) => p === "/admin" },
-  { href: "/admin/users", label: "Users", match: (p) => p.startsWith("/admin/users") },
+  { href: "/admin", label: "Overview", match: (p) => p === "/admin" },
+  {
+    href: "/admin/people",
+    label: "People",
+    match: (p) => p.startsWith("/admin/people") || p.startsWith("/admin/users"),
+  },
+  { href: "/admin/pool", label: "Pool", match: (p) => p.startsWith("/admin/pool") },
 ];
 
 export default function AdminTabs() {

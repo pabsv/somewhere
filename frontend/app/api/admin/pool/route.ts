@@ -31,7 +31,8 @@ function numOrNull(v: unknown): number | null {
 function toMs(v: unknown): number | null {
   if (v instanceof Date) return v.getTime();
   if (typeof v === "string") {
-    const t = Date.parse(v.endsWith("Z") ? v : v + "Z");
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(v);
+    const t = Date.parse(hasTimezone ? v : v + "Z");
     return Number.isNaN(t) ? null : t;
   }
   return null;
@@ -110,7 +111,7 @@ export async function GET() {
 
   const db = await getDb();
   const docs = await db.collection("scrape_targets").find({}).toArray();
-  const now = new Date();
+  const nowMs = Date.now();
 
   let enabled = 0;
   let disabled = 0;
@@ -120,13 +121,15 @@ export async function GET() {
 
   const targets: AdminTargetSummary[] = docs.map((d) => {
     const isEnabled = d.enabled === true;
-    const nextDue = d.next_due_at instanceof Date ? d.next_due_at : null;
+    const nextDueMs = toMs(d.next_due_at);
+    const isOverdue =
+      isEnabled && nextDueMs != null && nextDueMs <= nowMs;
     const tier = (d.tier as Tier) ?? "C";
 
     if (isEnabled) {
       enabled++;
       byTier[tier] = (byTier[tier] ?? 0) + 1;
-      if (nextDue && nextDue <= now) overdue++;
+      if (isOverdue) overdue++;
     } else {
       disabled++;
     }
@@ -138,6 +141,7 @@ export async function GET() {
       destination: String(d.destination ?? ""),
       tier,
       enabled: isEnabled,
+      overdue: isOverdue,
       last_scraped_at: toIso(d.last_scraped_at),
       next_due_at: toIso(d.next_due_at),
       last_status: d.last_status != null ? String(d.last_status) : null,

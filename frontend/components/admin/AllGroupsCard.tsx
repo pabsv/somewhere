@@ -1,46 +1,98 @@
 "use client";
 
-import Badge from "@/components/ui/Badge";
-import type { AdminGroup } from "@/types/api";
+import Avatar from "@/components/friends/Avatar";
+import type { AdminGroup, AdminUser } from "@/types/api";
+import { GroupStatusBadge, groupStatus } from "./GroupDetailSheet";
+import { timeAgo } from "./timeAgo";
 
-/** Roster of every group + its members (RunFeed-style divided list). */
-export default function AllGroupsCard({ groups }: { groups: AdminGroup[] }) {
+export default function AllGroupsCard({
+  groups,
+  users,
+  onSelect,
+}: {
+  groups: AdminGroup[];
+  users: AdminUser[];
+  onSelect: (group: AdminGroup) => void;
+}) {
+  const statusCounts = groups.reduce(
+    (counts, group) => {
+      counts[groupStatus(group)] += 1;
+      return counts;
+    },
+    { active: 0, quiet: 0, empty: 0 },
+  );
+  const namesById = new Map(users.map((user) => [user.id, user.name]));
+
   return (
-    <div className="overflow-hidden rounded-(--radius-card) border border-line bg-card shadow-(--shadow-card)">
+    <section>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-xl font-semibold text-ink">Groups</h2>
+        <p className="tnum font-mono text-[11px] text-ink-muted">
+          {groups.length} total · {statusCounts.active} active · {statusCounts.quiet} quiet · {statusCounts.empty} empty
+        </p>
+      </div>
+
       {groups.length === 0 ? (
-        <div className="px-4 py-6 text-sm text-ink-muted">No groups yet.</div>
+        <div className="rounded-(--radius-card) border border-line bg-card px-4 py-6 text-sm text-ink-muted shadow-(--shadow-card)">
+          No groups yet.
+        </div>
       ) : (
-        <ul className="divide-y divide-line/60">
-          {groups.map((g) => (
-            <li key={g.group_id} className="px-4 py-3">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-sm font-medium text-ink">{g.name}</span>
-                <span className="font-mono text-[11px] text-ink-muted">
-                  owner {g.owner_name}
+        <div className="grid grid-cols-1 gap-3 min-[720px]:grid-cols-3">
+          {groups.map((group) => {
+            const status = groupStatus(group);
+            return (
+              <button
+                key={group.group_id}
+                type="button"
+                onClick={() => onSelect(group)}
+                className={`min-w-0 rounded-(--radius-card) border bg-card p-4 text-left shadow-(--shadow-card) transition-colors hover:border-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                  status === "empty" ? "border-alert/30" : "border-line"
+                }`}
+              >
+                <span className="flex min-w-0 items-start justify-between gap-3">
+                  <span className="truncate font-display text-base font-semibold text-ink">
+                    {group.name}
+                  </span>
+                  <GroupStatusBadge status={status} />
                 </span>
-                <span className="tnum ml-auto font-mono text-xs text-ink-muted">
-                  {g.member_count} {g.member_count === 1 ? "member" : "members"}
+                <span className="mt-1.5 block truncate text-xs text-ink-muted">
+                  {group.member_count} {group.member_count === 1 ? "member" : "members"} · owner {group.owner_name}
                 </span>
-              </div>
-              {g.members.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {g.members.map((m) => (
-                    <span
-                      key={m.user_id}
-                      className="inline-flex items-center gap-1 rounded-tag border border-line bg-paper/60 px-1.5 py-0.5 text-xs text-ink"
-                    >
-                      {m.name || "—"}
-                      {m.role === "owner" && (
-                        <Badge variant="neutral">owner</Badge>
-                      )}
+
+                <span className="mt-4 flex min-h-8 items-center">
+                  {group.members.slice(0, 5).map((member, index) => {
+                    const owner = member.role === "owner";
+                    return (
+                      <span
+                        key={member.user_id}
+                        className={index > 0 ? "-ml-1.5" : ""}
+                        title={`${member.name}${owner ? " · owner" : ""}`}
+                      >
+                        <Avatar
+                          name={member.name || namesById.get(member.user_id) || ""}
+                          size={28}
+                          className={`ring-2 ring-card ${
+                            owner ? "relative z-10 outline-2 outline-offset-0 outline-brand" : ""
+                          }`}
+                        />
+                      </span>
+                    );
+                  })}
+                  {group.members.length > 5 && (
+                    <span className="-ml-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-paper font-mono text-[10px] text-ink-muted ring-2 ring-card">
+                      +{group.members.length - 5}
                     </span>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                  )}
+                </span>
+
+                <span className="mt-3 block truncate font-mono text-[11px] text-ink-muted">
+                  {group.trip_count} {group.trip_count === 1 ? "trip" : "trips"} · {group.shared_favourites_count} shared favourites · {group.last_active_at ? `active ${timeAgo(group.last_active_at)}` : "never active"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
-    </div>
+    </section>
   );
 }

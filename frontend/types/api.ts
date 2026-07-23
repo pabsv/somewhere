@@ -282,6 +282,8 @@ export const AdminTargetSummarySchema = z.object({
   destination: z.string(),
   tier: TierSchema,
   enabled: z.boolean(),
+  /** Server-derived from enabled + next_due_at; clients must not re-derive. */
+  overdue: z.boolean(),
   last_scraped_at: z.string().nullable(),
   next_due_at: z.string().nullable(),
   last_status: z.string().nullable(),
@@ -619,12 +621,25 @@ export const AdminGroupMemberSchema = z.object({
 });
 export type AdminGroupMember = z.infer<typeof AdminGroupMemberSchema>;
 
+/** A deliberately small admin view of a trip explicitly stored on a group. */
+export const AdminGroupTripSchema = z.object({
+  code: z.string().min(1),
+  start: DateStringSchema,
+  end: DateStringSchema,
+  added_by: z.string(),
+});
+export type AdminGroupTrip = z.infer<typeof AdminGroupTripSchema>;
+
 export const AdminGroupSchema = z.object({
   group_id: z.string(),
   name: z.string(),
   owner_name: z.string(),
   member_count: z.number(),
   created_at: z.string().nullable(),
+  last_active_at: z.string().nullable(),
+  trip_count: z.number(),
+  trips: z.array(AdminGroupTripSchema),
+  shared_favourites_count: z.number(),
   members: z.array(AdminGroupMemberSchema),
 });
 export type AdminGroup = z.infer<typeof AdminGroupSchema>;

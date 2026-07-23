@@ -7,6 +7,12 @@ interface SheetProps {
   open: boolean;
   onClose: () => void;
   title?: ReactNode;
+  /**
+   * Rich visual header content. When provided, this replaces the rendered
+   * `title`; callers can still pass a string `title` as the dialog's fallback
+   * accessible label.
+   */
+  header?: ReactNode;
   /** plain-text label for assistive tech when `title` isn't a string */
   ariaLabel?: string;
   /**
@@ -15,6 +21,10 @@ interface SheetProps {
    * dismiss control belongs under the thumb that opened the screen.
    */
   closeSide?: "left" | "right";
+  /** Panel sizing/appearance override. Defaults to `max-w-md`. */
+  panelClassName?: string;
+  /** Scrollable body spacing override. Defaults to `px-5 py-4`. */
+  bodyClassName?: string;
   children: ReactNode;
 }
 
@@ -34,8 +44,11 @@ export default function Sheet({
   open,
   onClose,
   title,
+  header,
   ariaLabel,
   closeSide = "right",
+  panelClassName,
+  bodyClassName,
   children,
 }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -167,7 +180,9 @@ export default function Sheet({
           touchAction: "pan-y",
           transitionDuration: dragging ? "0ms" : undefined,
         }}
-        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-card shadow-card transition-transform duration-200 ease-out-quart focus:outline-none"
+        className={`absolute inset-y-0 right-0 flex w-full flex-col bg-card shadow-card transition-transform duration-200 ease-out-quart focus:outline-none ${
+          panelClassName ?? "max-w-md"
+        }`}
       >
         <div
           className={`flex items-center gap-3 border-b border-line px-5 py-4 ${
@@ -175,7 +190,9 @@ export default function Sheet({
           }`}
         >
           {closeSide === "right" &&
-            (title ? (
+            (header ? (
+              <div className="min-w-0 flex-1">{header}</div>
+            ) : title ? (
               <h2 className="font-display text-lg font-semibold">{title}</h2>
             ) : (
               <span />
@@ -204,13 +221,20 @@ export default function Sheet({
               <path d="M3 3l10 10M13 3L3 13" />
             </svg>
           </button>
-          {closeSide === "left" && title && (
-            <h2 className="min-w-0 truncate font-display text-lg font-semibold">
-              {title}
-            </h2>
-          )}
+          {closeSide === "left" &&
+            (header ? (
+              <div className="min-w-0 flex-1">{header}</div>
+            ) : title ? (
+              <h2 className="min-w-0 truncate font-display text-lg font-semibold">
+                {title}
+              </h2>
+            ) : null)}
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div
+          className={`flex-1 overflow-y-auto ${bodyClassName ?? "px-5 py-4"}`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

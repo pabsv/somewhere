@@ -57,6 +57,13 @@ const LINKS: NavLink[] = [
   { href: "/explore", label: "Explore", icon: CompassIcon },
 ];
 
+function isLinkActive(pathname: string, href: string): boolean {
+  if (href === "/admin") {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+  return pathname === href;
+}
+
 function UsersIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -187,7 +194,7 @@ export default function Navigation({ user }: NavigationProps) {
           {/* Primary links — desktop only */}
           <div className="hidden h-full items-center gap-2 md:flex">
             {links.map((link) => {
-              const active = pathname === link.href;
+              const active = isLinkActive(pathname, link.href);
               return (
                 <Link
                   key={link.href}
@@ -239,7 +246,7 @@ export default function Navigation({ user }: NavigationProps) {
           style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}
         >
           {links.map((link) => {
-            const active = pathname === link.href;
+            const active = isLinkActive(pathname, link.href);
             const Icon = link.icon;
             return (
               <li key={link.href}>

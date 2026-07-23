@@ -19,6 +19,7 @@ import {
   type AdminUser,
   type AdminFriendRef,
   type AdminGroup,
+  type AdminGroupTrip,
   type AdminUserGroup,
   type DateWindow,
   type GroupRole,
@@ -47,16 +48,83 @@ function numOrNull(v: unknown): number | null {
   return typeof v === "number" ? v : null;
 }
 
+function toMs(v: unknown): number | null {
+  if (v instanceof Date) return v.getTime();
+  if (typeof v !== "string") return null;
+  const parsed = Date.parse(v);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** Latest valid timestamp as a canonical ISO string. */
+function latestIso(values: unknown[]): string | null {
+  let latest: number | null = null;
+  for (const value of values) {
+    const ms = toMs(value);
+    if (ms != null && (latest == null || ms > latest)) latest = ms;
+  }
+  return latest == null ? null : new Date(latest).toISOString();
+}
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === "object"
+    ? (v as Record<string, unknown>)
+    : null;
+}
+
+function idString(v: unknown): string | null {
+  if (v instanceof ObjectId) return v.toString();
+  if (typeof v !== "string") return null;
+  const value = v.trim();
+  return value ? value : null;
+}
+
+function nonNegativeInt(v: unknown): number | null {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
+}
+
+/**
+ * Groups do not currently have a separate planned-trips write path. Accept a
+ * small embedded shape when a stored document already supplies one, and skip
+ * malformed entries instead of manufacturing data from the live deal feed.
+ */
+function parseEmbeddedTrip(v: unknown): AdminGroupTrip | null {
+  const trip = asRecord(v);
+  if (!trip) return null;
+
+  const rawCode = trip.code ?? trip.destination;
+  const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+  const start = toDateStr(trip.start ?? trip.start_date);
+  const end = toDateStr(trip.end ?? trip.end_date);
+  const addedBy = idString(trip.added_by ?? trip.by);
+
+  if (!code || code.length > 8 || !start || !end || end < start || !addedBy) {
+    return null;
+  }
+  return { code, start, end, added_by: addedBy };
+}
+
 interface GroupMemberRaw {
   user_id: string;
   role: GroupRole;
+  joined_at?: unknown;
+}
+interface GroupInviteRaw {
+  created_at?: unknown;
 }
 interface GroupRaw {
   _id: ObjectId;
   name?: string;
   created_by?: string;
   created_at?: unknown;
+  updated_at?: unknown;
+  last_active_at?: unknown;
+  last_activity_at?: unknown;
   members?: GroupMemberRaw[];
+  invite?: GroupInviteRaw;
+  favourites?: unknown;
+  trips?: unknown;
+  trip_count?: unknown;
+  activity?: unknown;
 }
 
 export async function GET() {
@@ -148,6 +216,42 @@ export async function GET() {
     const gid = g._id.toString();
     const gname = typeof g.name === "string" ? g.name : "";
     const members = Array.isArray(g.members) ? g.members : [];
+    const rawTrips = Array.isArray(g.trips) ? g.trips : [];
+    const trips = rawTrips
+      .map(parseEmbeddedTrip)
+      .filter((trip): trip is AdminGroupTrip => trip !== null);
+    const activity = asRecord(g.activity);
+    const storedTripCount = nonNegativeInt(
+      g.trip_count ?? activity?.trip_count,
+    );
+    const tripCount = Math.max(trips.length, storedTripCount ?? 0);
+
+    const favouriteCodes = Array.isArray(g.favourites)
+      ? g.favourites
+          .filter((code): code is string => typeof code === "string")
+          .map((code) => code.trim().toUpperCase())
+          .filter((code) => code.length > 0 && code.length <= 8)
+      : [];
+    const sharedFavouritesCount = new Set(favouriteCodes).size;
+
+    const tripActivityTimes = rawTrips.flatMap((rawTrip) => {
+      const trip = asRecord(rawTrip);
+      return trip
+        ? [trip.updated_at, trip.added_at, trip.created_at]
+        : [];
+    });
+    const lastActiveAt = latestIso([
+      g.last_active_at,
+      g.last_activity_at,
+      activity?.last_active_at,
+      activity?.last_activity_at,
+      g.updated_at,
+      activity?.updated_at,
+      ...tripActivityTimes,
+      ...members.map((m) => m.joined_at),
+      g.invite?.created_at,
+      g.created_at,
+    ]);
 
     const owner = members.find((m) => m.role === "owner");
     const ownerName =
@@ -161,6 +265,10 @@ export async function GET() {
       owner_name: ownerName,
       member_count: members.length,
       created_at: toIso(g.created_at),
+      last_active_at: lastActiveAt,
+      trip_count: tripCount,
+      trips,
+      shared_favourites_count: sharedFavouritesCount,
       members: members.map((m) => ({
         user_id: m.user_id,
         name: nameById.get(m.user_id) ?? "",

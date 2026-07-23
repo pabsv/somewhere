@@ -7,141 +7,83 @@ interface PoolTilesProps {
 }
 
 /**
- * Top-of-admin tile row: pool health counts + tier breakdown + baseline
- * coverage (% of enabled targets that have a price_p50_ewma baseline). All
- * numbers mono/tabular on card surfaces.
+ * The pool's at-a-glance health row. The old tile grid exposed the same data
+ * over several cards; keeping it on one line makes the targets table the main
+ * operational surface while detailed grid diagnostics remain in tooltips.
  */
 export default function PoolTiles({ pool }: PoolTilesProps) {
-  const { tiles, targets } = pool;
-
-  const enabledTargets = targets.filter((t) => t.enabled);
+  const { tiles, targets, grids } = pool;
+  const enabledTargets = targets.filter((target) => target.enabled);
   const withBaseline = enabledTargets.filter(
-    (t) => t.price_p50_ewma != null,
+    (target) => target.price_p50_ewma != null,
   ).length;
-  const coveragePct =
-    enabledTargets.length === 0
-      ? 0
-      : Math.round((withBaseline / enabledTargets.length) * 100);
+  const coveragePct = enabledTargets.length
+    ? Math.round((withBaseline / enabledTargets.length) * 100)
+    : 0;
 
   const a = tiles.by_tier.A ?? 0;
   const b = tiles.by_tier.B ?? 0;
   const c = tiles.by_tier.C ?? 0;
+  const gridWrite = agoLabel(grids.newest_scraped_at) ?? "never";
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      <Tile label="Total" value={tiles.total} />
-      <Tile label="Enabled" value={tiles.enabled} accent="steal" />
-      <Tile
-        label="Disabled"
-        value={tiles.disabled}
-        accent={tiles.disabled > 0 ? "alert" : undefined}
+    <div className="flex flex-wrap items-baseline gap-x-7 gap-y-2.5 rounded-(--radius-card) border border-line bg-card px-4 py-3.5 shadow-(--shadow-card)">
+      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
+        Health
+      </span>
+      <HealthStat
+        label="Enabled"
+        value={`${tiles.enabled}/${tiles.total}`}
+        title={`${tiles.disabled} disabled · ${tiles.total} total targets`}
       />
-      <Tile
+      <HealthStat
         label="Overdue"
         value={tiles.overdue}
-        accent={tiles.overdue > 0 ? "alert" : undefined}
+        alert={tiles.overdue > 0}
+        title="Past their tier's scrape interval"
       />
-      <Tile label="Never scraped" value={tiles.never_scraped} />
-      <Tile
-        label="Baseline cov."
+      <HealthStat
+        label="Never scraped"
+        value={tiles.never_scraped}
+        title={`${tiles.never_scraped} targets have no completed scrape yet`}
+      />
+      <HealthStat
+        label="Baseline"
         value={`${coveragePct}%`}
-        sub={`${withBaseline}/${enabledTargets.length}`}
+        title={`${withBaseline}/${enabledTargets.length} enabled routes have a p50 baseline`}
       />
-
-      {/* tier breakdown spans full width below */}
-      <div className="col-span-2 rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card) sm:col-span-3 lg:col-span-6">
-        <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-          By tier
-        </span>
-        <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TierStat tier="A" value={a} />
-          <TierStat tier="B" value={b} />
-          <TierStat tier="C" value={c} />
-        </div>
-      </div>
-
-      <GridStatsCard grids={pool.grids} />
+      <HealthStat
+        label="Tiers A·B·C"
+        value={`${a} · ${b} · ${c}`}
+        title={`Enabled targets: tier A ${a} · tier B ${b} · tier C ${c}`}
+      />
+      <HealthStat
+        label="Grid write"
+        value={gridWrite}
+        title={`${grids.total} one-way grids · ${grids.out_legs} outbound · ${grids.back_legs} return · ${grids.fresh_24h} fresh in 24h · ${grids.stale_7d} stale over 7d · median ${grids.median_price_count ?? "—"} dates/grid`}
+      />
     </div>
   );
 }
 
-/** "3h ago" / "2d ago" from an ISO timestamp; null when unparseable. */
-function agoLabel(iso: string | null): string | null {
-  if (!iso) return null;
-  const t = Date.parse(iso.endsWith("Z") ? iso : iso + "Z");
-  if (Number.isNaN(t)) return null;
-  const mins = Math.max(0, Math.floor((Date.now() - t) / 60_000));
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 48) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-/**
- * One-way fare grid coverage: the data behind the calendar's trip-stretch
- * bubble, whose `~` rows are priced as the sum of a route's two one-way grids.
- * Since the multi-city rollback this card is the ONLY alarm that the grid
- * writer died — nothing else fails loudly, the `~` rows just quietly stop
- * appearing once the 21d TTL expires. The pool writes grids every few minutes
- * when healthy, so anything past 24h is flagged.
- */
-function GridStatsCard({ grids }: { grids: AdminPoolSummary["grids"] }) {
-  const newestMs = grids.newest_scraped_at
-    ? Date.parse(
-        grids.newest_scraped_at.endsWith("Z")
-          ? grids.newest_scraped_at
-          : grids.newest_scraped_at + "Z",
-      )
-    : NaN;
-  const writesStalled =
-    grids.total === 0 ||
-    Number.isNaN(newestMs) ||
-    Date.now() - newestMs > 24 * 3_600_000;
-
-  return (
-    <div className="col-span-2 rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card) sm:col-span-3 lg:col-span-6">
-      <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-        One-way grids (stretch-bubble fare data)
-      </span>
-      <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-        <GridStat label="Grids" value={grids.total} alert={grids.total === 0} />
-        <GridStat label="Out / back" value={`${grids.out_legs} / ${grids.back_legs}`} />
-        <GridStat label="Fresh 24h" value={grids.fresh_24h} />
-        <GridStat
-          label="Stale >7d"
-          value={grids.stale_7d}
-          alert={grids.stale_7d > 0}
-        />
-        <GridStat
-          label="Dates/grid (med)"
-          value={grids.median_price_count ?? "—"}
-        />
-        <GridStat
-          label="Last write"
-          value={agoLabel(grids.newest_scraped_at) ?? "never"}
-          alert={writesStalled}
-        />
-      </div>
-    </div>
-  );
-}
-
-function GridStat({
+function HealthStat({
   label,
   value,
-  alert,
+  title,
+  alert = false,
 }: {
   label: string;
   value: number | string;
+  title: string;
   alert?: boolean;
 }) {
   return (
-    <div className="flex items-baseline gap-2">
+    <div className="flex items-baseline gap-1.5" title={title}>
       <span className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
         {label}
       </span>
       <span
-        className={`tnum font-mono text-lg font-semibold ${
+        className={`tnum font-mono text-base font-semibold ${
           alert ? "text-alert" : "text-ink"
         }`}
       >
@@ -151,69 +93,32 @@ function GridStat({
   );
 }
 
-function Tile({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-  accent?: "steal" | "alert";
-}) {
-  const valueColor =
-    accent === "steal"
-      ? "text-steal"
-      : accent === "alert"
-        ? "text-alert"
-        : "text-ink";
-  return (
-    <div className="rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card)">
-      <div className="font-mono text-[11px] uppercase tracking-wide text-ink-muted">
-        {label}
-      </div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className={`tnum font-mono text-2xl font-semibold ${valueColor}`}>
-          {value}
-        </span>
-        {sub && (
-          <span className="tnum font-mono text-xs text-ink-muted">{sub}</span>
-        )}
-      </div>
-    </div>
-  );
-}
+/** "14m ago" / "3h ago" / "2d ago"; null when absent or invalid. */
+function agoLabel(iso: string | null): string | null {
+  if (!iso) return null;
+  const timestamp = Date.parse(iso.endsWith("Z") ? iso : `${iso}Z`);
+  if (Number.isNaN(timestamp)) return null;
 
-function TierStat({ tier, value }: { tier: string; value: number }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="tnum rounded-tag bg-brand px-1.5 py-px font-mono text-[11px] font-semibold uppercase tracking-wide text-brand-ink">
-        {tier}
-      </span>
-      <span className="tnum font-mono text-lg font-semibold text-ink">
-        {value}
-      </span>
-    </div>
-  );
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export function PoolTilesSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
+      className="flex flex-wrap items-baseline gap-x-7 gap-y-2.5 rounded-(--radius-card) border border-line bg-card px-4 py-3.5 shadow-(--shadow-card)"
     >
-      {Array.from({ length: 6 }, (_, i) => (
-        <div
-          key={i}
-          className="rounded-(--radius-card) border border-line bg-card p-4 shadow-(--shadow-card)"
-        >
+      <div className="h-3 w-12 animate-pulse rounded bg-line" />
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="flex items-baseline gap-2">
           <div className="h-3 w-16 animate-pulse rounded bg-line" />
-          <div className="mt-2 h-7 w-12 animate-pulse rounded bg-line" />
+          <div className="h-4 w-10 animate-pulse rounded bg-line" />
         </div>
       ))}
-      <div className="col-span-2 h-16 animate-pulse rounded-(--radius-card) bg-line sm:col-span-3 lg:col-span-6" />
     </div>
   );
 }
