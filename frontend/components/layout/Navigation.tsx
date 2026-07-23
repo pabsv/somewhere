@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { signOut } from "next-auth/react";
 
 interface NavigationProps {
   /**
@@ -148,11 +149,17 @@ function ProfileMenu({ user }: { user: { name: string; role?: string } }) {
             Settings
           </Link>
           <div aria-hidden="true" className="mx-4 my-1.5 border-t border-line" />
-          <form action="/api/auth/signout" method="post">
-            <button type="submit" role="menuitem" className={`${itemClass} w-full`}>
-              Sign out
-            </button>
-          </form>
+          {/* signOut() (not a bare form POST) — NextAuth v5 rejects a POST to
+              /api/auth/signout without its CSRF token (MissingCSRF), leaving
+              the session intact and bouncing to /login?error=... */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className={`${itemClass} w-full`}
+          >
+            Sign out
+          </button>
         </div>
       )}
     </div>

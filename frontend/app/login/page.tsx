@@ -104,7 +104,11 @@ function LoginForm() {
         <p className="text-sm text-alert">
           {credError || urlError === "CredentialsSignin"
             ? "Could not sign you in. Check your email and password, then try again."
-            : "Could not sign you in with Google. Please try again."}
+            : urlError === "OAuthSignin" ||
+                urlError === "OAuthCallbackError" ||
+                urlError === "AccessDenied"
+              ? "Could not sign you in with Google. Please try again."
+              : "Sign-in failed. Please try again."}
         </p>
       )}
 
