@@ -20,6 +20,7 @@ import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import MembersCard from "@/components/groups/MembersCard";
 import InviteCard from "@/components/groups/InviteCard";
 import GroupFavouritesCard from "@/components/groups/GroupFavouritesCard";
+import { useIsMobile } from "@/components/tripcal/useIsMobile";
 import {
   ApiError,
   deleteGroup,
@@ -41,10 +42,15 @@ export default function GroupDetailPage() {
 
   const [detail, setDetail] = useState<GroupDetailResponse | null>(null);
   const [trips, setTrips] = useState<GroupTripsResponse | null>(null);
-  const [tripsView, setTripsView] = useState<"list" | "calendar">("calendar");
+  // "info" is a mobile-only tab; on desktop the info panel is a side aside
+  // toggled by its own button, so the view falls back to "calendar" there.
+  const [tripsView, setTripsView] = useState<"list" | "calendar" | "info">(
+    "calendar",
+  );
   const [fullOnly, setFullOnly] = useState(true);
   const [favOnly, setFavOnly] = useState(false);
   const [infoOpen, setInfoOpen] = useState(true);
+  const isMobile = useIsMobile();
   const [mode, setMode] = useState<Mode>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -178,6 +184,11 @@ export default function GroupDetailPage() {
   const myUserId = session?.user?.id ?? "";
   const hasFullGroup = trips.trips.some((t) => t.full_group);
   const groupFavourites = detail.favourites;
+  // Resizing from phone to desktop can strand the view on the mobile-only
+  // "info" tab — fall back to the calendar there.
+  const view = !isMobile && tripsView === "info" ? "calendar" : tripsView;
+  const showBoard = !(isMobile && view === "info");
+  const showInfo = isMobile ? view === "info" : infoOpen;
 
   return (
     <div className="mx-auto max-w-[86rem] px-4 py-8 sm:px-6 sm:py-10">
@@ -205,19 +216,28 @@ export default function GroupDetailPage() {
         <div className="mb-5 flex flex-wrap items-center gap-2">
           <Chip
             size="sm"
-            selected={tripsView === "calendar"}
+            selected={view === "calendar"}
             onClick={() => setTripsView("calendar")}
           >
             Calendar
           </Chip>
           <Chip
             size="sm"
-            selected={tripsView === "list"}
+            selected={view === "list"}
             onClick={() => setTripsView("list")}
           >
             List
           </Chip>
-          {hasFullGroup && (
+          {isMobile && (
+            <Chip
+              size="sm"
+              selected={view === "info"}
+              onClick={() => setTripsView("info")}
+            >
+              Group info
+            </Chip>
+          )}
+          {hasFullGroup && showBoard && (
             <Chip
               size="sm"
               selected={fullOnly}
@@ -226,7 +246,7 @@ export default function GroupDetailPage() {
               Everyone&rsquo;s free only
             </Chip>
           )}
-          {groupFavourites.length > 0 && (
+          {groupFavourites.length > 0 && showBoard && (
             <Chip
               size="sm"
               selected={favOnly}
@@ -236,21 +256,25 @@ export default function GroupDetailPage() {
               ★ Favourites ({groupFavourites.length})
             </Chip>
           )}
-          <button
-            type="button"
-            onClick={() => setInfoOpen((v) => !v)}
-            aria-expanded={infoOpen}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-(--radius-tag) border border-line bg-card px-3 py-1 font-mono text-xs uppercase tracking-widest text-ink-muted transition-colors hover:text-ink"
-          >
-            {infoOpen ? "Hide info ›" : "‹ Group info"}
-          </button>
+          {/* Desktop only — on phones the info panel is its own tab above. */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => setInfoOpen((v) => !v)}
+              aria-expanded={infoOpen}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-(--radius-tag) border border-line bg-card px-3 py-1 font-mono text-xs uppercase tracking-widest text-ink-muted transition-colors hover:text-ink"
+            >
+              {infoOpen ? "Hide info ›" : "‹ Group info"}
+            </button>
+          )}
         </div>
 
         {/* Un-boxed calendar (matches the main /calendar look) beside a
             collapsible right-hand group-info panel. */}
         <div className="flex flex-col gap-6 min-[1400px]:flex-row min-[1400px]:items-start min-[1400px]:justify-center">
+          {showBoard && (
           <div className="w-full min-w-0 min-[1400px]:w-[64rem] min-[1400px]:shrink-0">
-            {tripsView === "list" ? (
+            {view === "list" ? (
               <GroupTripsBoard
                 trips={trips.trips}
                 truncated={trips.truncated}
@@ -272,8 +296,9 @@ export default function GroupDetailPage() {
               />
             )}
           </div>
+          )}
 
-          {infoOpen && (
+          {showInfo && (
             <aside className="w-full shrink-0 space-y-6 min-[1400px]:w-80">
               {/* Each panel collapses independently; open/closed is remembered
                   per user (keyed by user id) across visits and groups. */}
