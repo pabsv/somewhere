@@ -18,6 +18,7 @@ import { favouriteDest, isFavouriteTrip } from "@/lib/favourites";
 import { promoteFavouriteTier } from "@/lib/score";
 import { useUniCalendar } from "@/lib/university/context";
 import Chip from "@/components/ui/Chip";
+import OriginChips from "@/components/settings/OriginChips";
 import MonthBlock, {
   type StretchContext,
   type StretchSelection,
@@ -47,7 +48,7 @@ import {
 const MONTHS = 10;
 
 export default function CalendarPage() {
-  const { origins } = useOrigins();
+  const { origins, toggle: toggleOrigin } = useOrigins();
   const searchParams = useSearchParams();
   const fromQuery = searchParams.get("from") ? `from=${searchParams.get("from")}` : "";
   const { status } = useSession();
@@ -499,18 +500,13 @@ export default function CalendarPage() {
             {nearMissError}
           </p>
         )}
-        {/* What the board is filtered by. The chip used to say this for free;
-            with the board permanently on free dates, it has to be written down
-            — including for the two cases where the filter silently can't run. */}
+        {/* Only surface exceptional availability states; the normal filtered
+            state is already clear from the Calendar context. */}
         {windowsError ? (
           <p className="mt-2 px-4 text-xs text-ink-muted">
             Couldn’t load your free dates, so this board may not match them.
           </p>
-        ) : hasWindows ? (
-          <p className="mt-2 px-4 text-xs text-ink-muted">
-            Showing fares that fit your free dates.
-          </p>
-        ) : signedIn ? (
+        ) : !hasWindows && signedIn ? (
           <p className="mt-2 px-4 text-xs text-ink-muted">
             You haven’t set any free dates, so this is everything.{" "}
             <Link
@@ -520,52 +516,60 @@ export default function CalendarPage() {
               Set your availability →
             </Link>
           </p>
-        ) : (
+        ) : !hasWindows ? (
           <p className="mt-2 px-4 text-xs text-ink-muted">
             Sign in and set your free dates to filter this board to when you
             could actually go.
           </p>
-        )}
-        {(signedIn || (university && uniPeriods.length > 0)) && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 text-xs text-ink-muted">
-            {university && uniPeriods.length > 0 && (
-              <>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
-                    style={{
-                      backgroundImage:
-                        "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 45%, transparent) 0 2px, transparent 2px 4px)",
-                    }}
-                  />
-                  TU/e exams
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--color-uni-break) 35%, transparent)",
-                    }}
-                  />
-                  TU/e holidays
-                </span>
-              </>
-            )}
-            {/* Chip-shaped link (Chip itself is button-only) — the ★ filter
-                chip above only toggles, it can't take you to the editor. */}
-            {signedIn && (
+        ) : null}
+        <div className="mt-3 flex w-full flex-wrap items-center gap-x-5 gap-y-3 px-4 text-xs text-ink-muted">
+          {university && uniPeriods.length > 0 && (
+            <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-uni-exam) 45%, transparent) 0 2px, transparent 2px 4px)",
+                  }}
+                />
+                TU/e exams
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--color-uni-break) 35%, transparent)",
+                  }}
+                />
+                TU/e holidays
+              </span>
+            </div>
+          )}
+          {signedIn && (
+            <div className="flex min-w-48 flex-1 justify-center">
               <Link
                 href="/settings#favourites"
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:border-ink-muted"
+                className="inline-flex shrink-0 items-center rounded-lg border border-line bg-card px-3 py-2 text-xs font-medium text-ink transition-colors hover:border-ink-muted"
               >
                 ★ Edit favourite cities
               </Link>
-            )}
+            </div>
+          )}
+          <div
+            role="group"
+            aria-label="Departure airports"
+            className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-2"
+          >
+            <span className="mr-1 shrink-0 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+              From
+            </span>
+            <OriginChips selected={origins} onToggle={toggleOrigin} />
           </div>
-        )}
+        </div>
       </div>
 
       {/* ─── Body ──────────────────────────────────────────────────────────── */}
